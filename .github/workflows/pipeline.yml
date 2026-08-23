@@ -2,7 +2,7 @@ name: flight-hunter-pipeline
 
 on:
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '0 10 * * *'
   repository_dispatch:
     types: [resume-after-approval]
   workflow_dispatch: {}
@@ -33,3 +33,4 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+          SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}

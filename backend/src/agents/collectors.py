@@ -1,135 +1,99 @@
-import time
+import os
 import random
+import requests
 from typing import List, Dict, Any
-from fli.core.builders import build_flight_segments
-from ..services.currency import converter
 
 # Constantes de destinos (IATA codes)
-ORIGIN = "BUE" # Buenos Aires (EZE/AEP)
-EUROPE_DESTINATIONS = ["MAD", "PAR", "LON"] # Madrid, Paris, London
-ASIA_DESTINATIONS = ["TYO", "OSA"] # Tokyo, Osaka
+ORIGIN = "EZE" # Buenos Aires (EZE/AEP)
+EUROPE_DESTINATIONS = ["MAD", "CDG", "LHR"] # Madrid, Paris (CDG), London (LHR)
+ASIA_DESTINATIONS = ["NRT", "KIX"] # Tokyo (NRT), Osaka (KIX)
 
 # Constantes de fechas base (2027)
 DEPARTURE_DATES = ["2027-04-17", "2027-04-18", "2027-04-19"]
 RETURN_DATES = ["2027-04-26", "2027-04-27", "2027-04-28", "2027-04-29", "2027-04-30", "2027-05-01", "2027-05-02"]
 
-def fetch_flights_with_retry(origin: str, dest: str, dep_date: str, ret_date: str, max_retries=3) -> List[Any]:
-    """Helper to fetch flights with exponential backoff for rate limits."""
-    for attempt in range(max_retries):
-        try:
-            # Llama a la librería fli para construir la búsqueda
-            trip = build_flight_segments(origin, dest, dep_date, ret_date)
-            # asumiendo que build_flight_segments devuelve algo que tiene un método .get_flights() o similar 
-            # según la API de fli. Si trip es el objeto de búsqueda:
-            # Nota: fli interna usa iteradores o métodos para obtener los vuelos. 
-            # Como es reverse-engineering, acá simulamos la obtención en base a la doc de fli
-            flights = trip.get_flights() 
-            
-            # Filtramos los que no tienen precio (Google a veces oculta el precio total)
-            valid_flights = [f for f in flights if not getattr(f, 'price_unknown', False)]
-            return valid_flights
-            
-        except Exception as e:
-            error_msg = str(e)
-            if "429" in error_msg or "403" in error_msg:
-                # Rate limit
-                sleep_time = (2 ** attempt) + random.random()
-                print(f"Rate limited (429/403). Retrying in {sleep_time:.2f}s...")
-                time.sleep(sleep_time)
-            else:
-                print(f"Error fetching {origin}-{dest}: {e}")
-                break
-    return []
+SERPAPI_KEY = os.environ.get("SERPAPI_KEY", "")
 
-def serialize_flight(flight: Any, dep_date: str, ret_date: str, origin: str, dest: str) -> Dict:
-    """Extrae la información necesaria del objeto de vuelo de fli a un diccionario."""
+def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str) -> List[Dict]:
+    """Busca vuelos usando SerpApi (Google Flights)"""
+    if not SERPAPI_KEY:
+        print("Warning: SERPAPI_KEY no encontrada. Omitiendo búsqueda.")
+        return []
+        
+    print(f"Buscando en SerpApi: {origin} -> {dest} ({dep_date} al {ret_date})")
+    url = "https://serpapi.com/search.json"
+    params = {
+        "engine": "google_flights",
+        "departure_id": origin,
+        "arrival_id": dest,
+        "outbound_date": dep_date,
+        "return_date": ret_date,
+        "currency": "USD",
+        "type": "1", # Ida y vuelta
+        "api_key": SERPAPI_KEY
+    }
+    
     try:
-        precio_raw = flight.price
-        moneda_raw = getattr(flight, 'currency', None)
+        response = requests.get(url, params=params, timeout=30)
+        response.raise_for_status()
+        data = response.json()
         
-        # Deducción de moneda heurística si la librería no la devuelve
-        if not moneda_raw:
-            if isinstance(precio_raw, (int, float)) and precio_raw > 20000:
-                moneda_raw = "ARS"
-            else:
-                moneda_raw = "USD"
-                
-        moneda_raw = moneda_raw.upper()
+        # Juntamos 'best_flights' y 'other_flights'
+        raw_flights = data.get("best_flights", []) + data.get("other_flights", [])
         
-        # Obtenemos precio original para almacenar y mostrar, y el estandarizado USD para evaluar
-        precio_usd = converter.convert_to_usd(precio_raw, moneda_raw)
-        precio_usd = round(precio_usd, 2)
+        # Link para reservar
+        search_link = data.get("search_metadata", {}).get("google_flights_url", "https://google.com/travel/flights")
+        
+        parsed_flights = []
+        for flight in raw_flights:
+            # Obtener aerolinea del primer tramo
+            airlines = [leg.get("airline", "Desconocida") for leg in flight.get("flights", [])]
+            airline = airlines[0] if airlines else "Múltiples"
             
-        return {
-            "ida_fecha": dep_date,
-            "vuelta_fecha": ret_date,
-            "ida_origen_destino": f"{origin}-{dest}",
-            "vuelta_origen_destino": f"{dest}-{origin}",
-            "precio_original": round(precio_raw, 2) if precio_raw else 0,
-            "moneda_original": moneda_raw,
-            "precio_total_usd": precio_usd,
-            "aerolinea": flight.airline, 
-            "cantidad_escalas": flight.stops,
-            "duracion_total_minutos": flight.duration,
-            "link_reserva": flight.booking_token or "" 
-        }
-    except AttributeError as e:
-        print(f"Error serializing flight: {e}")
-        return {}
+            # Obtener escalas
+            layovers = flight.get("layovers", [])
+            stops = len(layovers) if layovers else max(0, len(flight.get("flights", [])) - 1)
+            
+            # Precio
+            precio_usd = flight.get("price", 0)
+            
+            parsed_flights.append({
+                "ida_fecha": dep_date,
+                "vuelta_fecha": ret_date,
+                "ida_origen_destino": f"{origin}-{dest}",
+                "vuelta_origen_destino": f"{dest}-{origin}",
+                "precio_original": precio_usd,
+                "moneda_original": "USD",
+                "precio_total_usd": precio_usd,
+                "aerolinea": airline,
+                "cantidad_escalas": stops,
+                "duracion_total_minutos": flight.get("total_duration", 0),
+                "link_reserva": search_link,
+                "fuente": "serpapi"
+            })
+            
+        return parsed_flights
+    except Exception as e:
+        print(f"Error fetching from SerpApi: {e}")
+        return []
 
 def collect_europe() -> List[Dict]:
-    results = []
-    print("Collecting flights for Europe...")
-    for dest in EUROPE_DESTINATIONS:
-        for dep in DEPARTURE_DATES:
-            for ret in RETURN_DATES:
-                flights = fetch_flights_with_retry(ORIGIN, dest, dep, ret)
-                for f in flights:
-                    data = serialize_flight(f, dep, ret, ORIGIN, dest)
-                    if data:
-                        results.append(data)
-    return results
+    dest = random.choice(EUROPE_DESTINATIONS)
+    dep = random.choice(DEPARTURE_DATES)
+    ret = random.choice(RETURN_DATES)
+    return fetch_serpapi_flights(ORIGIN, dest, dep, ret)
 
 def collect_asia() -> List[Dict]:
-    results = []
-    print("Collecting flights for Asia...")
-    for dest in ASIA_DESTINATIONS:
-        for dep in DEPARTURE_DATES:
-            for ret in RETURN_DATES:
-                flights = fetch_flights_with_retry(ORIGIN, dest, dep, ret)
-                for f in flights:
-                    data = serialize_flight(f, dep, ret, ORIGIN, dest)
-                    if data:
-                        results.append(data)
-    return results
+    dest = random.choice(ASIA_DESTINATIONS)
+    dep = random.choice(DEPARTURE_DATES)
+    ret = random.choice(RETURN_DATES)
+    return fetch_serpapi_flights(ORIGIN, dest, dep, ret)
 
 def collect_lufthansa() -> List[Dict]:
-    results = []
-    print("Collecting flights for Lufthansa...")
-    dest = "FRA" 
-    for dep in DEPARTURE_DATES[:1]: 
-        for ret in RETURN_DATES[:2]: 
-            flights = fetch_flights_with_retry(ORIGIN, dest, dep, ret)
-            for f in flights:
-                if "lufthansa" in getattr(f, 'airline', '').lower():
-                    data = serialize_flight(f, dep, ret, ORIGIN, dest)
-                    if data:
-                        results.append(data)
-                        
-    # MOCK DE PRUEBA: Si no encontró absolutamente nada, inyectamos un vuelo falso para probar la web
-    if not results:
-        print("Inyectando vuelo de prueba (Mock) para validar la UI...")
-        results.append({
-            "ida_fecha": "2027-04-17",
-            "vuelta_fecha": "2027-04-26",
-            "ida_origen_destino": "BUE-MAD",
-            "vuelta_origen_destino": "MAD-BUE",
-            "precio_original": 1200000,
-            "moneda_original": "ARS",
-            "precio_total_usd": 1000,
-            "aerolinea": "Lufthansa Mock",
-            "cantidad_escalas": 1,
-            "duracion_total_minutos": 900,
-            "link_reserva": "https://google.com/flights"
-        })
-    return results
+    dest = "FRA"
+    dep = random.choice(DEPARTURE_DATES)
+    ret = random.choice(RETURN_DATES)
+    
+    flights = fetch_serpapi_flights(ORIGIN, dest, dep, ret)
+    lufthansa_deals = [f for f in flights if "lufthansa" in f.get("aerolinea", "").lower()]
+    return lufthansa_deals
