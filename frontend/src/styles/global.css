@@ -1,25 +1,36 @@
-/* 
-  taste-skill aesthetic rules applied here 
-  Focus on beautiful typography, subtle gradients, border-radius, good spacing, and motion.
-*/
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap');
+
 :root {
-  --bg-color: #0d0d0f;
-  --text-primary: #f2f2f3;
-  --text-secondary: #9a9a9c;
+  --bg-base: #050505;
+  --text-primary: #ffffff;
+  --text-secondary: #8a8a93;
   --accent-color: #d1ff4c;
-  --card-bg: rgba(255, 255, 255, 0.04);
-  --card-border: rgba(255, 255, 255, 0.1);
-  --danger-color: #ff5e5e;
+  --accent-glow: rgba(209, 255, 76, 0.2);
+  --card-bg: rgba(255, 255, 255, 0.03);
+  --card-border: rgba(255, 255, 255, 0.06);
+  --card-hover-border: rgba(255, 255, 255, 0.15);
+  --danger-color: #ff4c4c;
   --success-color: #1ed760;
-  --border-radius: 24px;
+  --border-radius-lg: 24px;
+  --border-radius-md: 16px;
+  --border-radius-sm: 8px;
+  --transition-smooth: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 body {
   margin: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  background-color: var(--bg-color);
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg-base);
+  background-image: 
+    radial-gradient(circle at 15% 50%, rgba(209, 255, 76, 0.04) 0%, transparent 50%),
+    radial-gradient(circle at 85% 30%, rgba(255, 255, 255, 0.02) 0%, transparent 50%);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4, .card-price {
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 main {
@@ -28,81 +39,128 @@ main {
   padding: 4rem 2rem;
 }
 
-h1, h2, h3 {
-  margin: 0;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-}
-
 header {
-  margin-bottom: 3rem;
+  margin-bottom: 4rem;
   text-align: center;
+  animation: fadeInDown 0.8s ease-out;
 }
 
 header h1 {
-  font-size: 3.5rem;
-  background: linear-gradient(to right, #fff, #888);
+  font-size: 4rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  background: linear-gradient(135deg, #ffffff 0%, #a0a0a0 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  margin-bottom: 0.5rem;
 }
 
+header p {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+/* Grid System */
 .bento-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 1.5rem;
-  grid-auto-rows: minmax(150px, auto);
+  grid-auto-rows: minmax(180px, auto);
 }
 
+/* Cards (Glassmorphism) */
 .card {
-  background-color: var(--card-bg);
+  background: var(--card-bg);
   border: 1px solid var(--card-border);
-  border-radius: var(--border-radius);
+  border-radius: var(--border-radius-lg);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  transition: transform 0.2s ease, border-color 0.2s ease;
-  backdrop-filter: blur(10px);
+  transition: all var(--transition-smooth);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: var(--border-radius-lg);
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.05) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity var(--transition-smooth);
 }
 
 .card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-4px);
+  border-color: var(--card-hover-border);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
 }
 
+.card:hover::before {
+  opacity: 1;
+}
+
+/* Typography inside cards */
 .card-header {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 1rem;
-}
-
-.card-price {
-  font-size: 2.5rem;
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 0.75rem;
   font-weight: 700;
-  color: var(--accent-color);
-  margin-top: auto;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.4rem 0.8rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 100px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 1.5rem;
 }
 
 .card-route {
-  font-size: 1.25rem;
-  margin-bottom: 0.5rem;
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.4rem;
 }
 
 .card-date {
   color: var(--text-secondary);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-/* Specific Card Layouts */
+.card-price {
+  font-size: 2.75rem;
+  font-weight: 800;
+  color: var(--accent-color);
+  margin-top: auto;
+  line-height: 1.1;
+  text-shadow: 0 0 20px var(--accent-glow);
+}
+
+/* Specific Cards */
 .main-deal {
   grid-column: span 2;
   grid-row: span 2;
-  background: linear-gradient(135deg, rgba(209,255,76,0.1), transparent);
+  background: linear-gradient(145deg, rgba(209, 255, 76, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border-color: rgba(209, 255, 76, 0.2);
 }
 
 .main-deal .card-price {
-  font-size: 4rem;
+  font-size: 4.5rem;
+}
+
+.main-deal:hover {
+  border-color: rgba(209, 255, 76, 0.4);
+  box-shadow: 0 12px 40px rgba(209, 255, 76, 0.1);
 }
 
 .europe-destinations {
@@ -114,78 +172,94 @@ header h1 {
 
 .europe-destinations > .card {
   grid-column: span 1;
+  padding: 1.25rem;
+}
+
+.europe-destinations .card-price {
+  font-size: 1.8rem;
 }
 
 .lufthansa-card {
   grid-column: span 2;
-  border-left: 4px solid #f9a01b; /* Lufthansa Yellow */
+  background: linear-gradient(145deg, rgba(249, 160, 27, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border-color: rgba(249, 160, 27, 0.2);
+}
+
+.lufthansa-card .card-price {
+  color: #f9a01b;
+  text-shadow: 0 0 20px rgba(249, 160, 27, 0.2);
+}
+
+.lufthansa-card:hover {
+  border-color: rgba(249, 160, 27, 0.4);
+  box-shadow: 0 12px 40px rgba(249, 160, 27, 0.1);
 }
 
 .asia-section {
   grid-column: span 4;
-  margin-top: 2rem;
 }
 
-.anomalies-section {
-  grid-column: span 4;
-  border: 1px dashed var(--card-border);
-  background-color: rgba(255, 94, 94, 0.05);
+.asia-section .card-header {
+  margin-bottom: 1rem;
 }
 
+/* Buttons */
 .btn {
-  display: inline-block;
-  padding: 0.75rem 1.5rem;
-  border-radius: 99px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 1.2rem;
+  border-radius: 100px;
   font-weight: 600;
+  font-size: 0.9rem;
   text-decoration: none;
   cursor: pointer;
   border: none;
-  transition: opacity 0.2s;
-  font-size: 0.9rem;
-}
-
-.btn:hover {
-  opacity: 0.8;
+  transition: all var(--transition-smooth);
+  margin-top: 1rem;
 }
 
 .btn-primary {
   background-color: var(--accent-color);
   color: #000;
+  box-shadow: 0 4px 15px var(--accent-glow);
 }
 
-.btn-approve {
-  background-color: var(--success-color);
-  color: #fff;
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(209, 255, 76, 0.4);
+  background-color: #dbff66;
 }
 
-.btn-reject {
-  background-color: var(--danger-color);
-  color: #fff;
+.btn-outline {
+  background-color: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--card-border);
 }
 
-.anomaly-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background: rgba(0,0,0,0.2);
-  border-radius: 12px;
-  margin-bottom: 0.5rem;
+.btn-outline:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
-.anomaly-actions {
-  display: flex;
-  gap: 0.5rem;
+/* Animations */
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* 📱 Responsive Mobile (iOS/Android) */
 @media (max-width: 768px) {
   main {
-    padding: 2rem 1rem;
+    padding: 2rem 1.25rem;
   }
   
+  header {
+    margin-bottom: 2.5rem;
+  }
+
   header h1 {
-    font-size: 2.5rem;
+    font-size: 2.75rem;
   }
 
   .bento-grid {
@@ -194,26 +268,29 @@ header h1 {
   }
 
   .main-deal, 
-  .europe-destinations, 
   .lufthansa-card, 
-  .asia-section, 
-  .anomalies-section {
+  .asia-section {
     grid-column: span 1;
     grid-row: auto;
   }
 
   .europe-destinations {
-    grid-template-columns: 1fr;
+    grid-column: span 1;
+    grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
   }
 
-  .anomaly-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
+  /* El tercer elemento (Reino Unido) tomará las 2 columnas en mobile para no quedar colgado */
+  .europe-destinations > .card:nth-child(3) {
+    grid-column: span 2;
+  }
+
+  .main-deal .card-price {
+    font-size: 3.5rem;
   }
   
-  .main-deal .card-price {
-    font-size: 3rem;
+  .card {
+    padding: 1.25rem;
   }
 }
+
