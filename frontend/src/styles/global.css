@@ -177,3 +177,43 @@ header h1 {
   display: flex;
   gap: 0.5rem;
 }
+
+/* 📱 Responsive Mobile (iOS/Android) */
+@media (max-width: 768px) {
+  main {
+    padding: 2rem 1rem;
+  }
+  
+  header h1 {
+    font-size: 2.5rem;
+  }
+
+  .bento-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .main-deal, 
+  .europe-destinations, 
+  .lufthansa-card, 
+  .asia-section, 
+  .anomalies-section {
+    grid-column: span 1;
+    grid-row: auto;
+  }
+
+  .europe-destinations {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .anomaly-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .main-deal .card-price {
+    font-size: 3rem;
+  }
+}
