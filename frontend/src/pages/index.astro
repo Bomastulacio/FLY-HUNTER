@@ -91,40 +91,55 @@ const formatPrice = (deal: any) => {
 
         <!-- Destinos Europa -->
         <div class="europe-destinations">
-          <div class="card">
+          <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
             <div class="card-header">🇪🇸 España</div>
             {spainDeal ? (
               <>
                 <div class="card-route">{spainDeal.ida_origen_destino}</div>
                 <div class="card-date">🗓 {spainDeal.ida_fecha}</div>
-                <div class="card-price">{formatPrice(spainDeal)}</div>
-                {spainDeal.link_reserva && <a href={spainDeal.link_reserva} target="_blank" class="btn btn-primary" style="width: 100%;">Ver Vuelo</a>}
+                <div class="card-price" style="font-size: clamp(1.4rem, 4vw, 1.8rem); margin-top: auto; margin-bottom: 0.5rem;">{formatPrice(spainDeal)}</div>
+                {spainDeal.link_reserva && <a href={spainDeal.link_reserva} target="_blank" class="btn btn-primary" style="width: 100%; box-sizing: border-box;">Ver Vuelo</a>}
               </>
-            ) : <span style="color: var(--text-secondary); font-weight: 500;">Buscando...</span>}
+            ) : (
+              <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.5; gap: 0.5rem; padding: 1rem 0;">
+                <span style="font-size: 1.5rem;">📡</span>
+                <span style="font-size: 0.85rem; font-weight: 500; text-align: center;">Radar en espera</span>
+              </div>
+            )}
           </div>
           
-          <div class="card">
+          <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
             <div class="card-header">🇫🇷 Francia</div>
             {franceDeal ? (
               <>
                 <div class="card-route">{franceDeal.ida_origen_destino}</div>
                 <div class="card-date">🗓 {franceDeal.ida_fecha}</div>
-                <div class="card-price">{formatPrice(franceDeal)}</div>
-                {franceDeal.link_reserva && <a href={franceDeal.link_reserva} target="_blank" class="btn btn-primary" style="width: 100%;">Ver Vuelo</a>}
+                <div class="card-price" style="font-size: clamp(1.4rem, 4vw, 1.8rem); margin-top: auto; margin-bottom: 0.5rem;">{formatPrice(franceDeal)}</div>
+                {franceDeal.link_reserva && <a href={franceDeal.link_reserva} target="_blank" class="btn btn-primary" style="width: 100%; box-sizing: border-box;">Ver Vuelo</a>}
               </>
-            ) : <span style="color: var(--text-secondary); font-weight: 500;">Buscando...</span>}
+            ) : (
+              <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.5; gap: 0.5rem; padding: 1rem 0;">
+                <span style="font-size: 1.5rem;">📡</span>
+                <span style="font-size: 0.85rem; font-weight: 500; text-align: center;">Radar en espera</span>
+              </div>
+            )}
           </div>
           
-          <div class="card">
+          <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
             <div class="card-header">🇬🇧 Reino Unido</div>
             {ukDeal ? (
               <>
                 <div class="card-route">{ukDeal.ida_origen_destino}</div>
                 <div class="card-date">🗓 {ukDeal.ida_fecha}</div>
-                <div class="card-price">{formatPrice(ukDeal)}</div>
-                {ukDeal.link_reserva && <a href={ukDeal.link_reserva} target="_blank" class="btn btn-primary" style="width: 100%;">Ver Vuelo</a>}
+                <div class="card-price" style="font-size: clamp(1.4rem, 4vw, 1.8rem); margin-top: auto; margin-bottom: 0.5rem;">{formatPrice(ukDeal)}</div>
+                {ukDeal.link_reserva && <a href={ukDeal.link_reserva} target="_blank" class="btn btn-primary" style="width: 100%; box-sizing: border-box;">Ver Vuelo</a>}
               </>
-            ) : <span style="color: var(--text-secondary); font-weight: 500;">Buscando...</span>}
+            ) : (
+              <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.5; gap: 0.5rem; padding: 1rem 0;">
+                <span style="font-size: 1.5rem;">📡</span>
+                <span style="font-size: 0.85rem; font-weight: 500; text-align: center;">Radar en espera</span>
+              </div>
+            )}
           </div>
         </div>
 
