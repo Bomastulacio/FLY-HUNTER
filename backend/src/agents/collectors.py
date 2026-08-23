@@ -2,10 +2,7 @@ import time
 import random
 from typing import List, Dict, Any
 from fli.core.builders import build_flight_segments
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from services.currency import converter
+from ..services.currency import converter
 
 # Constantes de destinos (IATA codes)
 ORIGIN = "BUE" # Buenos Aires (EZE/AEP)
