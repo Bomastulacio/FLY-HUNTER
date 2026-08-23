@@ -75,6 +75,10 @@ const formatDate = (dateStr: string) => {
             <span id="cd-minutes" style="font-size: 2.5rem; color: var(--text-primary); text-shadow: 0 0 15px var(--accent-glow);">00</span>
             <span style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Min</span>
           </div>
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <span id="cd-seconds" style="font-size: 2.5rem; color: var(--text-primary); text-shadow: 0 0 15px var(--accent-glow);">00</span>
+            <span style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Seg</span>
+          </div>
         </div>
       </div>
 
@@ -222,18 +226,21 @@ const formatDate = (dateStr: string) => {
         const days = Math.floor(distance / (1000 * 60 * 60 * 24));
         const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
         
         const daysEl = document.getElementById('cd-days');
         const hoursEl = document.getElementById('cd-hours');
         const minsEl = document.getElementById('cd-minutes');
+        const secsEl = document.getElementById('cd-seconds');
         
         if(daysEl) daysEl.innerText = days.toString().padStart(2, '0');
         if(hoursEl) hoursEl.innerText = hours.toString().padStart(2, '0');
         if(minsEl) minsEl.innerText = minutes.toString().padStart(2, '0');
+        if(secsEl) secsEl.innerText = seconds.toString().padStart(2, '0');
       };
       
       updateCountdown();
-      setInterval(updateCountdown, 60000); // Actualizar cada minuto
+      setInterval(updateCountdown, 1000); // Actualizar cada segundo
 
       // Lógica de cliente para botones
       document.querySelectorAll('.btn-approve, .btn-reject').forEach(btn => {
