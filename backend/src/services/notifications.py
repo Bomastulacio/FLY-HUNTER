@@ -12,7 +12,7 @@ def send_email(subject: str, html_content: str) -> None:
     
     try:
         r = resend.Emails.send({
-            "from": "Flight Hunter <alerts@tu-dominio.com>", # TODO: reemplazar con dominio verificado de Resend
+            "from": "Flight Hunter <onboarding@resend.dev>",
             "to": alert_email_to,
             "subject": subject,
             "html": html_content
