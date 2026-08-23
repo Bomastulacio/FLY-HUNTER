@@ -29,6 +29,7 @@ def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str) 
         "outbound_date": dep_date,
         "return_date": ret_date,
         "currency": "USD",
+        "adults": "2",
         "type": "1", # Ida y vuelta
         "api_key": SERPAPI_KEY
     }
