@@ -87,7 +87,6 @@ const formatDate = (dateStr: string) => {
               <div>
                 <strong style="font-size: 1.1rem; letter-spacing: -0.02em;">{anomalia.ida_origen_destino} a {anomalia.vuelta_origen_destino}</strong>
                 <span style="color: var(--accent-color); font-weight: bold; font-size: 1.1rem; margin-left: 1rem; text-shadow: 0 0 10px var(--accent-glow);">{formatPrice(anomalia)}</span>
-                <span style="font-size: 0.8rem; color: var(--text-secondary); margin-left: 0.5rem;">(~${anomalia.precio_total_usd} USD)</span>
                 <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.2rem;">Fechas: {formatDate(anomalia.ida_fecha)} al {formatDate(anomalia.vuelta_fecha)}</div>
               </div>
               <div class="anomaly-actions">
@@ -109,7 +108,6 @@ const formatDate = (dateStr: string) => {
               <div class="card-date">🗓 {formatDate(mainDeal.ida_fecha)} al {formatDate(mainDeal.vuelta_fecha)}</div>
               <div style="color: var(--text-secondary); margin-top: 0.5rem; font-weight: 500;">{mainDeal.aerolinea} • {mainDeal.cantidad_escalas} escalas</div>
               <div class="card-price">{formatPrice(mainDeal)}</div>
-              <div style="color: var(--text-secondary); font-size: 0.9rem; font-weight: 500;">(Aprox. ${mainDeal.precio_total_usd} USD)</div>
               {mainDeal.link_reserva && <a href={mainDeal.link_reserva} target="_blank" class="btn btn-primary" style="align-self: flex-start; margin-top: 1.5rem;">Reserva en Google Flights</a>}
             </>
           ) : (
