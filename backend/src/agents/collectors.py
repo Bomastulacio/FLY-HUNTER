@@ -2,6 +2,10 @@ import time
 import random
 from typing import List, Dict, Any
 from fli.core.builders import build_flight_segments
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from services.currency import converter
 
 # Constantes de destinos (IATA codes)
 ORIGIN = "BUE" # Buenos Aires (EZE/AEP)
@@ -42,23 +46,30 @@ def fetch_flights_with_retry(origin: str, dest: str, dep_date: str, ret_date: st
 
 def serialize_flight(flight: Any, dep_date: str, ret_date: str, origin: str, dest: str) -> Dict:
     """Extrae la información necesaria del objeto de vuelo de fli a un diccionario."""
-    # Esto depende de la estructura real del objeto flight en fli.
-    # Ajustar según corresponda.
     try:
-        # Lógica heurística de moneda: si el precio > 20000, asumimos que viene en ARS y lo convertimos a USD.
         precio_raw = flight.price
-        TIPO_CAMBIO_ARS = 1200 # Cotización aproximada
-        if isinstance(precio_raw, (int, float)) and precio_raw > 20000:
-            precio_usd = round(precio_raw / TIPO_CAMBIO_ARS)
-            print(f"Normalizando moneda: {precio_raw} ARS -> {precio_usd} USD")
-        else:
-            precio_usd = round(precio_raw) if precio_raw else 0
+        moneda_raw = getattr(flight, 'currency', None)
+        
+        # Deducción de moneda heurística si la librería no la devuelve
+        if not moneda_raw:
+            if isinstance(precio_raw, (int, float)) and precio_raw > 20000:
+                moneda_raw = "ARS"
+            else:
+                moneda_raw = "USD"
+                
+        moneda_raw = moneda_raw.upper()
+        
+        # Obtenemos precio original para almacenar y mostrar, y el estandarizado USD para evaluar
+        precio_usd = converter.convert_to_usd(precio_raw, moneda_raw)
+        precio_usd = round(precio_usd, 2)
             
         return {
             "ida_fecha": dep_date,
             "vuelta_fecha": ret_date,
             "ida_origen_destino": f"{origin}-{dest}",
             "vuelta_origen_destino": f"{dest}-{origin}",
+            "precio_original": round(precio_raw, 2) if precio_raw else 0,
+            "moneda_original": moneda_raw,
             "precio_total_usd": precio_usd,
             "aerolinea": flight.airline, 
             "cantidad_escalas": flight.stops,

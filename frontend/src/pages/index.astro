@@ -27,6 +27,13 @@ const lufthansaDeal = approvedDeals.find(d => d.aerolinea.toLowerCase().includes
 
 // Asia
 const asiaDeals = approvedDeals.filter(d => d.ida_origen_destino.includes('TYO') || d.ida_origen_destino.includes('OSA'));
+
+// Formateador de moneda
+const formatPrice = (deal: any) => {
+  const price = deal.precio_original || deal.precio_total_usd;
+  const currency = deal.moneda_original || 'USD';
+  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: currency, maximumFractionDigits: 0 }).format(price);
+};
 ---
 
 <html lang="es">
@@ -47,12 +54,13 @@ const asiaDeals = approvedDeals.filter(d => d.ida_origen_destino.includes('TYO')
       <!-- Pendientes de Aprobación -->
       {pendingAnomalies.length > 0 && (
         <div class="anomalies-section card" style="margin-bottom: 2rem;">
-          <div class="card-header" style="color: var(--danger-color);">⚠️ Anomalías Pendientes</div>
+          <div class="card-header" style="color: var(--danger-color);">❓ Anomalías Pendientes</div>
           {pendingAnomalies.map(anomalia => (
             <div class="anomaly-item">
               <div>
                 <strong>{anomalia.ida_origen_destino} a {anomalia.vuelta_origen_destino}</strong>
-                <span style="color: var(--accent-color); margin-left: 1rem;">${anomalia.precio_total_usd} USD</span>
+                <span style="color: var(--accent-color); margin-left: 1rem;">{formatPrice(anomalia)}</span>
+                <span style="font-size: 0.8rem; color: var(--text-secondary); margin-left: 0.5rem;">(~${anomalia.precio_total_usd} USD)</span>
                 <div style="font-size: 0.85rem; color: var(--text-secondary);">Fechas: {anomalia.ida_fecha} al {anomalia.vuelta_fecha}</div>
               </div>
               <div class="anomaly-actions">
@@ -70,10 +78,11 @@ const asiaDeals = approvedDeals.filter(d => d.ida_origen_destino.includes('TYO')
           <div class="card-header">Vuelo Más Barato Absoluto</div>
           {mainDeal ? (
             <>
-              <div class="card-route">{mainDeal.ida_origen_destino} ⇄ {mainDeal.vuelta_origen_destino}</div>
+              <div class="card-route">{mainDeal.ida_origen_destino} ✈ {mainDeal.vuelta_origen_destino}</div>
               <div class="card-date">{mainDeal.ida_fecha} al {mainDeal.vuelta_fecha}</div>
-              <div style="color: var(--text-secondary); margin-top: 0.5rem;">{mainDeal.aerolinea} • {mainDeal.cantidad_escalas} escalas</div>
-              <div class="card-price">${mainDeal.precio_total_usd} USD</div>
+              <div style="color: var(--text-secondary); margin-top: 0.5rem;">{mainDeal.aerolinea} ✈ {mainDeal.cantidad_escalas} escalas</div>
+              <div class="card-price">{formatPrice(mainDeal)}</div>
+              <div style="color: var(--text-secondary); font-size: 0.9rem;">(Aprox. ${mainDeal.precio_total_usd} USD)</div>
               {mainDeal.link_reserva && <a href={mainDeal.link_reserva} target="_blank" class="btn btn-primary" style="margin-top: 1rem; align-self: flex-start;">Ver Vuelo</a>}
             </>
           ) : (
@@ -89,7 +98,7 @@ const asiaDeals = approvedDeals.filter(d => d.ida_origen_destino.includes('TYO')
               <>
                 <div class="card-route">{spainDeal.ida_origen_destino}</div>
                 <div class="card-date">{spainDeal.ida_fecha}</div>
-                <div class="card-price" style="font-size: 1.8rem;">${spainDeal.precio_total_usd}</div>
+                <div class="card-price" style="font-size: 1.5rem;">{formatPrice(spainDeal)}</div>
               </>
             ) : <span style="color: var(--text-secondary);">Buscando...</span>}
           </div>
@@ -100,7 +109,7 @@ const asiaDeals = approvedDeals.filter(d => d.ida_origen_destino.includes('TYO')
               <>
                 <div class="card-route">{franceDeal.ida_origen_destino}</div>
                 <div class="card-date">{franceDeal.ida_fecha}</div>
-                <div class="card-price" style="font-size: 1.8rem;">${franceDeal.precio_total_usd}</div>
+                <div class="card-price" style="font-size: 1.5rem;">{formatPrice(franceDeal)}</div>
               </>
             ) : <span style="color: var(--text-secondary);">Buscando...</span>}
           </div>
@@ -111,7 +120,7 @@ const asiaDeals = approvedDeals.filter(d => d.ida_origen_destino.includes('TYO')
               <>
                 <div class="card-route">{ukDeal.ida_origen_destino}</div>
                 <div class="card-date">{ukDeal.ida_fecha}</div>
-                <div class="card-price" style="font-size: 1.8rem;">${ukDeal.precio_total_usd}</div>
+                <div class="card-price" style="font-size: 1.5rem;">{formatPrice(ukDeal)}</div>
               </>
             ) : <span style="color: var(--text-secondary);">Buscando...</span>}
           </div>
@@ -122,9 +131,9 @@ const asiaDeals = approvedDeals.filter(d => d.ida_origen_destino.includes('TYO')
           <div class="card-header">Lufthansa Tracking</div>
           {lufthansaDeal ? (
             <>
-              <div class="card-route">{lufthansaDeal.ida_origen_destino} ⇄ {lufthansaDeal.vuelta_origen_destino}</div>
+              <div class="card-route">{lufthansaDeal.ida_origen_destino} ✈ {lufthansaDeal.vuelta_origen_destino}</div>
               <div class="card-date">{lufthansaDeal.ida_fecha}</div>
-              <div class="card-price" style="color: #f9a01b;">${lufthansaDeal.precio_total_usd} USD</div>
+              <div class="card-price" style="color: #f9a01b;">{formatPrice(lufthansaDeal)}</div>
             </>
           ) : (
              <span style="color: var(--text-secondary); margin: auto;">Sin ofertas destacadas de Lufthansa</span>
@@ -138,7 +147,7 @@ const asiaDeals = approvedDeals.filter(d => d.ida_origen_destino.includes('TYO')
              {asiaDeals.length > 0 ? asiaDeals.slice(0, 4).map(deal => (
                <div style="min-width: 200px; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 12px;">
                   <div style="font-weight: 600;">{deal.ida_origen_destino}</div>
-                  <div style="color: var(--accent-color); font-size: 1.2rem; font-weight: bold; margin: 0.5rem 0;">${deal.precio_total_usd}</div>
+                  <div style="color: var(--accent-color); font-size: 1.2rem; font-weight: bold; margin: 0.5rem 0;">{formatPrice(deal)}</div>
                   <div style="font-size: 0.8rem; color: var(--text-secondary);">{deal.ida_fecha}</div>
                </div>
              )) : (
