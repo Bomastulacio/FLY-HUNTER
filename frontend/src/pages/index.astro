@@ -26,7 +26,7 @@ const ukDeal = getBestForDest('LON');
 const lufthansaDeal = approvedDeals.find(d => d.aerolinea.toLowerCase().includes('lufthansa'));
 
 // Asia
-const asiaDeals = approvedDeals.filter(d => d.ida_origen_destino.includes('TYO') || d.ida_origen_destino.includes('OSA'));
+const asiaDeals = approvedDeals.filter(d => d.ida_origen_destino.includes('NRT') || d.ida_origen_destino.includes('KIX'));
 
 // Formateador de moneda
 const formatPrice = (deal: any) => {
@@ -99,6 +99,7 @@ const formatPrice = (deal: any) => {
                 <div class="card-route">{spainDeal.ida_origen_destino}</div>
                 <div class="card-date">{spainDeal.ida_fecha}</div>
                 <div class="card-price" style="font-size: 1.5rem;">{formatPrice(spainDeal)}</div>
+                {spainDeal.link_reserva && <a href={spainDeal.link_reserva} target="_blank" class="btn" style="margin-top: 0.5rem; display: inline-block; padding: 0.3rem 0.6rem; font-size: 0.8rem;">Ver Vuelo</a>}
               </>
             ) : <span style="color: var(--text-secondary);">Buscando...</span>}
           </div>
@@ -110,6 +111,7 @@ const formatPrice = (deal: any) => {
                 <div class="card-route">{franceDeal.ida_origen_destino}</div>
                 <div class="card-date">{franceDeal.ida_fecha}</div>
                 <div class="card-price" style="font-size: 1.5rem;">{formatPrice(franceDeal)}</div>
+                {franceDeal.link_reserva && <a href={franceDeal.link_reserva} target="_blank" class="btn" style="margin-top: 0.5rem; display: inline-block; padding: 0.3rem 0.6rem; font-size: 0.8rem;">Ver Vuelo</a>}
               </>
             ) : <span style="color: var(--text-secondary);">Buscando...</span>}
           </div>
@@ -121,6 +123,7 @@ const formatPrice = (deal: any) => {
                 <div class="card-route">{ukDeal.ida_origen_destino}</div>
                 <div class="card-date">{ukDeal.ida_fecha}</div>
                 <div class="card-price" style="font-size: 1.5rem;">{formatPrice(ukDeal)}</div>
+                {ukDeal.link_reserva && <a href={ukDeal.link_reserva} target="_blank" class="btn" style="margin-top: 0.5rem; display: inline-block; padding: 0.3rem 0.6rem; font-size: 0.8rem;">Ver Vuelo</a>}
               </>
             ) : <span style="color: var(--text-secondary);">Buscando...</span>}
           </div>
@@ -134,6 +137,7 @@ const formatPrice = (deal: any) => {
               <div class="card-route">{lufthansaDeal.ida_origen_destino} ✈ {lufthansaDeal.vuelta_origen_destino}</div>
               <div class="card-date">{lufthansaDeal.ida_fecha}</div>
               <div class="card-price" style="color: #f9a01b;">{formatPrice(lufthansaDeal)}</div>
+              {lufthansaDeal.link_reserva && <a href={lufthansaDeal.link_reserva} target="_blank" class="btn" style="margin-top: 0.5rem; display: inline-block; padding: 0.4rem 0.8rem; font-size: 0.85rem; border: 1px solid #f9a01b; color: #f9a01b;">Ver Vuelo</a>}
             </>
           ) : (
              <span style="color: var(--text-secondary); margin: auto;">Sin ofertas destacadas de Lufthansa</span>
