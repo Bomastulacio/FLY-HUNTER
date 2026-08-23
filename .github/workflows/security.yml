@@ -1,0 +1,44 @@
+name: Security Scanning
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: '30 4 * * 1' # Todos los lunes a las 4:30 AM
+
+jobs:
+  python-security:
+    name: Bandit Python Scanner
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        
+    - name: Install Bandit
+      run: pip install bandit
+      
+    - name: Run Bandit
+      run: bandit -r backend/src -ll -i
+
+  npm-audit:
+    name: NPM Audit
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        
+    - name: Run npm audit
+      working-directory: ./frontend
+      run: npm audit --audit-level=high
