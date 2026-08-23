@@ -36,11 +36,11 @@ h1, h2, h3, h4, .card-price {
 main {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 4rem 2rem;
+  padding: 2rem 2rem;
 }
 
 header {
-  margin-bottom: 4rem;
+  margin-bottom: 2rem;
   text-align: center;
   animation: fadeInDown 0.8s ease-out;
 }
@@ -65,8 +65,8 @@ header p {
 .bento-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 1.5rem;
-  grid-auto-rows: minmax(180px, auto);
+  gap: 1rem;
+  grid-auto-rows: minmax(160px, auto);
 }
 
 /* Cards (Glassmorphism) */
@@ -74,7 +74,7 @@ header p {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: var(--border-radius-lg);
-  padding: 1.5rem;
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
   transition: all var(--transition-smooth);
@@ -155,7 +155,7 @@ header p {
 }
 
 .main-deal .card-price {
-  font-size: 4.5rem;
+  font-size: 3.5rem;
 }
 
 .main-deal:hover {
@@ -167,7 +167,7 @@ header p {
   grid-column: span 2;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .europe-destinations > .card {
