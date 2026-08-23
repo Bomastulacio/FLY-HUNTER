@@ -58,6 +58,26 @@ const formatDate = (dateStr: string) => {
         <p>Buscando las mejores tarifas desde Buenos Aires.</p>
       </header>
 
+      <!-- Countdown de Vacaciones -->
+      <div class="card countdown-card" style="margin-bottom: 2rem; background: linear-gradient(135deg, rgba(20, 20, 25, 0.9) 0%, rgba(30, 35, 45, 0.9) 100%); border-color: var(--accent-color); text-align: center;">
+        <h2 style="margin-bottom: 0.5rem; color: var(--accent-color);">🌴 Vacaciones a Europa</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 1rem;">16 de Abril al 1 de Mayo, 2027</p>
+        <div id="countdown" style="display: flex; justify-content: center; gap: 1.5rem; font-size: 1.5rem; font-weight: bold;">
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <span id="cd-days" style="font-size: 2.5rem; color: var(--text-primary); text-shadow: 0 0 15px var(--accent-glow);">00</span>
+            <span style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Días</span>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <span id="cd-hours" style="font-size: 2.5rem; color: var(--text-primary); text-shadow: 0 0 15px var(--accent-glow);">00</span>
+            <span style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Horas</span>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <span id="cd-minutes" style="font-size: 2.5rem; color: var(--text-primary); text-shadow: 0 0 15px var(--accent-glow);">00</span>
+            <span style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Min</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Pendientes de Aprobación -->
       {pendingAnomalies.length > 0 && (
         <div class="anomalies-section card" style="margin-bottom: 2rem;">
@@ -186,6 +206,37 @@ const formatDate = (dateStr: string) => {
     </main>
 
     <script>
+      // Countdown Logic
+      const targetDate = new Date('2027-04-16T00:00:00').getTime();
+      
+      const updateCountdown = () => {
+        const now = new Date().getTime();
+        const distance = targetDate - now;
+        
+        const countdownEl = document.getElementById('countdown');
+        if (!countdownEl) return;
+
+        if (distance < 0) {
+          countdownEl.innerHTML = "<span style='font-size: 2rem; color: var(--accent-color);'>¡Feliz viaje! ✈️</span>";
+          return;
+        }
+        
+        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        
+        const daysEl = document.getElementById('cd-days');
+        const hoursEl = document.getElementById('cd-hours');
+        const minsEl = document.getElementById('cd-minutes');
+        
+        if(daysEl) daysEl.innerText = days.toString().padStart(2, '0');
+        if(hoursEl) hoursEl.innerText = hours.toString().padStart(2, '0');
+        if(minsEl) minsEl.innerText = minutes.toString().padStart(2, '0');
+      };
+      
+      updateCountdown();
+      setInterval(updateCountdown, 60000); // Actualizar cada minuto
+
       // Lógica de cliente para botones
       document.querySelectorAll('.btn-approve, .btn-reject').forEach(btn => {
         btn.addEventListener('click', async (e) => {
