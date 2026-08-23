@@ -18,6 +18,8 @@ class FlightDeal(BaseModel):
     vuelta_fecha: str
     vuelta_origen_destino: str
     precio_total_usd: float
+    precio_original: Optional[float] = None
+    moneda_original: Optional[str] = None
     aerolinea: str
     cantidad_escalas: int
     duracion_total_minutos: int
