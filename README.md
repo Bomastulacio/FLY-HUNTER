@@ -1,64 +1,82 @@
-# Flight Hunter
+# ✈️ Flight Hunter
 
-Un sistema proactivo de rastreo y alerta de vuelos construido para encontrar pasajes económicos hacia Europa y Asia. 
+Un sistema proactivo de rastreo y alerta de vuelos construido con una arquitectura de **Agentes Inteligentes (LangGraph)**. Diseñado para encontrar, evaluar y notificar pasajes económicos hacia Europa y Asia de forma completamente autónoma.
 
-## Historia del Proyecto
+## 🧠 Arquitectura de Agentes Inteligentes
 
-La idea de este proyecto nació de una necesidad real: planear unas vacaciones con mi novia. Buscar pasajes manualmente todos los días, comparar precios y estar pendiente de las ofertas relámpago se vuelve una tarea exhaustiva. En lugar de depender de alertas genéricas de sitios de viajes, decidí construir una solución propia, ajustada exactamente a nuestras fechas, presupuestos y destinos.
+El corazón de Flight Hunter es un grafo de agentes (construido con **LangGraph** en Python) que simula el trabajo de un equipo de analistas de viajes. En lugar de una simple búsqueda lineal, los agentes colaboran, delegan tareas en paralelo y toman decisiones basadas en reglas de negocio estrictas.
 
-Además del objetivo personal de conseguir vuelos baratos, este proyecto sirvió como excusa perfecta para poner a prueba y consolidar varias herramientas y arquitecturas de software que estuve aprendiendo recientemente. Aquí está el resultado.
+### ¿Cómo funciona el Grafo?
 
-## ¿Qué hace Flight Hunter?
+```mermaid
+graph TD
+    Trigger([🕒 GitHub Actions Cron<br>Cada 6 horas]) --> Sup
+    
+    subgraph Equipo de Recolección
+        Sup[🤖 Supervisor<br>Recibe el Goal] -->|Delega| AE[🕵️ Subagente Europa]
+        Sup -->|Delega| AA[🕵️ Subagente Asia]
+        Sup -->|Delega| AC[🕵️ Subagente Capricho<br>Lufthansa]
+    end
 
-Flight Hunter es una aplicación full-stack que opera de forma autónoma. No espera a que un usuario busque vuelos; los busca de forma periódica, los evalúa con un motor de reglas de negocio y notifica cuando hay oportunidades reales.
+    AE --> Analista
+    AA --> Analista
+    AC --> Analista
 
-### Características Principales
+    subgraph Procesamiento y Evaluación
+        Analista[📊 Agente Analista<br>Pandas: Consolida y Normaliza] --> Critico
+        Critico{🧐 Agente Crítico<br>Motor de Reglas}
+    end
 
-- **Búsqueda Automatizada:** Scraping/búsqueda de vuelos usando `fli` (un envoltorio sobre APIs internas) hacia destinos específicos: Madrid, París, Londres (Europa) y Tokio, Osaka (Asia).
-- **Filtros Específicos:** Monitoreo especial para vuelos operados exclusivamente por Lufthansa.
-- **Motor de Reglas (Crítico):** 
-  - *Oportunidades de Oro:* Si el vuelo total para 2 personas baja de $1500 USD, se envía un correo inmediatamente.
-  - *Aprobaciones Estándar:* Ofertas dentro de un presupuesto razonable ($1700 - $2400) con fechas exactas.
-  - *Anomalías:* Ofertas muy económicas pero que varían ligeramente en la fecha o en la cantidad de escalas. Quedan en estado "Pendiente" para aprobación humana.
-- **Human-in-the-Loop:** Un panel web donde se pueden revisar y aprobar/rechazar las anomalías detectadas, lo cual reanuda el ciclo de búsqueda.
+    Critico -->|Precio < $1500 USD| Oro[⭐ Oportunidad de Oro]
+    Critico -->|Dentro de $1700-$2400| OK[✅ Aprobado Estándar]
+    Critico -->|Fuera de regla pero muy barato| Anomalia[⚠️ Anomalía Pendiente]
 
-## Arquitectura y Stack Tecnológico
+    Oro --> DB[(Supabase)]
+    OK --> DB
+    Anomalia --> DB
 
-El sistema fue diseñado priorizando la eficiencia, los bajos costos (serverless) y la simplicidad operativa.
+    subgraph Acciones Finales
+        DB --> Notif{Gestor de Notificaciones}
+        Notif -->|⭐ Oro| Email1[📧 Email Inmediato<br>¡Comprar ahora!]
+        Notif -->|⚠️ Anomalía| Email2[📧 Email de Revisión<br>Human-in-the-Loop]
+    end
+```
 
-- **Orquestación y Lógica (Backend):** 
-  - **Python + LangGraph:** Estructura de agentes modulares (Supervisor, Recolectores, Analista, Crítico).
-  - **Pandas:** Para limpieza de datos, consolidación y manejo eficiente de tablas en memoria.
-  - **GitHub Actions:** Actúa como el motor de ejecución (cron job) cada 6 horas. Esto evita mantener un servidor 24/7 y permite ejecuciones prolongadas sin límite de timeout corto.
-- **Almacenamiento (Base de Datos):** 
-  - **Supabase (PostgreSQL):** Base de datos relacional para persistir ofertas. Cuenta con validación estricta, un sistema de hashes MD5 para evitar ofertas duplicadas y políticas RLS (Row Level Security).
-- **Interfaz de Usuario (Frontend):** 
-  - **Astro:** Un framework web enfocado en la velocidad. 
-  - **Vercel:** Despliegue del sitio y alojamiento del endpoint Serverless (API) necesario para aprobar las anomalías e interactuar con GitHub Actions vía `repository_dispatch`.
-- **Notificaciones:**
-  - **Resend:** Utilizado para enviar correos electrónicos transaccionales cuando se encuentran ofertas clave.
+### Roles de los Agentes
 
-## Estructura del Repositorio
-
-- `/backend`: Contiene toda la lógica de obtención, análisis y filtrado de vuelos en Python. El pipeline se ejecuta mediante `main.py`.
-- `/frontend`: Proyecto web construido en Astro. Incluye un dashboard estilo Bento Grid para visualizar el estado actual de las ofertas.
-- `.github/workflows`: Definición de la pipeline de integración continua que ejecuta las búsquedas periódicas.
-- `schema.sql`: Script DDL para replicar la estructura y reglas de seguridad de la base de datos en Supabase.
-- `agents.md`: Archivo de contexto fundacional del proyecto.
-
-## Instalación y Despliegue
-
-1. **Base de Datos:** Crear un proyecto en Supabase y ejecutar el archivo `schema.sql` en el SQL Editor.
-2. **Entorno Local (Backend):**
-   - Navegar a `/backend` e instalar dependencias con `pip install -r requirements.txt`.
-   - Crear un archivo `.env` con las claves de Supabase (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`) y Resend (`RESEND_API_KEY`).
-3. **Entorno Local (Frontend):**
-   - Navegar a `/frontend` e instalar dependencias con `npm install`.
-   - Levantar el entorno con `npm run dev`.
-4. **Despliegue Nube:**
-   - Cargar los Secrets correspondientes en los settings del repositorio de GitHub (para que el cron funcione).
-   - Vincular la carpeta `/frontend` a un proyecto en Vercel.
+1. **Supervisor:** Recibe el objetivo principal (fechas, presupuesto, destinos) y orquesta la ejecución en paralelo de los recolectores.
+2. **Subagentes Recolectores (Europa, Asia, Capricho):** Especialistas en buscar rutas específicas usando la librería `fli` (reverse-engineering de la API de vuelos, lo cual evita costos y uso de tokens limitados).
+3. **Agente Analista:** Utiliza `pandas` para consolidar los JSON dispares devueltos por los recolectores, calcular los precios finales para 2 pasajeros y normalizar la estructura de datos.
+4. **Agente Crítico:** El "cerebro" de decisiones. Evalúa las ofertas contra las reglas de negocio:
+   - **Oportunidad de Oro:** Si es obscenamente barato (ej. <$1500 USD), aprueba y fuerza una notificación urgente.
+   - **Aprobado:** Pasa directo a la base de datos si cumple fechas y presupuesto estándar.
+   - **Anomalía (Human-in-the-Loop):** Detecta vuelos baratos que rompen levemente las reglas (ej. salida 1 día antes o más escalas de las deseadas). En lugar de descartarlos, solicita revisión humana para que el usuario decida vía Frontend.
 
 ---
 
-Desarrollado para resolver un problema real, aprendiendo en el proceso.
+## 🛠️ Stack Tecnológico
+
+El sistema fue diseñado priorizando la eficiencia, los bajos costos (*serverless*) y la simplicidad operativa.
+
+- **Orquestación (Backend):** Python + LangGraph + Pandas.
+- **Motor de Ejecución:** GitHub Actions. Ejecuta el pipeline cada 6 horas vía *cron*. Esto evita mantener servidores prendidos 24/7 y permite ejecuciones de larga duración.
+- **Base de Datos:** Supabase (PostgreSQL). Implementa `hash_dedupe` para evitar re-insertar la misma oferta y reglas de seguridad RLS.
+- **Frontend & API:** Astro desplegado en Vercel. Presenta un dashboard (Bento Grid) para ver vuelos y expone un endpoint `/api/aprobar-anomalia` para reanudar el grafo tras una aprobación humana.
+- **Notificaciones:** Resend para emails transaccionales.
+
+## 📂 Estructura del Repositorio
+
+- `/backend`: Lógica de agentes en Python. Punto de entrada principal para GitHub Actions: `main.py`.
+- `/frontend`: Dashboard web en Astro.
+- `.github/workflows`: Definición del pipeline periódico y los receptores de *webhooks* (dispatches).
+- `schema.sql`: Script DDL para replicar la estructura de la base de datos en Supabase.
+- `agents.md`: Instrucciones fundamentales de arquitectura para desarrollo asistido por IA.
+
+## 🚀 Configuración y Despliegue
+
+1. **Base de Datos:** Ejecuta `schema.sql` en el SQL Editor de tu proyecto en Supabase.
+2. **Backend (GitHub Actions):** 
+   - Carga los secretos en el repositorio: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `ALERT_EMAIL_TO`, `GH_DISPATCH_TOKEN`.
+3. **Frontend (Vercel):** 
+   - Vincula el directorio `/frontend` a un proyecto en Vercel.
+   - Configura las variables de entorno: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `GH_DISPATCH_TOKEN`, `GH_REPO`.
