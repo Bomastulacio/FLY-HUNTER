@@ -104,21 +104,32 @@ def collect_asia() -> List[Dict]:
     return results
 
 def collect_lufthansa() -> List[Dict]:
-    """Subagente capricho: filtra específicamente disponibilidad Lufthansa hacia Europa/Asia."""
-    # Podemos reusar la lógica o simplemente tomar los resultados globales y filtrar.
-    # Para optimizar requests, lo ideal sería que esto opere sobre los resultados ya obtenidos
-    # o hacer búsquedas específicas si la API de fli permite filtrar aerolínea en el request.
-    # Como LangGraph correrá en paralelo, hacemos las búsquedas (quizás con menos fechas para no agotar cuota).
     results = []
     print("Collecting flights for Lufthansa...")
-    # Solo un subset para no hacer demasiados requests duplicados si no se puede filtrar en origen
-    dest = "FRA" # Frankfurt (Hub principal)
-    for dep in DEPARTURE_DATES[:1]: # Solo la primera fecha
-        for ret in RETURN_DATES[:2]: # Solo dos fechas de retorno
+    dest = "FRA" 
+    for dep in DEPARTURE_DATES[:1]: 
+        for ret in RETURN_DATES[:2]: 
             flights = fetch_flights_with_retry(ORIGIN, dest, dep, ret)
             for f in flights:
                 if "lufthansa" in getattr(f, 'airline', '').lower():
                     data = serialize_flight(f, dep, ret, ORIGIN, dest)
                     if data:
                         results.append(data)
+                        
+    # MOCK DE PRUEBA: Si no encontró absolutamente nada, inyectamos un vuelo falso para probar la web
+    if not results:
+        print("Inyectando vuelo de prueba (Mock) para validar la UI...")
+        results.append({
+            "ida_fecha": "2027-04-17",
+            "vuelta_fecha": "2027-04-26",
+            "ida_origen_destino": "BUE-MAD",
+            "vuelta_origen_destino": "MAD-BUE",
+            "precio_original": 1200000,
+            "moneda_original": "ARS",
+            "precio_total_usd": 1000,
+            "aerolinea": "Lufthansa Mock",
+            "cantidad_escalas": 1,
+            "duracion_total_minutos": 900,
+            "link_reserva": "https://google.com/flights"
+        })
     return results
