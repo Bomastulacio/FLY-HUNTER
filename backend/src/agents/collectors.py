@@ -45,12 +45,21 @@ def serialize_flight(flight: Any, dep_date: str, ret_date: str, origin: str, des
     # Esto depende de la estructura real del objeto flight en fli.
     # Ajustar según corresponda.
     try:
+        # Lógica heurística de moneda: si el precio > 20000, asumimos que viene en ARS y lo convertimos a USD.
+        precio_raw = flight.price
+        TIPO_CAMBIO_ARS = 1200 # Cotización aproximada
+        if isinstance(precio_raw, (int, float)) and precio_raw > 20000:
+            precio_usd = round(precio_raw / TIPO_CAMBIO_ARS)
+            print(f"Normalizando moneda: {precio_raw} ARS -> {precio_usd} USD")
+        else:
+            precio_usd = round(precio_raw) if precio_raw else 0
+            
         return {
             "ida_fecha": dep_date,
             "vuelta_fecha": ret_date,
             "ida_origen_destino": f"{origin}-{dest}",
             "vuelta_origen_destino": f"{dest}-{origin}",
-            "precio_total_usd": flight.price, # Asumimos que da el precio total o por pax
+            "precio_total_usd": precio_usd,
             "aerolinea": flight.airline, 
             "cantidad_escalas": flight.stops,
             "duracion_total_minutos": flight.duration,
