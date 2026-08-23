@@ -29,7 +29,6 @@ def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str) 
         "outbound_date": dep_date,
         "return_date": ret_date,
         "currency": "USD",
-        "adults": "2",
         "type": "1", # Ida y vuelta
         "api_key": SERPAPI_KEY
     }
@@ -39,9 +38,15 @@ def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str) 
         response.raise_for_status()
         data = response.json()
         
+        if "error" in data:
+            print(f"SerpApi JSON Error: {data['error']}")
+            
         # Juntamos 'best_flights' y 'other_flights'
         raw_flights = data.get("best_flights", []) + data.get("other_flights", [])
         
+        if not raw_flights:
+            print(f"Warning: SerpApi devolvió 0 vuelos para {origin}-{dest}.")
+            
         # Link para reservar
         search_link = data.get("search_metadata", {}).get("google_flights_url", "https://google.com/travel/flights")
         
@@ -55,8 +60,8 @@ def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str) 
             layovers = flight.get("layovers", [])
             stops = len(layovers) if layovers else max(0, len(flight.get("flights", [])) - 1)
             
-            # Precio
-            precio_usd = flight.get("price", 0)
+            # Precio base (1 pasajero) y lo multiplicamos por 2 para el presupuesto de pareja
+            precio_usd = flight.get("price", 0) * 2
             
             parsed_flights.append({
                 "ida_fecha": dep_date,
