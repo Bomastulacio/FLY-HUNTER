@@ -1,0 +1,179 @@
+/* 
+  taste-skill aesthetic rules applied here 
+  Focus on beautiful typography, subtle gradients, border-radius, good spacing, and motion.
+*/
+:root {
+  --bg-color: #0d0d0f;
+  --text-primary: #f2f2f3;
+  --text-secondary: #9a9a9c;
+  --accent-color: #d1ff4c;
+  --card-bg: rgba(255, 255, 255, 0.04);
+  --card-border: rgba(255, 255, 255, 0.1);
+  --danger-color: #ff5e5e;
+  --success-color: #1ed760;
+  --border-radius: 24px;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 4rem 2rem;
+}
+
+h1, h2, h3 {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+header {
+  margin-bottom: 3rem;
+  text-align: center;
+}
+
+header h1 {
+  font-size: 3.5rem;
+  background: linear-gradient(to right, #fff, #888);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  grid-auto-rows: minmax(150px, auto);
+}
+
+.card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  backdrop-filter: blur(10px);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.card-header {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 1rem;
+}
+
+.card-price {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--accent-color);
+  margin-top: auto;
+}
+
+.card-route {
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.card-date {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* Specific Card Layouts */
+.main-deal {
+  grid-column: span 2;
+  grid-row: span 2;
+  background: linear-gradient(135deg, rgba(209,255,76,0.1), transparent);
+}
+
+.main-deal .card-price {
+  font-size: 4rem;
+}
+
+.europe-destinations {
+  grid-column: span 2;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.europe-destinations > .card {
+  grid-column: span 1;
+}
+
+.lufthansa-card {
+  grid-column: span 2;
+  border-left: 4px solid #f9a01b; /* Lufthansa Yellow */
+}
+
+.asia-section {
+  grid-column: span 4;
+  margin-top: 2rem;
+}
+
+.anomalies-section {
+  grid-column: span 4;
+  border: 1px dashed var(--card-border);
+  background-color: rgba(255, 94, 94, 0.05);
+}
+
+.btn {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  border-radius: 99px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.2s;
+  font-size: 0.9rem;
+}
+
+.btn:hover {
+  opacity: 0.8;
+}
+
+.btn-primary {
+  background-color: var(--accent-color);
+  color: #000;
+}
+
+.btn-approve {
+  background-color: var(--success-color);
+  color: #fff;
+}
+
+.btn-reject {
+  background-color: var(--danger-color);
+  color: #fff;
+}
+
+.anomaly-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(0,0,0,0.2);
+  border-radius: 12px;
+  margin-bottom: 0.5rem;
+}
+
+.anomaly-actions {
+  display: flex;
+  gap: 0.5rem;
+}

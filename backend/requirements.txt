@@ -1,0 +1,9 @@
+langgraph
+langchain-core
+langchain-openai
+pandas
+supabase
+resend
+flights
+pydantic
+python-dotenv

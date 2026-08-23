@@ -1,0 +1,185 @@
+---
+import { supabase } from '../lib/supabase';
+import '../styles/global.css';
+
+// Habilitar SSR (Server-Side Rendering) en Vercel
+export const prerender = false;
+
+// Obtener datos de Supabase
+const { data: deals, error } = await supabase
+  .from('flight_deals')
+  .select('*')
+  .order('precio_total_usd', { ascending: true });
+
+// Procesar datos para el grid
+const allDeals = deals || [];
+const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' || d.es_oportunidad_oro);
+const pendingAnomalies = allDeals.filter(d => d.estado_aprobacion === 'pendiente');
+
+const mainDeal = approvedDeals.length > 0 ? approvedDeals[0] : null;
+
+// Encontrar mejores por destino
+const getBestForDest = (dest: string) => approvedDeals.find(d => d.ida_origen_destino.includes(dest));
+const spainDeal = getBestForDest('MAD');
+const franceDeal = getBestForDest('PAR');
+const ukDeal = getBestForDest('LON');
+const lufthansaDeal = approvedDeals.find(d => d.aerolinea.toLowerCase().includes('lufthansa'));
+
+// Asia
+const asiaDeals = approvedDeals.filter(d => d.ida_origen_destino.includes('TYO') || d.ida_origen_destino.includes('OSA'));
+---
+
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Flight Hunter - Ofertas de Vuelos</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Flight Hunter</h1>
+        <p style="color: var(--text-secondary); margin-top: 0.5rem;">Buscando las mejores tarifas desde Buenos Aires.</p>
+      </header>
+
+      <!-- Pendientes de Aprobación -->
+      {pendingAnomalies.length > 0 && (
+        <div class="anomalies-section card" style="margin-bottom: 2rem;">
+          <div class="card-header" style="color: var(--danger-color);">⚠️ Anomalías Pendientes</div>
+          {pendingAnomalies.map(anomalia => (
+            <div class="anomaly-item">
+              <div>
+                <strong>{anomalia.ida_origen_destino} a {anomalia.vuelta_origen_destino}</strong>
+                <span style="color: var(--accent-color); margin-left: 1rem;">${anomalia.precio_total_usd} USD</span>
+                <div style="font-size: 0.85rem; color: var(--text-secondary);">Fechas: {anomalia.ida_fecha} al {anomalia.vuelta_fecha}</div>
+              </div>
+              <div class="anomaly-actions">
+                <button class="btn btn-approve" data-id={anomalia.id} data-action="aprobado">Aprobar</button>
+                <button class="btn btn-reject" data-id={anomalia.id} data-action="rechazado">Rechazar</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div class="bento-grid">
+        <!-- Deal Principal -->
+        <div class="card main-deal">
+          <div class="card-header">Vuelo Más Barato Absoluto</div>
+          {mainDeal ? (
+            <>
+              <div class="card-route">{mainDeal.ida_origen_destino} ⇄ {mainDeal.vuelta_origen_destino}</div>
+              <div class="card-date">{mainDeal.ida_fecha} al {mainDeal.vuelta_fecha}</div>
+              <div style="color: var(--text-secondary); margin-top: 0.5rem;">{mainDeal.aerolinea} • {mainDeal.cantidad_escalas} escalas</div>
+              <div class="card-price">${mainDeal.precio_total_usd} USD</div>
+              {mainDeal.link_reserva && <a href={mainDeal.link_reserva} target="_blank" class="btn btn-primary" style="margin-top: 1rem; align-self: flex-start;">Ver Vuelo</a>}
+            </>
+          ) : (
+            <div style="margin: auto; color: var(--text-secondary);">No hay ofertas disponibles</div>
+          )}
+        </div>
+
+        <!-- Destinos Europa -->
+        <div class="europe-destinations">
+          <div class="card">
+            <div class="card-header">España</div>
+            {spainDeal ? (
+              <>
+                <div class="card-route">{spainDeal.ida_origen_destino}</div>
+                <div class="card-date">{spainDeal.ida_fecha}</div>
+                <div class="card-price" style="font-size: 1.8rem;">${spainDeal.precio_total_usd}</div>
+              </>
+            ) : <span style="color: var(--text-secondary);">Buscando...</span>}
+          </div>
+          
+          <div class="card">
+            <div class="card-header">Francia</div>
+            {franceDeal ? (
+              <>
+                <div class="card-route">{franceDeal.ida_origen_destino}</div>
+                <div class="card-date">{franceDeal.ida_fecha}</div>
+                <div class="card-price" style="font-size: 1.8rem;">${franceDeal.precio_total_usd}</div>
+              </>
+            ) : <span style="color: var(--text-secondary);">Buscando...</span>}
+          </div>
+          
+          <div class="card">
+            <div class="card-header">Reino Unido</div>
+            {ukDeal ? (
+              <>
+                <div class="card-route">{ukDeal.ida_origen_destino}</div>
+                <div class="card-date">{ukDeal.ida_fecha}</div>
+                <div class="card-price" style="font-size: 1.8rem;">${ukDeal.precio_total_usd}</div>
+              </>
+            ) : <span style="color: var(--text-secondary);">Buscando...</span>}
+          </div>
+        </div>
+
+        <!-- Lufthansa Card -->
+        <div class="card lufthansa-card">
+          <div class="card-header">Lufthansa Tracking</div>
+          {lufthansaDeal ? (
+            <>
+              <div class="card-route">{lufthansaDeal.ida_origen_destino} ⇄ {lufthansaDeal.vuelta_origen_destino}</div>
+              <div class="card-date">{lufthansaDeal.ida_fecha}</div>
+              <div class="card-price" style="color: #f9a01b;">${lufthansaDeal.precio_total_usd} USD</div>
+            </>
+          ) : (
+             <span style="color: var(--text-secondary); margin: auto;">Sin ofertas destacadas de Lufthansa</span>
+          )}
+        </div>
+
+        <!-- Asia Section -->
+        <div class="card asia-section">
+          <div class="card-header">Monitoreo Japón</div>
+          <div style="display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 1rem;">
+             {asiaDeals.length > 0 ? asiaDeals.slice(0, 4).map(deal => (
+               <div style="min-width: 200px; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 12px;">
+                  <div style="font-weight: 600;">{deal.ida_origen_destino}</div>
+                  <div style="color: var(--accent-color); font-size: 1.2rem; font-weight: bold; margin: 0.5rem 0;">${deal.precio_total_usd}</div>
+                  <div style="font-size: 0.8rem; color: var(--text-secondary);">{deal.ida_fecha}</div>
+               </div>
+             )) : (
+                <span style="color: var(--text-secondary);">No hay ofertas a Asia bajo presupuesto.</span>
+             )}
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      // Lógica de cliente para botones
+      document.querySelectorAll('.btn-approve, .btn-reject').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const target = e.currentTarget as HTMLButtonElement;
+          const id = target.dataset.id;
+          const action = target.dataset.action;
+          
+          target.innerText = 'Procesando...';
+          target.disabled = true;
+
+          try {
+            const res = await fetch('/api/aprobar-anomalia', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id, action })
+            });
+            
+            if(res.ok) {
+              window.location.reload();
+            } else {
+              alert("Error al procesar la solicitud");
+              target.disabled = false;
+              target.innerText = action === 'aprobado' ? 'Aprobar' : 'Rechazar';
+            }
+          } catch(err) {
+            alert("Error de conexión");
+            target.disabled = false;
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
