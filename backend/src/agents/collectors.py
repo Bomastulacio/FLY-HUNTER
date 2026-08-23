@@ -78,16 +78,20 @@ def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str) 
         return []
 
 def collect_europe() -> List[Dict]:
-    dest = random.choice(EUROPE_DESTINATIONS)
-    dep = random.choice(DEPARTURE_DATES)
-    ret = random.choice(RETURN_DATES)
-    return fetch_serpapi_flights(ORIGIN, dest, dep, ret)
+    results = []
+    for dest in EUROPE_DESTINATIONS:
+        dep = random.choice(DEPARTURE_DATES)
+        ret = random.choice(RETURN_DATES)
+        results.extend(fetch_serpapi_flights(ORIGIN, dest, dep, ret))
+    return results
 
 def collect_asia() -> List[Dict]:
-    dest = random.choice(ASIA_DESTINATIONS)
-    dep = random.choice(DEPARTURE_DATES)
-    ret = random.choice(RETURN_DATES)
-    return fetch_serpapi_flights(ORIGIN, dest, dep, ret)
+    results = []
+    for dest in ASIA_DESTINATIONS:
+        dep = random.choice(DEPARTURE_DATES)
+        ret = random.choice(RETURN_DATES)
+        results.extend(fetch_serpapi_flights(ORIGIN, dest, dep, ret))
+    return results
 
 def collect_lufthansa() -> List[Dict]:
     dest = "FRA"
