@@ -39,14 +39,17 @@ graph TD
     Critico -->|Dentro de $1700-$2400| OK[Aprobado Estándar]
     Critico -->|Rompe regla levemente| Anomalia[Anomalía Pendiente]
 
-    Oro --> DB[(Supabase)]
-    OK --> DB
-    Anomalia --> DB
+    Oro --> Persist[Persistencia]
+    OK --> Persist
+    Anomalia --> Persist
 
-    subgraph Acciones Finales
-        DB --> Notif{Gestor de Notificaciones}
-        Notif -->|Oportunidad de Oro| Email1[Email Inmediato<br>Comprar Ya]
-        Notif -->|Anomalía Pendiente| Email2[Email de Revisión<br>Human-in-the-Loop]
+    subgraph Acciones Finales y Analítica
+        Persist --> DB[(Supabase<br>flight_deals)]
+        Persist --> Notif{Gestor Notificaciones}
+        Notif --> Email[Envío de Correos]
+        
+        Persist --> DS[Agente Data Scientist<br>ML & Calendario]
+        DS --> DB2[(Supabase<br>route_insights)]
     end
 ```
 
@@ -59,6 +62,7 @@ graph TD
    - **Oportunidad de Oro:** Si el precio es irrisoriamente bajo (ej. <$1500 USD total), lo aprueba y fuerza una notificación prioritaria.
    - **Aprobado:** Pasa directo a la base de datos si cumple con las fechas y presupuesto estándar.
    - **Anomalía (Human-in-the-Loop):** Detecta vuelos muy económicos que rompen levemente los parámetros (ej. salida un día antes o conexiones largas). En lugar de descartarlos, los marca para revisión humana desde el frontend, pausando esa rama del proceso hasta recibir feedback.
+5. **Agente Data Scientist (Analítica Predictiva):** Se ejecuta al final del pipeline. Extrae el historial de los últimos 30 días, agrupa por ruta y utiliza `numpy` para realizar una regresión lineal (Polyfit) que predice si los precios mínimos están bajando o subiendo. Además, implementa la librería `holidays` para cruzar automáticamente las fechas de los vuelos con el calendario oficial de feriados en Argentina y el país de destino, detectando oportunidades ocultas.
 
 ## Stack Tecnológico
 
@@ -67,7 +71,7 @@ El sistema fue diseñado priorizando la eficiencia, los costos nulos o mínimos 
 - **Orquestación (Backend):** Python + LangGraph + Pandas.
 - **Motor de Ejecución:** GitHub Actions. Corre el pipeline cada 6 horas vía `cron`. Esto evita mantener servidores activos 24/7 y tolera tiempos de ejecución prolongados sin problemas de timeout.
 - **Base de Datos:** Supabase (PostgreSQL). Implementa `hash_dedupe` mediante constraints de unicidad para evitar duplicar ofertas entre ejecuciones, y Row Level Security (RLS) para exponer una API de solo lectura al cliente.
-- **Frontend y API:** Astro desplegado en Vercel. Presenta un dashboard (Bento Grid) para monitorear vuelos y expone un endpoint (`/api/aprobar-anomalia`) que permite resolver decisiones manuales enviando un webhook `repository_dispatch` hacia GitHub Actions para reanudar el ciclo.
+- **Frontend y API:** Astro desplegado en Vercel. Presenta un dashboard inmersivo (con animaciones CSS 3D puras, diseño "Glassmorphism" y temática "Radar") para monitorear vuelos, ver estadísticas de Inteligencia Artificial de las tendencias y resolver anomalías mediante webhooks a GitHub Actions.
 - **Correos Transaccionales:** Resend.
 
 ## Estructura del Repositorio
