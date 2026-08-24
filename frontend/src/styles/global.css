@@ -162,7 +162,7 @@ header p {
 .europe-destinations {
   grid-column: span 2;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr); /* Changed to 2 columns to fit 4 items nicely */
   gap: 1rem;
 }
 
@@ -244,6 +244,17 @@ header p {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* 📱 Responsive Tablet */
+@media (max-width: 1024px) {
+  .bento-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .europe-destinations {
+    grid-column: span 2;
+  }
+}
+
 /* 📱 Responsive Mobile (iOS/Android) */
 @media (max-width: 768px) {
   main {
@@ -272,14 +283,11 @@ header p {
 
   .europe-destinations {
     grid-column: span 1;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
     gap: 1rem;
   }
 
-  /* El tercer elemento (Reino Unido) tomará las 2 columnas en mobile para no quedar colgado */
-  .europe-destinations > .card:nth-child(3) {
-    grid-column: span 2;
-  }
+  /* No longer need to span the 3rd card since it's 1fr */
 
   .main-deal .card-price {
     font-size: 3.5rem;
@@ -333,12 +341,12 @@ header p {
 
 .horizon-line {
   position: absolute;
-  bottom: 15%;
+  bottom: 0;
   left: 0;
   width: 100%;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(209, 255, 76, 0.5), transparent);
-  box-shadow: 0 0 20px rgba(209, 255, 76, 0.8), 0 0 40px rgba(209, 255, 76, 0.4);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(209, 255, 76, 0.3), transparent);
+  box-shadow: 0 0 15px rgba(209, 255, 76, 0.4);
 }
 
 .horizon-line::after {
@@ -347,8 +355,8 @@ header p {
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 100px;
-  background: linear-gradient(to bottom, rgba(209, 255, 76, 0.1), transparent);
+  height: 50px;
+  background: linear-gradient(to bottom, rgba(209, 255, 76, 0.05), transparent);
 }
 
 .floating-elements {
