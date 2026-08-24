@@ -5,7 +5,7 @@ from typing import List, Dict, Any
 
 # Constantes de destinos (IATA codes)
 ORIGIN = "EZE" # Buenos Aires (EZE/AEP)
-EUROPE_DESTINATIONS = ["MAD", "CDG", "LHR"] # Madrid, Paris (CDG), London (LHR)
+EUROPE_DESTINATIONS = ["MAD", "CDG", "LHR", "BER"] # Madrid, Paris (CDG), London (LHR), Berlin (BER)
 ASIA_DESTINATIONS = ["NRT", "KIX"] # Tokyo (NRT), Osaka (KIX)
 
 # Constantes de fechas base (2027)

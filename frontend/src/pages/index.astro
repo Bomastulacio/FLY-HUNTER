@@ -21,8 +21,9 @@ const mainDeal = approvedDeals.length > 0 ? approvedDeals[0] : null;
 // Encontrar mejores por destino
 const getBestForDest = (dest: string) => approvedDeals.find(d => d.ida_origen_destino.includes(dest));
 const spainDeal = getBestForDest('MAD');
-const franceDeal = getBestForDest('PAR');
-const ukDeal = getBestForDest('LON');
+const franceDeal = getBestForDest('CDG');
+const ukDeal = getBestForDest('LHR');
+const germanyDeal = getBestForDest('BER');
 const lufthansaDeal = approvedDeals.find(d => d.aerolinea.toLowerCase().includes('lufthansa'));
 
 // Asia
@@ -163,6 +164,23 @@ const formatDate = (dateStr: string) => {
                 <div class="card-date">🗓 {formatDate(ukDeal.ida_fecha)} al {formatDate(ukDeal.vuelta_fecha)}</div>
                 <div class="card-price" style="font-size: clamp(1.4rem, 4vw, 1.8rem); margin-top: auto; margin-bottom: 0.5rem;">{formatPrice(ukDeal)}</div>
                 {ukDeal.link_reserva && <a href={ukDeal.link_reserva} target="_blank" class="btn btn-primary" style="width: 100%; box-sizing: border-box;">Ver Vuelo</a>}
+              </>
+            ) : (
+              <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.5; gap: 0.5rem; padding: 1rem 0;">
+                <span style="font-size: 1.5rem;">📡</span>
+                <span style="font-size: 0.85rem; font-weight: 500; text-align: center;">Radar en espera</span>
+              </div>
+            )}
+          </div>
+
+          <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+            <div class="card-header">🇩🇪 Alemania</div>
+            {germanyDeal ? (
+              <>
+                <div class="card-route">{germanyDeal.ida_origen_destino}</div>
+                <div class="card-date">🗓 {formatDate(germanyDeal.ida_fecha)} al {formatDate(germanyDeal.vuelta_fecha)}</div>
+                <div class="card-price" style="font-size: clamp(1.4rem, 4vw, 1.8rem); margin-top: auto; margin-bottom: 0.5rem;">{formatPrice(germanyDeal)}</div>
+                {germanyDeal.link_reserva && <a href={germanyDeal.link_reserva} target="_blank" class="btn btn-primary" style="width: 100%; box-sizing: border-box;">Ver Vuelo</a>}
               </>
             ) : (
               <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.5; gap: 0.5rem; padding: 1rem 0;">
