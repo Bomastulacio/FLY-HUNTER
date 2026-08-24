@@ -1,0 +1,31 @@
+graph TD
+    Trigger([🕒 GitHub Actions Cron<br>Cada 6 horas]) --> Sup
+    
+    subgraph Equipo de Recolección
+        Sup[🤖 Supervisor<br>Recibe el Goal] -->|Delega| AE[🕵️ Subagente Europa]
+        Sup -->|Delega| AA[🕵️ Subagente Asia]
+        Sup -->|Delega| AC[🕵️ Subagente Capricho<br>Lufthansa]
+    end
+
+    AE --> Analista
+    AA --> Analista
+    AC --> Analista
+
+    subgraph Procesamiento y Evaluación
+        Analista[📊 Agente Analista<br>Pandas: Consolida y Normaliza] --> Critico
+        Critico{🧐 Agente Crítico<br>Motor de Reglas}
+    end
+
+    Critico -->|Precio < $1500 USD| Oro[⭐ Oportunidad de Oro]
+    Critico -->|Dentro de $1700-$2400| OK[✅ Aprobado Estándar]
+    Critico -->|Fuera de regla pero muy barato| Anomalia[⚠️ Anomalía Pendiente]
+
+    Oro --> DB[(Supabase)]
+    OK --> DB
+    Anomalia --> DB
+
+    subgraph Acciones Finales
+        DB --> Notif{Gestor de Notificaciones}
+        Notif -->|⭐ Oro| Email1[📧 Email Inmediato<br>¡Comprar ahora!]
+        Notif -->|⚠️ Anomalía| Email2[📧 Email de Revisión<br>Human-in-the-Loop]
+    end

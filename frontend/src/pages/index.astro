@@ -11,6 +11,9 @@ const { data: deals, error } = await supabase
   .select('*')
   .order('precio_total_usd', { ascending: true });
 
+const { data: insightsData } = await supabase.from('route_insights').select('*');
+const routeInsights = insightsData || [];
+
 // Procesar datos para el grid
 const allDeals = deals || [];
 const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' || d.es_oportunidad_oro);
@@ -241,6 +244,45 @@ const formatDate = (dateStr: string) => {
                 <span style="color: var(--text-secondary); font-weight: 500;">No hay ofertas a Asia bajo presupuesto.</span>
              )}
           </div>
+        </div>
+      </div>
+
+      <!-- Analytics Section -->
+      <div style="margin-top: 3rem; animation: fadeInDown 0.8s ease-out 0.4s both;">
+        <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.8rem;">
+          📊 Inteligencia Artificial & Tendencias
+        </h2>
+        <div class="bento-grid" style="grid-auto-rows: auto; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+          {routeInsights.map((insight: any) => (
+            <div class="card" style="padding: 1.25rem;">
+              <div class="card-header" style="margin-bottom: 1rem; background: rgba(255,255,255,0.1);">{insight.ruta}</div>
+              <div style="display: flex; flex-direction: column; gap: 0.8rem; font-size: 0.95rem;">
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem;">
+                  <span style="color: var(--text-secondary);">Piso Promedio (7d)</span>
+                  <strong>US$ {Math.round(insight.precio_promedio_7d)}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem;">
+                  <span style="color: var(--text-secondary);">Mínimo Histórico</span>
+                  <strong style="color: var(--success-color);">US$ {Math.round(insight.minimo_historico)}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+                  <span style="color: var(--text-secondary);">Tendencia Mínimo</span>
+                  {insight.tendencia < -0.1 ? (
+                    <span style="color: var(--success-color); font-weight: bold; display: flex; align-items: center; gap: 0.2rem;">📉 Bajando</span>
+                  ) : insight.tendencia > 0.1 ? (
+                    <span style="color: var(--danger-color); font-weight: bold; display: flex; align-items: center; gap: 0.2rem;">📈 Subiendo</span>
+                  ) : (
+                    <span style="color: #f9a01b; font-weight: bold; display: flex; align-items: center; gap: 0.2rem;">➖ Estable</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+          {routeInsights.length === 0 && (
+            <div style="grid-column: 1 / -1; padding: 2rem; text-align: center; color: var(--text-secondary); background: var(--card-bg); border-radius: var(--border-radius-md); border: 1px dashed var(--card-border);">
+              📡 El Agente Científico de Datos está procesando el historial de precios...
+            </div>
+          )}
         </div>
       </div>
     </main>

@@ -3,6 +3,7 @@ from langgraph.graph import StateGraph, END
 from .agents.collectors import collect_europe, collect_asia, collect_lufthansa
 from .agents.analyst import consolidate_and_analyze
 from .agents.critic import filter_and_evaluate
+from .agents.data_scientist import data_scientist_analysis
 from .services.db import upsert_deals, FlightDeal
 from .services.notifications import notify_golden_opportunity, notify_anomaly
 
@@ -65,7 +66,13 @@ def persistence_and_notify_node(state: GraphState) -> GraphState:
             notify_golden_opportunity(d)
         elif d.get("es_anomalia") and d.get("estado_aprobacion") == "pendiente" and not d.get("notificado"):
             notify_anomaly(d)
+            notify_anomaly(d)
             
+    return state
+
+def data_scientist_node(state: GraphState) -> GraphState:
+    deals = state.get("evaluated_deals", [])
+    data_scientist_analysis(deals)
     return state
 
 def build_graph() -> StateGraph:
@@ -76,12 +83,14 @@ def build_graph() -> StateGraph:
     builder.add_node("analyst", analyst_node)
     builder.add_node("critic", critic_node)
     builder.add_node("persist_notify", persistence_and_notify_node)
+    builder.add_node("data_scientist", data_scientist_node)
     
     # Definir Edges (Flujo)
     builder.set_entry_point("supervisor")
     builder.add_edge("supervisor", "analyst")
     builder.add_edge("analyst", "critic")
     builder.add_edge("critic", "persist_notify")
-    builder.add_edge("persist_notify", END)
+    builder.add_edge("persist_notify", "data_scientist")
+    builder.add_edge("data_scientist", END)
     
     return builder.compile()

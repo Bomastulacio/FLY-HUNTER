@@ -19,6 +19,8 @@ create table public.flight_deals (
     notificado boolean not null default false, -- evita reenviar el mismo mail
     fuente text, -- 'amadeus' | 'fli'
     link_reserva text,
+    es_feriado_origen boolean not null default false,
+    es_feriado_destino boolean not null default false,
     hash_dedupe text unique -- md5(ida_fecha || ida_od || vuelta_fecha || vuelta_od || aerolinea || round(precio))
 );
 
@@ -37,4 +39,24 @@ create policy "Permitir lectura pública de ofertas"
 -- Política para que el service_role (backend/API) pueda insertar/actualizar
 create policy "Permitir full access al service role"
     on public.flight_deals
+    using (auth.jwt() ->> 'role' = 'service_role');
+
+-- Tabla de Insights (Data Science)
+create table public.route_insights (
+    ruta text primary key, -- ej. "EZE-MAD"
+    precio_promedio_7d numeric(10,2),
+    minimo_historico numeric(10,2),
+    tendencia numeric(10,4), -- slope from linear regression
+    actualizado_en timestamptz not null default now()
+);
+
+alter table public.route_insights enable row level security;
+
+create policy "Permitir lectura pública de insights"
+    on public.route_insights
+    for select
+    using (true);
+
+create policy "Permitir full access al service role insights"
+    on public.route_insights
     using (auth.jwt() ->> 'role' = 'service_role');

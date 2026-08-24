@@ -8,3 +8,4 @@ flights
 pydantic
 python-dotenv
 requests
+holidays

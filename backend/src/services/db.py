@@ -51,3 +51,35 @@ def mark_as_notified(hash_dedupe: str) -> None:
         client.table('flight_deals').update({'notificado': True}).eq('hash_dedupe', hash_dedupe).execute()
     except Exception as e:
         print(f"Error updating notified status: {e}")
+
+class RouteInsight(BaseModel):
+    ruta: str
+    precio_promedio_7d: float
+    minimo_historico: float
+    tendencia: float
+
+def upsert_route_insights(insights: List[RouteInsight]) -> None:
+    if not insights:
+        return
+    client = get_supabase_client()
+    data = [insight.model_dump() for insight in insights]
+    try:
+        client.table('route_insights').upsert(data, on_conflict='ruta').execute()
+        print(f"Successfully upserted {len(insights)} route insights to Supabase.")
+    except Exception as e:
+        print(f"Error upserting route insights to Supabase: {e}")
+
+def get_recent_flight_deals(days: int = 30) -> List[dict]:
+    client = get_supabase_client()
+    try:
+        from datetime import datetime, timedelta
+        import pytz
+        
+        past_date = datetime.now(pytz.UTC) - timedelta(days=days)
+        past_date_str = past_date.isoformat()
+        
+        response = client.table('flight_deals').select('*').gte('created_at', past_date_str).execute()
+        return response.data
+    except Exception as e:
+        print(f"Error fetching recent deals: {e}")
+        return []
