@@ -23,8 +23,8 @@ def consolidate_and_analyze(flights_data: List[Dict]) -> List[Dict]:
     # multiplicamos por 2 para asegurar.
     # Ajustar esto según el payload real de la librería.
     if 'precio_total_usd' in df.columns:
-        # Aquí asumimos que era precio por pax. Si ya era total, comentar la sgte línea:
-        df['precio_total_usd'] = df['precio_total_usd'] * 2.0
+        # collectors.py ya lo multiplicó por 2, así que lo dejamos intacto.
+        pass
     
     # Limpiar duplicados exactos que pudieron venir de múltiples recolectores
     df = df.drop_duplicates(subset=[
