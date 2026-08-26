@@ -1,0 +1,106 @@
+<template>
+  <style>
+    .bg-layer {
+      background-color: var(--colors-navy);
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    .content-layer {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--spacing-slide-pad);
+      box-sizing: border-box;
+      gap: 10cqw;
+    }
+    .agent-block {
+      width: 80%;
+      background-color: var(--colors-navy-elev);
+      border: 1px solid var(--colors-cream);
+      border-radius: var(--spacing-radius-lg);
+      padding: 4cqw;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      opacity: 0;
+    }
+    .agent-title {
+      font-family: var(--typography-kicker-fontFamily);
+      font-size: var(--typography-kicker-px)px;
+      color: var(--colors-coral);
+      text-transform: uppercase;
+      margin-bottom: 2cqw;
+    }
+    .data-line {
+      width: 100%;
+      height: 2cqw;
+      background-color: var(--colors-cream);
+      margin-bottom: 1cqw;
+      opacity: 0.5;
+    }
+    .data-trash {
+      background-color: #C64545;
+      text-decoration: line-through;
+    }
+  </style>
+  <div id="root" data-composition-id="04-pipeline" data-width="1080" data-height="1920" data-duration="10.6">
+
+  <div class="clip bg-layer" data-start="0" data-duration="10.6" data-track-index="0"></div>
+  <div id="content-04-pipeline" class="clip content-layer" data-start="0" data-duration="10.6" data-track-index="1">
+    
+    <div id="agent-estratega" class="agent-block">
+      <div class="agent-title">✱ Estratega</div>
+      <div class="data-line"></div>
+      <div class="data-line"></div>
+    </div>
+
+    <div id="agent-sanitizador" class="agent-block">
+      <div class="agent-title">✱ Sanitizador</div>
+      <div id="trash1" class="data-line"></div>
+      <div id="trash2" class="data-line"></div>
+      <div id="trash3" class="data-line"></div>
+    </div>
+
+  </div>
+
+    </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    
+    // Estratega reveal
+    tl.fromTo("#agent-estratega", 
+      { opacity: 0, xPercent: -50 }, 
+      { opacity: 1, xPercent: 0, duration: 1, ease: "power2.out" }, 
+      0
+    );
+
+    // Sanitizador reveal
+    tl.fromTo("#agent-sanitizador", 
+      { opacity: 0, xPercent: 50 }, 
+      { opacity: 1, xPercent: 0, duration: 1, ease: "power2.out" }, 
+      4
+    );
+
+    // Trash crossing out
+    tl.add(() => {
+      document.getElementById("trash1").classList.add("data-trash");
+    }, 5);
+    tl.add(() => {
+      document.getElementById("trash2").classList.add("data-trash");
+    }, 5.5);
+    tl.add(() => {
+      document.getElementById("trash3").classList.add("data-trash");
+    }, 6);
+
+    window.__timelines["04-pipeline"] = tl;
+  </script>
+</template>

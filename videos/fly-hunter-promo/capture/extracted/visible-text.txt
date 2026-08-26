@@ -1,0 +1,4 @@
+El Agente Estratega distribuye inteligentemente el consumo de llamadas a SerpApi.
+El Agente Sanitizador limpia la basura de resultados irreales, descartando vuelos con múltiples escalas o duraciones irrisorias de manera inmediata antes de que saturen el sistema.
+El Agente Crítico analiza los precios frente al registro histórico (la base de datos local). Y lo más importante, está configurado para cazar Glitch Fares (Tarifas Error): cuando un pasaje cae dramáticamente (por ejemplo a $400 USD hacia Europa), bloquea el filtro y dispara una alerta roja urgente antes de que la aerolínea lo corrija.
+Todo está interconectado mediante un LangGraph (un grafo de IA).

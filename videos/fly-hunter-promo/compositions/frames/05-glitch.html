@@ -1,0 +1,101 @@
+<template>
+  <style>
+    .bg-layer {
+      background-color: var(--colors-cream);
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    .content-layer {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--spacing-slide-pad);
+      box-sizing: border-box;
+    }
+    .title {
+      font-family: var(--typography-kicker-fontFamily);
+      font-size: var(--typography-kicker-px)px;
+      color: var(--colors-ink);
+      text-transform: uppercase;
+      margin-bottom: 5cqw;
+    }
+    .glitch-word {
+      color: var(--colors-coral);
+    }
+    .chart {
+      width: 80%;
+      height: 40cqw;
+      border-left: 1px solid var(--colors-ink);
+      border-bottom: 1px solid var(--colors-ink);
+      position: relative;
+    }
+    .line-segment {
+      position: absolute;
+      background-color: var(--colors-ink);
+      height: 2px;
+      transform-origin: left center;
+    }
+    .crash-segment {
+      background-color: var(--colors-coral);
+      height: 4px;
+    }
+  </style>
+  <div id="root" data-composition-id="05-glitch" data-width="1080" data-height="1920">
+
+  <div class="clip bg-layer" data-start="0" data-duration="8" data-track-index="0"></div>
+  <div id="content-05-glitch" class="clip content-layer" data-start="0" data-duration="8" data-track-index="1">
+    <div id="ftitle" class="title">Agente Crítico</div>
+    
+    <div class="chart">
+      <!-- Normal prices -->
+      <div id="line1" class="line-segment" style="left: 0%; top: 20%; width: 20%; transform: rotate(5deg);"></div>
+      <div id="line2" class="line-segment" style="left: 20%; top: 25%; width: 20%; transform: rotate(-2deg);"></div>
+      <div id="line3" class="line-segment" style="left: 40%; top: 23%; width: 20%; transform: rotate(10deg);"></div>
+      <!-- Crash -->
+      <div id="line-crash" class="line-segment crash-segment" style="left: 60%; top: 30%; width: 45%; transform: rotate(60deg); opacity: 0;"></div>
+    </div>
+  </div>
+
+    </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    
+    // Title
+    tl.fromTo("#ftitle", 
+      { opacity: 0, y: 20 }, 
+      { opacity: 1, y: 0, duration: 1 }, 
+      0
+    );
+
+    // Lines reveal
+    tl.fromTo(["#line1", "#line2", "#line3"],
+      { scaleX: 0 },
+      { scaleX: 1, duration: 2, stagger: 0.5, ease: "linear" },
+      1
+    );
+
+    // Crash reveal
+    tl.fromTo("#line-crash",
+      { scaleX: 0, opacity: 1 },
+      { scaleX: 1, opacity: 1, duration: 0.5, ease: "power4.in" },
+      3.5
+    );
+
+    // Glitch title text
+    tl.add(() => {
+      const el = document.getElementById("05-title");
+      if(el) el.innerHTML = "Agente Crítico: <span class='glitch-word'>TARIFAS ERROR</span>";
+    }, 4);
+
+    window.__timelines["05-glitch"] = tl;
+  </script>
+</template>

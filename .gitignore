@@ -63,3 +63,6 @@ Thumbs.db
 
 # Caché local
 .cache_vuelos/
+
+# Videos
+*.mp4

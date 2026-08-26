@@ -1,0 +1,89 @@
+<template>
+  <style>
+    .bg-layer {
+      background-color: var(--colors-navy);
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    .content-layer {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: var(--spacing-slide-pad);
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+    .code-line {
+      font-family: var(--typography-code-fontFamily);
+      font-size: var(--typography-code-cqw);
+      color: var(--colors-cream);
+      opacity: 0.3;
+      margin-bottom: 1cqw;
+      width: 100%;
+      text-align: left;
+    }
+    .red-trash {
+      color: #C64545 !important;
+      text-decoration: line-through;
+      opacity: 0.8;
+    }
+    #fproblem-shredder {
+      position: absolute;
+      bottom: 20cqw;
+      width: 80%;
+      height: 4cqw;
+      background-color: var(--colors-coral);
+      border-radius: var(--spacing-radius-sm);
+    }
+  </style>
+  <div id="root" data-composition-id="02-problem" data-width="1080" data-height="1920" data-duration="7.6">
+
+  <div class="clip bg-layer" data-start="0" data-duration="7.6" data-track-index="0"></div>
+  <div id="content-02-problem" class="clip content-layer" data-start="0" data-duration="7.6" data-track-index="1">
+    <div id="fproblem-code-1" class="code-line">{ "flight": "MAD-BUE", "price": 1200, "stops": 3 }</div>
+    <div id="fproblem-code-2" class="code-line">{ "flight": "JFK-LHR", "price": 950, "stops": 2 }</div>
+    <div id="fproblem-code-3" class="code-line">{ "flight": "SYD-LAX", "price": 1500, "stops": 4 }</div>
+    <div id="fproblem-code-4" class="code-line">{ "flight": "CDG-EZE", "price": 2000, "stops": 1 }</div>
+    <div id="fproblem-code-5" class="code-line">{ "flight": "MIA-GRU", "price": 800, "stops": 2 }</div>
+    
+    <div id="fproblem-shredder"></div>
+  </div>
+
+    </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    
+    // Shredder enters
+    tl.fromTo("#fproblem-shredder",
+      { opacity: 0, scaleX: 0 },
+      { opacity: 1, scaleX: 1, duration: 0.5, ease: "power2.out" },
+      0
+    );
+
+    // Code lines falling
+    for (let i = 1; i <= 5; i++) {
+      tl.fromTo(`#fproblem-code-${i}`,
+        { yPercent: -1000, opacity: 0 },
+        { yPercent: 400, opacity: 0.8, duration: 2, ease: "linear" },
+        i * 0.4
+      );
+      
+      // Turn red when hitting shredder
+      tl.add(() => {
+        const el = document.getElementById(`02-problem-code-${i}`);
+        if(el) el.classList.add("red-trash");
+      }, (i * 0.4) + 1.2);
+    }
+
+    window.__timelines["02-problem"] = tl;
+  </script>
+</template>

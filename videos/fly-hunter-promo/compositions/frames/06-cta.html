@@ -1,0 +1,92 @@
+<template>
+  <style>
+    .bg-layer {
+      background-color: var(--colors-cream);
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    .content-layer {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--spacing-slide-pad);
+      box-sizing: border-box;
+      gap: 5cqw;
+    }
+    .cta-button {
+      background-color: var(--colors-coral);
+      color: var(--colors-cream);
+      font-family: var(--typography-button-fontFamily);
+      font-size: var(--typography-button-cqw);
+      font-weight: var(--typography-button-weight);
+      padding: 3cqw 6cqw;
+      border-radius: var(--spacing-radius-md);
+      text-transform: uppercase;
+      opacity: 0;
+    }
+    .countdown {
+      font-family: var(--typography-number-hero-fontFamily);
+      font-size: var(--typography-number-hero-cqw);
+      color: var(--colors-ink);
+    }
+    .unit {
+      font-family: var(--typography-number-unit-fontFamily);
+      font-size: var(--typography-number-unit-cqw);
+      color: var(--colors-ink);
+    }
+  </style>
+  <div id="root" data-composition-id="06-cta" data-width="1080" data-height="1920">
+
+  <div class="clip bg-layer" data-start="0" data-duration="7" data-track-index="0"></div>
+  <div id="content-06-cta" class="clip content-layer" data-start="0" data-duration="7" data-track-index="1">
+    
+    <div id="fcountdown" class="countdown">15:00</div>
+    <div id="fcta-button" class="cta-button">FLY HUNTER</div>
+
+  </div>
+
+    </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    
+    // Countdown enters
+    tl.fromTo("#fcountdown",
+      { opacity: 0, scale: 2 },
+      { opacity: 1, scale: 1, duration: 1, ease: "power4.out" },
+      0
+    );
+
+    // Countdown ticking
+    tl.to("#fcountdown", {
+      duration: 5,
+      onUpdate: function() {
+        const prog = this.progress();
+        const remaining = Math.max(0, 15 - (prog * 15));
+        const mins = Math.floor(remaining);
+        const secs = Math.floor((remaining - mins) * 60);
+        const el = document.getElementById("06-countdown");
+        if(el) {
+          el.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+      }
+    }, 1);
+
+    // CTA Button reveal
+    tl.fromTo("#fcta-button",
+      { opacity: 0, y: 20 },
+      { opacity: 1, y: 0, duration: 1, ease: "back.out(1.5)" },
+      4
+    );
+
+    window.__timelines["06-cta"] = tl;
+  </script>
+</template>
