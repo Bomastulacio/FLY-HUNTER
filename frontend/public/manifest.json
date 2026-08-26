@@ -1,0 +1,22 @@
+{
+  "name": "Flight Hunter",
+  "short_name": "FlyHunter",
+  "description": "Radar autónomo de ofertas de vuelos a Europa y Asia.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#141419",
+  "theme_color": "#a8ff3e",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.ico",
+      "type": "image/x-icon",
+      "sizes": "64x64 32x32 24x24 16x16"
+    }
+  ]
+}
