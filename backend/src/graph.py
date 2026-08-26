@@ -2,6 +2,7 @@ from typing import TypedDict, List, Dict, Any
 from langgraph.graph import StateGraph, END
 from .agents.strategist import define_daily_mission
 from .agents.collectors import collect_europe, collect_asia, collect_lufthansa
+from .agents.sanitizer import sanitize_flights
 from .agents.analyst import consolidate_and_analyze
 from .agents.critic import filter_and_evaluate
 from .agents.data_scientist import data_scientist_analysis
@@ -33,6 +34,12 @@ def supervisor_node(state: GraphState) -> GraphState:
     lufthansa = collect_lufthansa(mission)
     
     state["raw_flights"] = europe + asia + lufthansa
+    return state
+
+def sanitizer_node(state: GraphState) -> GraphState:
+    raw = state.get("raw_flights", [])
+    clean = sanitize_flights(raw)
+    state["raw_flights"] = clean
     return state
 
 def analyst_node(state: GraphState) -> GraphState:
@@ -90,6 +97,7 @@ def build_graph() -> StateGraph:
     # Agregar Nodos
     builder.add_node("strategist", strategist_node)
     builder.add_node("supervisor", supervisor_node)
+    builder.add_node("sanitizer", sanitizer_node)
     builder.add_node("analyst", analyst_node)
     builder.add_node("critic", critic_node)
     builder.add_node("persist_notify", persistence_and_notify_node)
@@ -98,7 +106,8 @@ def build_graph() -> StateGraph:
     # Definir Edges (Flujo)
     builder.set_entry_point("strategist")
     builder.add_edge("strategist", "supervisor")
-    builder.add_edge("supervisor", "analyst")
+    builder.add_edge("supervisor", "sanitizer")
+    builder.add_edge("sanitizer", "analyst")
     builder.add_edge("analyst", "critic")
     builder.add_edge("critic", "persist_notify")
     builder.add_edge("persist_notify", "data_scientist")
