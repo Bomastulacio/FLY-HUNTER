@@ -80,9 +80,15 @@ const formatDate = (dateStr: string) => {
       </div>
     </div>
     <main>
-      <header>
+      <header style="margin-bottom: 2rem;">
         <h1>Flight Hunter</h1>
         <p>Buscando las mejores tarifas desde Buenos Aires.</p>
+        <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin-top: 1.5rem; font-size: 0.85rem;">
+          <span style="background: rgba(255,255,255,0.05); padding: 0.4rem 1rem; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 0.4rem; color: var(--text-secondary);">🛫 <strong style="color: var(--text-primary);">Salida:</strong> 17 al 19 Abr</span>
+          <span style="background: rgba(255,255,255,0.05); padding: 0.4rem 1rem; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 0.4rem; color: var(--text-secondary);">🛬 <strong style="color: var(--text-primary);">Regreso:</strong> 26 Abr al 2 May</span>
+          <span style="background: rgba(255,255,255,0.05); padding: 0.4rem 1rem; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 0.4rem; color: var(--text-secondary);">💰 <strong style="color: var(--text-primary);">Tope:</strong> US$ 2.400</span>
+          <span style="background: rgba(255,255,255,0.05); padding: 0.4rem 1rem; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 0.4rem; color: var(--text-secondary);">⏱️ <strong style="color: var(--text-primary);">Escalas:</strong> Máx 1</span>
+        </div>
       </header>
 
       <!-- Countdown de Vacaciones -->
