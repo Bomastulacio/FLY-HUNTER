@@ -16,6 +16,7 @@ create table public.flight_deals (
     duracion_total_minutos int,
     es_oportunidad_oro boolean not null default false, -- precio < umbral crítico
     es_anomalia boolean not null default false, -- rompe parámetros, necesita aprobación
+    es_tarifa_error boolean not null default false,
     estado_aprobacion text not null default 'no_aplica', -- no_aplica | pendiente | aprobado | rechazado
     notificado boolean not null default false, -- evita reenviar el mismo mail
     fuente text, -- 'amadeus' | 'fli'

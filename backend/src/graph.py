@@ -7,6 +7,7 @@ from .agents.analyst import consolidate_and_analyze
 from .agents.critic import filter_and_evaluate
 from .agents.data_scientist import data_scientist_analysis
 from .services.db import upsert_deals, FlightDeal, mark_as_notified
+from .services.notifications import notify_golden_opportunity, notify_anomaly, notify_glitch_fare
 
 class GraphState(TypedDict):
     mission: Dict
@@ -77,7 +78,10 @@ def persistence_and_notify_node(state: GraphState) -> GraphState:
     
     # Notificaciones
     for d in deals:
-        if d.get("es_oportunidad_oro") and not d.get("notificado"):
+        if d.get("es_tarifa_error") and not d.get("notificado"):
+            notify_glitch_fare(d)
+            mark_as_notified(d['hash_dedupe'])
+        elif d.get("es_oportunidad_oro") and not d.get("notificado"):
             notify_golden_opportunity(d)
             mark_as_notified(d['hash_dedupe'])
         elif d.get("es_anomalia") and d.get("estado_aprobacion") == "pendiente" and not d.get("notificado"):

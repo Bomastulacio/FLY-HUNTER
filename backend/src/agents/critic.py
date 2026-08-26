@@ -4,6 +4,7 @@ from typing import List, Dict
 BUDGET_MIN = 1700
 BUDGET_MAX = 2400
 CRITICAL_THRESHOLD = 1700
+GLITCH_THRESHOLD = 900
 
 VALID_DEPARTURE_DATES = ["2027-04-17", "2027-04-18", "2027-04-19"]
 VALID_RETURN_DATES = ["2027-04-26", "2027-04-27", "2027-04-28", "2027-04-29", "2027-04-30", "2027-05-01", "2027-05-02"]
@@ -33,12 +34,19 @@ def evaluate_deal(deal: Dict) -> Dict:
     deal['hash_dedupe'] = generate_hash(deal)
     deal['es_oportunidad_oro'] = False
     deal['es_anomalia'] = False
+    deal['es_tarifa_error'] = False
     deal['estado_aprobacion'] = 'no_aplica'
     deal['notificado'] = False
     
     # Regla 0: Filtro estricto de escalas (rechazo inmediato)
     if escalas > 1:
         deal['estado_aprobacion'] = 'rechazado'
+        return deal
+        
+    # Regla 0.5: Tarifa Error (Glitch Fare)
+    if precio < GLITCH_THRESHOLD:
+        deal['es_tarifa_error'] = True
+        deal['estado_aprobacion'] = 'aprobado'
         return deal
         
     # Regla 1: Oportunidad de Oro
@@ -98,6 +106,7 @@ def filter_and_evaluate(deals: List[Dict]) -> List[Dict]:
             # Aseguramos que no dispare emails
             cheapest['es_oportunidad_oro'] = False
             cheapest['es_anomalia'] = False
+            cheapest['es_tarifa_error'] = False
             evaluated_deals.append(cheapest)
             
     return evaluated_deals

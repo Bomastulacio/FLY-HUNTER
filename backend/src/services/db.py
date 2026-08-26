@@ -22,10 +22,11 @@ class FlightDeal(BaseModel):
     moneda_original: Optional[str] = None
     precio_ars_tarjeta: Optional[float] = None
     aerolinea: str
-    cantidad_escalas: int
-    duracion_total_minutos: int
+    cantidad_escalas: Optional[int] = 0
+    duracion_total_minutos: Optional[int] = 0
     es_oportunidad_oro: bool = False
     es_anomalia: bool = False
+    es_tarifa_error: bool = False
     estado_aprobacion: str = 'no_aplica'
     notificado: bool = False
     fuente: str = 'fli'

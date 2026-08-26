@@ -57,3 +57,22 @@ def notify_anomaly(deal: dict) -> None:
     <p>Por favor revisá el panel de control de Flight Hunter para aprobar o rechazar esta oferta.</p>
     """
     send_email(subject, html)
+
+def notify_glitch_fare(deal: dict) -> None:
+    precio_orig = deal.get('precio_original', deal.get('precio_total_usd', 0))
+    moneda_orig = deal.get('moneda_original', 'USD')
+    precio_usd = deal.get('precio_total_usd', 0)
+    
+    subject = f"🚨 TARIFA ERROR DETECTADA: {deal['ida_origen_destino']} a {precio_orig} {moneda_orig}"
+    html = f"""
+    <h2 style="color: red;">¡ALERTA MÁXIMA: TARIFA ERROR!</h2>
+    <p><strong>El Agente Crítico ha detectado un precio matemáticamente absurdo. Esto es un "Glitch Fare" y probablemente la aerolínea lo corrija en minutos. ¡COMPRA AHORA!</strong></p>
+    <ul>
+        <li><strong>Ruta:</strong> {deal['ida_origen_destino']} / {deal['vuelta_origen_destino']}</li>
+        <li><strong>Precio:</strong> {precio_orig:,.2f} {moneda_orig} <em>(aprox. ${precio_usd} USD)</em></li>
+        <li><strong>Fechas:</strong> {deal['ida_fecha']} - {deal['vuelta_fecha']}</li>
+        <li><strong>Aerolínea:</strong> {deal['aerolinea']}</li>
+    </ul>
+    <p><a href="{deal['link_reserva']}" style="background-color: red; color: white; padding: 10px 20px; text-decoration: none; font-weight: bold;">RESERVAR ANTES DE QUE DESAPAREZCA</a></p>
+    """
+    send_email(subject, html)
