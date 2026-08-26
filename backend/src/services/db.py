@@ -20,6 +20,7 @@ class FlightDeal(BaseModel):
     precio_total_usd: float
     precio_original: Optional[float] = None
     moneda_original: Optional[str] = None
+    precio_ars_tarjeta: Optional[float] = None
     aerolinea: str
     cantidad_escalas: int
     duracion_total_minutos: int

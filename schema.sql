@@ -10,6 +10,7 @@ create table public.flight_deals (
     precio_total_usd numeric(10,2) not null, -- total para 2 pasajeros (convertido a usd)
     precio_original numeric(12,2), -- precio en moneda local devuelto por aerolínea
     moneda_original text, -- ej. 'ARS', 'EUR', 'USD'
+    precio_ars_tarjeta numeric(12,2), -- precio total calculado al dolar tarjeta
     aerolinea text,
     cantidad_escalas int not null default 0,
     duracion_total_minutos int,
