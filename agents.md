@@ -79,3 +79,13 @@ SUPABASE_URL, SUPABASE_ANON_KEY (frontend, solo lectura)
 SUPABASE_SERVICE_ROLE_KEY (solo en el endpoint API, no exponer al cliente)
 GH_DISPATCH_TOKEN, GH_REPO (para el endpoint de aprobación)
 ADMIN_TOKEN (password para aprobar/rechazar desde la web)
+
+### 8. Reglas Críticas Aprendidas (Post-Mortem)
+Para evitar deuda técnica y bugs recurrentes, respetar obligatoriamente:
+
+1. **Consultas Históricas (UI vs DB)**: Supabase retiene el historial completo de vuelos (los `upsert` generan nuevas filas si cambia la fecha). El frontend (`index.astro`) **siempre** debe filtrar los queries por `created_at` (ej. últimas 24 horas) para que los vuelos antiguos y baratos no dominen eternamente la interfaz.
+2. **Tolerancia Cero en Escalas**: La regla de negocio es estricta: **Máximo 1 escala**. Cualquier vuelo con 2 o más escalas debe ser rechazado al inicio del Crítico (regla de early return), sin importar si el precio entra en la categoría de "Anomalía" u "Oportunidad de Oro".
+3. **Evaluación de Límites**: Las constantes de límites (ej. `BUDGET_MIN`) no deben ser solo declarativas. Deben formar parte activa de las condiciones (ej. `BUDGET_MIN <= precio`).
+4. **Protección de Endpoints Manuales**: Todo endpoint del frontend que dispare acciones en la base de datos o webhooks de GitHub (ej. `/api/aprobar-anomalia`) debe estar protegido por un `ADMIN_TOKEN`, validando cabeceras o payloads contra `import.meta.env`.
+5. **Gestión de Cuota de API (SerpApi)**: Las APIs de pago se agotan rápido si se itera sobre todas las combinaciones. No usar `random.choice()` (arruina el análisis de tendencias estadístico). Usar siempre algoritmos determinísticos de partición (ej. Round-Robin usando `día del año % total de combinaciones`) para ciclar búsquedas sin saturar la cuota.
+6. **Estado de Notificación (Anti-Spam)**: Toda notificación por mail debe estar acoplada a una llamada inmediata a la base de datos (ej. `mark_as_notified`) para persistir el estado y evitar spam en loops del grafo.
