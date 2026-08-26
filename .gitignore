@@ -60,3 +60,6 @@ lerna-debug.log*
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Caché local
+.cache_vuelos/

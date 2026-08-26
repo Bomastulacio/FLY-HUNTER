@@ -3,6 +3,11 @@ import random
 import requests
 import datetime
 from typing import List, Dict, Any
+import diskcache
+
+# Inicializar caché en el directorio del proyecto
+cache_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '.cache_vuelos')
+flight_cache = diskcache.Cache(cache_dir)
 
 # Constantes de destinos (IATA codes)
 ORIGIN = "EZE" # Buenos Aires (EZE/AEP)
@@ -15,6 +20,7 @@ RETURN_DATES = ["2027-04-26", "2027-04-27", "2027-04-28", "2027-04-29", "2027-04
 
 SERPAPI_KEY = os.environ.get("SERPAPI_KEY", "")
 
+@flight_cache.memoize(expire=43200) # Expira en 12 horas
 def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str) -> List[Dict]:
     """Busca vuelos usando SerpApi (Google Flights)"""
     if not SERPAPI_KEY:
