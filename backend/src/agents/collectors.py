@@ -90,30 +90,33 @@ def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str) 
         print(f"Error fetching from SerpApi: {e}")
         return []
 
-def get_daily_dates() -> tuple[str, str]:
-    day_of_year = datetime.datetime.now().timetuple().tm_yday
-    dep = DEPARTURE_DATES[day_of_year % len(DEPARTURE_DATES)]
-    ret = RETURN_DATES[day_of_year % len(RETURN_DATES)]
-    return dep, ret
-
-def collect_europe() -> List[Dict]:
+def collect_europe(mission: Dict) -> List[Dict]:
+    if not mission.get("run_europe"):
+        return []
     results = []
-    dep, ret = get_daily_dates()
-    for dest in EUROPE_DESTINATIONS:
+    dep = mission.get("dep_date")
+    ret = mission.get("ret_date")
+    for dest in mission.get("europe_dests", []):
         results.extend(fetch_serpapi_flights(ORIGIN, dest, dep, ret))
     return results
 
-def collect_asia() -> List[Dict]:
+def collect_asia(mission: Dict) -> List[Dict]:
+    if not mission.get("run_asia"):
+        return []
     results = []
-    dep, ret = get_daily_dates()
-    for dest in ASIA_DESTINATIONS:
+    dep = mission.get("dep_date")
+    ret = mission.get("ret_date")
+    for dest in mission.get("asia_dests", []):
         results.extend(fetch_serpapi_flights(ORIGIN, dest, dep, ret))
     return results
 
-def collect_lufthansa() -> List[Dict]:
+def collect_lufthansa(mission: Dict) -> List[Dict]:
+    if not mission.get("run_lufthansa"):
+        return []
     results = []
-    dep, ret = get_daily_dates()
-    for dest in EUROPE_DESTINATIONS:
+    dep = mission.get("dep_date")
+    ret = mission.get("ret_date")
+    for dest in mission.get("lufthansa_dests", []):
         flights = fetch_serpapi_flights(ORIGIN, dest, dep, ret)
         lufthansa_deals = [f for f in flights if "lufthansa" in f.get("aerolinea", "").lower()]
         results.extend(lufthansa_deals)

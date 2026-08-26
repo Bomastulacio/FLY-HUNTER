@@ -1,5 +1,6 @@
 from typing import TypedDict, List, Dict, Any
 from langgraph.graph import StateGraph, END
+from .agents.strategist import define_daily_mission
 from .agents.collectors import collect_europe, collect_asia, collect_lufthansa
 from .agents.analyst import consolidate_and_analyze
 from .agents.critic import filter_and_evaluate
@@ -7,21 +8,29 @@ from .agents.data_scientist import data_scientist_analysis
 from .services.db import upsert_deals, FlightDeal, mark_as_notified
 
 class GraphState(TypedDict):
+    mission: Dict
     raw_flights: List[Dict]
     analyzed_flights: List[Dict]
     evaluated_deals: List[Dict]
 
+def strategist_node(state: GraphState) -> GraphState:
+    print("--- Estratega: Definiendo la Misión de hoy ---")
+    mission = define_daily_mission()
+    state["mission"] = mission
+    return state
+
 def supervisor_node(state: GraphState) -> GraphState:
-    print("--- Supervisor: Iniciando recolección paralela ---")
-    # LangGraph no tiene paralelismo out-of-the-box súper simple sin map/reduce,
-    # pero podemos llamar a los recolectores secuencialmente dentro de un nodo
-    # o usar hilos de Python. Como es sincrónico y rápido, lo hacemos secuencial aquí por simplicidad,
-    # pero en un grafo real con LLMs usaríamos Send().
+    print("--- Supervisor: Iniciando recolección delegada ---")
+    mission = state.get("mission", {})
     
+    if mission.get("use_mock"):
+        state["raw_flights"] = mission.get("mock_data", [])
+        return state
+        
     # Recolección
-    europe = collect_europe()
-    asia = collect_asia()
-    lufthansa = collect_lufthansa()
+    europe = collect_europe(mission)
+    asia = collect_asia(mission)
+    lufthansa = collect_lufthansa(mission)
     
     state["raw_flights"] = europe + asia + lufthansa
     return state
@@ -79,6 +88,7 @@ def build_graph() -> StateGraph:
     builder = StateGraph(GraphState)
     
     # Agregar Nodos
+    builder.add_node("strategist", strategist_node)
     builder.add_node("supervisor", supervisor_node)
     builder.add_node("analyst", analyst_node)
     builder.add_node("critic", critic_node)
@@ -86,7 +96,8 @@ def build_graph() -> StateGraph:
     builder.add_node("data_scientist", data_scientist_node)
     
     # Definir Edges (Flujo)
-    builder.set_entry_point("supervisor")
+    builder.set_entry_point("strategist")
+    builder.add_edge("strategist", "supervisor")
     builder.add_edge("supervisor", "analyst")
     builder.add_edge("analyst", "critic")
     builder.add_edge("critic", "persist_notify")
