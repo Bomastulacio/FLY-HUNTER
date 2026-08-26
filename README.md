@@ -56,7 +56,7 @@ graph TD
 ### Roles de los Agentes
 
 1. **Supervisor:** Recibe el objetivo principal (fechas, presupuesto, destinos) y orquesta la ejecución en paralelo de los recolectores.
-2. **Subagentes Recolectores (Europa, Asia, Lufthansa):** Especialistas en consultar rutas específicas. Utilizan la librería `fli` (un envoltorio que hace ingeniería inversa a APIs internas de vuelos), lo que permite evadir límites de requests tradicionales y evitar costos por uso de tokens.
+2. **Subagentes Recolectores (Europa, Asia, Lufthansa):** Especialistas en consultar rutas específicas. Utilizan **SerpApi** (Google Flights API) para extraer datos en tiempo real de manera confiable.
 3. **Agente Analista:** Utiliza `pandas` para consolidar las distintas estructuras JSON devueltas por los recolectores, calcula los precios finales para múltiples pasajeros y normaliza el esquema de datos.
 4. **Agente Crítico:** El motor de decisiones. Evalúa las ofertas normalizadas contra reglas de negocio estrictas:
    - **Oportunidad de Oro:** Si el precio es irrisoriamente bajo (ej. <$1500 USD total), lo aprueba y fuerza una notificación prioritaria.
@@ -85,10 +85,10 @@ El sistema fue diseñado priorizando la eficiencia, los costos nulos o mínimos 
 
 1. **Base de Datos:** Ejecutar `schema.sql` en el SQL Editor del proyecto de Supabase.
 2. **Backend (GitHub Actions):** 
-   - Cargar los secretos en la configuración del repositorio: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `ALERT_EMAIL_TO`, `GH_DISPATCH_TOKEN`.
+   - Cargar los secretos en la configuración del repositorio: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `ALERT_EMAIL_TO`, `GH_DISPATCH_TOKEN`, `SERPAPI_KEY`.
 3. **Frontend (Vercel):** 
    - Vincular el directorio `/frontend` a un proyecto en Vercel.
-   - Configurar variables de entorno: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `GH_DISPATCH_TOKEN`, `GH_REPO`.
+   - Configurar variables de entorno: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `GH_DISPATCH_TOKEN`, `GH_REPO`, `ADMIN_TOKEN`.
 
 ---
 *Desarrollado para resolver un problema real, aprendiendo en el proceso.*

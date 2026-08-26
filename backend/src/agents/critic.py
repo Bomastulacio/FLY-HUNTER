@@ -36,6 +36,11 @@ def evaluate_deal(deal: Dict) -> Dict:
     deal['estado_aprobacion'] = 'no_aplica'
     deal['notificado'] = False
     
+    # Regla 0: Filtro estricto de escalas (rechazo inmediato)
+    if escalas > 1:
+        deal['estado_aprobacion'] = 'rechazado'
+        return deal
+        
     # Regla 1: Oportunidad de Oro
     if precio < CRITICAL_THRESHOLD:
         deal['es_oportunidad_oro'] = True
@@ -44,8 +49,8 @@ def evaluate_deal(deal: Dict) -> Dict:
         
     # Validaciones normales
     fecha_ok = (ida_fecha in VALID_DEPARTURE_DATES) and (vuelta_fecha in VALID_RETURN_DATES)
-    presupuesto_ok = (precio <= BUDGET_MAX)
-    escalas_ok = (escalas <= 2) # Máximo arbitrario de escalas razonables
+    presupuesto_ok = (BUDGET_MIN <= precio <= BUDGET_MAX)
+    escalas_ok = (escalas <= 1) # Máximo de escalas razonables (sin escala o 1)
     
     # Regla 2: Anomalía (rompe parámetros levemente pero es barata)
     if not fecha_ok and precio < (BUDGET_MAX - 200):
@@ -54,12 +59,7 @@ def evaluate_deal(deal: Dict) -> Dict:
         deal['estado_aprobacion'] = 'pendiente'
         return deal
         
-    if not escalas_ok and precio < (BUDGET_MAX - 300):
-        # Ej: Muchas escalas, pero muy buen precio
-        deal['es_anomalia'] = True
-        deal['estado_aprobacion'] = 'pendiente'
-        return deal
-    
+
     # Regla 3: Aprobación estándar
     if fecha_ok and presupuesto_ok and escalas_ok:
         deal['estado_aprobacion'] = 'aprobado'

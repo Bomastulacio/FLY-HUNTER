@@ -11,7 +11,12 @@ export const prerender = false;
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    const { id, action } = await request.json();
+    const { id, action, token } = await request.json();
+
+    const adminToken = import.meta.env.ADMIN_TOKEN;
+    if (adminToken && token !== adminToken) {
+      return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 });
+    }
 
     if (!id || !['aprobado', 'rechazado'].includes(action)) {
       return new Response(JSON.stringify({ error: 'Parámetros inválidos' }), { status: 400 });

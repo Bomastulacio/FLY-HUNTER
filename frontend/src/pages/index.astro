@@ -332,11 +332,18 @@ const formatDate = (dateStr: string) => {
           target.innerText = 'Procesando...';
           target.disabled = true;
 
+          const token = window.prompt("Ingresa el Token de Administrador para confirmar:");
+          if (!token) {
+             target.innerText = action === 'aprobado' ? 'Aprobar' : 'Rechazar';
+             target.disabled = false;
+             return;
+          }
+
           try {
             const res = await fetch('/api/aprobar-anomalia', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id, action })
+              body: JSON.stringify({ id, action, token })
             });
             
             if(res.ok) {

@@ -24,7 +24,7 @@ Vercel se usa solo para:
 
 3. Stack tecnológico (definitivo)
 Orquestación: Python + LangGraph + Pandas.
-Datos de vuelos: librería fli (paquete PyPI flights), única fuente. Reverse-engineering de la API interna de Google Flights — sin API key, sin costo, sin cuota que administrar. Usar fli.core.builders.build_flight_segments(origin, destination, departure_date, return_date) para armar los segmentos ida+vuelta y el TripType.
+Datos de vuelos: SerpApi (Google Flights API). Fuente estructurada y confiable. Se requiere configurar la variable de entorno SERPAPI_KEY.
 Envolver cada búsqueda en try/except con reintentos + backoff (2-3 reintentos, pausa de unos segundos) — confirmado en pruebas: un 403 no es necesariamente error de código, puede ser rate-limit puntual.
 Filtrar resultados con flight.price_unknown — Google no siempre expone precio agregado por fila; esas filas no sirven para comparar contra presupuesto.
 
@@ -72,9 +72,10 @@ Diseño visual: no generar estilos genéricos. Usar los skills de diseño web de
 GitHub Actions (secrets del repo):
 SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 RESEND_API_KEY, ALERT_EMAIL_TO
-GH_DISPATCH_TOKEN
+GH_DISPATCH_TOKEN, SERPAPI_KEY
 
 Vercel (env vars del proyecto):
 SUPABASE_URL, SUPABASE_ANON_KEY (frontend, solo lectura)
 SUPABASE_SERVICE_ROLE_KEY (solo en el endpoint API, no exponer al cliente)
 GH_DISPATCH_TOKEN, GH_REPO (para el endpoint de aprobación)
+ADMIN_TOKEN (password para aprobar/rechazar desde la web)
