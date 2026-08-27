@@ -1,0 +1,59 @@
+---
+import { supabase } from '../lib/supabase';
+import SearchWidget from '../components/SearchWidget.astro';
+import '../styles/global.css';
+---
+
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mis Alertas - Flight Hunter</title>
+  </head>
+  <body>
+    <div class="bg-3d-scene">
+      <div class="radar-circles" style="opacity: 0.5;">
+        <div class="circle c1"></div>
+        <div class="circle c2"></div>
+      </div>
+    </div>
+    
+    <main>
+      <header style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <a href="/" style="color: var(--accent-color); text-decoration: none; font-size: 0.9rem; margin-bottom: 1rem; display: inline-block;">← Volver al Radar</a>
+          <h1 style="font-size: 2.5rem;">Mis Alertas</h1>
+          <p style="color: var(--text-secondary);">Configurá el Agente Estratega para que busque por ti.</p>
+        </div>
+        <div>
+          <button id="logout-btn" class="btn btn-outline" style="border-color: rgba(255,76,76,0.3); color: var(--danger-color);">Cerrar Sesión</button>
+        </div>
+      </header>
+
+      <!-- Este es el componente que acabamos de armar, pero ahora oculto de la home -->
+      <SearchWidget />
+      
+    </main>
+
+    <script>
+      import { supabase } from '../lib/supabase';
+
+      // Proteger ruta
+      window.addEventListener('DOMContentLoaded', async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          window.location.href = '/login';
+        }
+      });
+
+      // Cerrar sesión
+      const logoutBtn = document.getElementById('logout-btn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+          await supabase.auth.signOut();
+          window.location.href = '/';
+        });
+      }
+    </script>
+  </body>
+</html>

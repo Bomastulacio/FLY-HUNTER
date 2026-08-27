@@ -1,6 +1,5 @@
 ---
 import { supabase } from '../lib/supabase';
-import SearchWidget from '../components/SearchWidget.astro';
 import '../styles/global.css';
 
 // Habilitar SSR (Server-Side Rendering) en Vercel
@@ -98,9 +97,11 @@ const formatDate = (dateStr: string) => {
           <span style="background: rgba(255,255,255,0.05); padding: 0.4rem 1rem; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 0.4rem; color: var(--text-secondary);">💰 <strong style="color: var(--text-primary);">Tope:</strong> US$ 2.400</span>
           <span style="background: rgba(255,255,255,0.05); padding: 0.4rem 1rem; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 0.4rem; color: var(--text-secondary);">⏱️ <strong style="color: var(--text-primary);">Escalas:</strong> Máx 1</span>
         </div>
+        <div style="margin-top: 2rem; display: flex; justify-content: center; gap: 1rem;">
+          <a href="/login" class="btn btn-outline" style="min-width: 120px;">🔑 Ingresar</a>
+          <a href="/alertas" class="btn btn-primary" style="min-width: 150px; background-color: var(--accent-color); color: #000;">✈️ Mis Alertas</a>
+        </div>
       </header>
-
-      <SearchWidget />
 
       <!-- Countdown de Vacaciones -->
       <div class="card countdown-card" style="margin-bottom: 1rem; background: linear-gradient(135deg, rgba(20, 20, 25, 0.9) 0%, rgba(30, 35, 45, 0.9) 100%); border-color: var(--accent-color); text-align: center;">

@@ -1,0 +1,186 @@
+---
+import '../styles/global.css';
+---
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Crear Cuenta - Flight Hunter</title>
+  </head>
+  <body style="display: flex; justify-content: center; align-items: center; min-height: 100vh;">
+    <div class="bg-3d-scene">
+      <div class="radar-circles">
+        <div class="circle c1"></div>
+        <div class="circle c2"></div>
+      </div>
+    </div>
+    
+    <div class="auth-container card">
+      <div class="text-center mb-6">
+        <div class="icon-container" style="margin: 0 auto 1rem auto; width: 64px; height: 64px;">
+          <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        </div>
+        <h2 style="font-size: 1.8rem; margin-bottom: 0.5rem;">Crear cuenta con email</h2>
+        <p style="color: var(--text-secondary); font-size: 0.95rem;">Completá tus datos para comenzar a cazar pasajes.</p>
+      </div>
+
+      <form id="register-form" style="display: flex; flex-direction: column; gap: 1rem;">
+        
+        <div class="input-group">
+          <label style="font-size: 0.8rem; color: var(--text-secondary);">Nombre completo</label>
+          <div class="input-wrapper mt-1">
+            <input type="text" name="name" placeholder="Ej: Juan Pérez" required style="width: 100%;" />
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label style="font-size: 0.8rem; color: var(--text-secondary);">Email</label>
+          <div class="input-wrapper mt-1">
+            <input type="email" name="email" placeholder="Ej: juanperez@email.com" required style="width: 100%;" />
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label style="font-size: 0.8rem; color: var(--text-secondary);">Contraseña</label>
+          <div class="input-wrapper mt-1">
+            <input type="password" name="password" placeholder="Mínimo 6 caracteres" required minlength="6" style="width: 100%;" />
+          </div>
+        </div>
+
+        <div class="input-group" style="margin-bottom: 0.5rem;">
+          <label style="font-size: 0.8rem; color: var(--text-secondary);">Confirmar contraseña</label>
+          <div class="input-wrapper mt-1">
+            <input type="password" name="password_confirm" placeholder="Repetí tu contraseña" required minlength="6" style="width: 100%;" />
+          </div>
+        </div>
+        
+        <label style="display: flex; gap: 0.5rem; align-items: flex-start; font-size: 0.8rem; color: var(--text-secondary); cursor: pointer;">
+          <input type="checkbox" required style="width: auto; margin-top: 2px;" />
+          <span>Acepto los <span style="color: var(--accent-color);">Términos y Condiciones</span> y la <span style="color: var(--accent-color);">Política de Privacidad</span></span>
+        </label>
+
+        <button type="submit" id="submit-btn" class="btn btn-primary" style="width: 100%; padding: 1rem; margin-top: 0.5rem;">
+          Crear cuenta
+        </button>
+
+        <button type="button" class="btn btn-outline" style="width: 100%; padding: 0.9rem; display: flex; gap: 0.5rem; justify-content: center; margin-top: 0.5rem;" onclick="alert('Configuración de Google pendiente en Supabase')">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2 6.42 2 12c0 5.59 4.39 10 10.1 10 5.9 0 11.1-4.34 11.1-11.53 0-1.3-.22-2.37-.22-2.37z"/></svg>
+          Continuar con Google
+        </button>
+
+        <div id="error-msg" style="color: var(--danger-color); font-size: 0.85rem; text-align: center; display: none;"></div>
+        <div id="success-msg" style="color: var(--success-color); font-size: 0.9rem; text-align: center; display: none; background: rgba(30,215,96,0.1); padding: 1rem; border-radius: 8px;"></div>
+      </form>
+
+      <div style="text-align: center; margin-top: 2rem; font-size: 0.9rem; color: var(--text-secondary);">
+        ¿Ya tenés cuenta? <a href="/login" style="color: var(--accent-color); text-decoration: none;">Iniciar sesión</a>
+      </div>
+    </div>
+
+    <script>
+      import { supabase } from '../lib/supabase';
+      
+      const form = document.getElementById('register-form') as HTMLFormElement;
+      const btn = document.getElementById('submit-btn') as HTMLButtonElement;
+      const errorMsg = document.getElementById('error-msg');
+      const successMsg = document.getElementById('success-msg');
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        btn.disabled = true;
+        btn.innerText = 'Creando cuenta...';
+        if (errorMsg) errorMsg.style.display = 'none';
+        if (successMsg) successMsg.style.display = 'none';
+
+        const formData = new FormData(form);
+        const name = formData.get('name') as string;
+        const email = formData.get('email') as string;
+        const password = formData.get('password') as string;
+        const passwordConfirm = formData.get('password_confirm') as string;
+
+        if (password !== passwordConfirm) {
+          if (errorMsg) {
+            errorMsg.innerText = "Las contraseñas no coinciden.";
+            errorMsg.style.display = 'block';
+          }
+          btn.disabled = false;
+          btn.innerText = 'Crear cuenta';
+          return;
+        }
+
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: name,
+            }
+          }
+        });
+
+        if (error) {
+          if (errorMsg) {
+            errorMsg.innerText = error.message;
+            errorMsg.style.display = 'block';
+          }
+          btn.disabled = false;
+          btn.innerText = 'Crear cuenta';
+        } else {
+          // Si el signUp requiere confirmación de email:
+          if (data.user && data.user.identities && data.user.identities.length === 0) {
+              if (errorMsg) {
+                errorMsg.innerText = "Este correo ya está registrado. Por favor, inicia sesión.";
+                errorMsg.style.display = 'block';
+              }
+              btn.disabled = false;
+              btn.innerText = 'Crear cuenta';
+          } else if (data.session === null) {
+            form.style.display = 'none';
+            if (successMsg) {
+              successMsg.innerText = "¡Cuenta creada! Revisa tu bandeja de entrada para verificar tu email y poder iniciar sesión.";
+              successMsg.style.display = 'block';
+            }
+          } else {
+             // Si el auto-login está activado en Supabase (sin confirm email)
+             window.location.href = '/alertas';
+          }
+        }
+      });
+    </script>
+    
+    <style>
+      .auth-container {
+        width: 100%;
+        max-width: 480px;
+        padding: 3rem 2.5rem;
+        background: rgba(10, 10, 12, 0.85);
+        border: 1px solid rgba(209, 255, 76, 0.2);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(209, 255, 76, 0.05);
+        z-index: 10;
+        margin: 2rem 0;
+      }
+      .text-center { text-align: center; }
+      .mb-6 { margin-bottom: 2rem; }
+      .mt-1 { margin-top: 0.25rem; }
+      .input-wrapper {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: var(--border-radius-sm);
+      }
+      .input-wrapper:focus-within {
+        border-color: var(--accent-color);
+      }
+      input[type="text"], input[type="email"], input[type="password"] {
+        background: transparent;
+        border: none;
+        color: white;
+        padding: 1rem;
+        font-family: inherit;
+        outline: none;
+      }
+      input[type="checkbox"] {
+        accent-color: var(--accent-color);
+      }
+    </style>
+  </body>
+</html>
