@@ -62,3 +62,44 @@ create policy "Permitir lectura pÃºblica de insights"
 create policy "Permitir full access al service role insights"
     on public.route_insights
     using (auth.jwt() ->> 'role' = 'service_role');
+
+-- Tabla de Alertas de Búsqueda (Preferencias de usuario)
+create table public.search_alerts (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid references auth.users(id) not null,
+    origen text not null,
+    destino text not null,
+    tipo_viaje text not null, -- 'Ida y vuelta' o 'Solo ida'
+    fecha_ida_min date,
+    fecha_ida_max date,
+    fecha_vuelta_min date,
+    fecha_vuelta_max date,
+    paises text[],
+    presupuesto_min numeric(10,2),
+    presupuesto_max numeric(10,2),
+    escalas_max int default 1,
+    clase text default 'Cualquiera',
+    email text not null,
+    activo boolean not null default true,
+    creado_en timestamptz not null default now(),
+    actualizado_en timestamptz not null default now(),
+    constraint unique_user_alert unique(user_id) -- Por ahora, 1 alerta por usuario
+);
+
+-- Habilitar RLS
+alter table public.search_alerts enable row level security;
+
+-- Política para que los usuarios puedan ver y editar SUS propias alertas
+create policy "Usuarios ven sus alertas"
+    on public.search_alerts
+    for select
+    using (auth.uid() = user_id);
+
+create policy "Usuarios editan sus alertas"
+    on public.search_alerts
+    for all
+    using (auth.uid() = user_id);
+
+create policy "Permitir full access al service role alertas"
+    on public.search_alerts
+    using (auth.jwt() ->> 'role' = 'service_role');

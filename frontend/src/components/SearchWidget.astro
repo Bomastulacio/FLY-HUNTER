@@ -1,0 +1,447 @@
+---
+import { supabase } from '../lib/supabase';
+---
+
+<div class="search-widget-container card">
+  <div class="widget-header">
+    <div class="icon-container">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.2-1.1.6L3 8l6.5 4.5L6 16l-3.2-1.3c-.4-.1-.8.2-1 .6L1 17l4.5 2.5L8 24l1.7-.8c.4-.2.7-.6.6-1L9 19l3.5-3.5 8.2 6.5c.4.2.8 0 .6-.5z" />
+        <circle cx="12" cy="12" r="10" stroke-dasharray="4 4" stroke-opacity="0.5"/>
+      </svg>
+    </div>
+    <div>
+      <h2>Buscá tu próximo vuelo</h2>
+      <p>Completá tus preferencias y te avisamos por email cuando encontremos las mejores tarifas.</p>
+    </div>
+  </div>
+
+  <form id="search-alert-form" class="widget-form">
+    <!-- Row 1 -->
+    <div class="form-group">
+      <label>Origen</label>
+      <div class="input-wrapper">
+        <span class="input-icon">🛫</span>
+        <select name="origen" required>
+          <option value="EZE,AEP" selected>Buenos Aires (EZE/AEP)</option>
+          <option value="COR">Córdoba (COR)</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Destino</label>
+      <div class="input-wrapper">
+        <span class="input-icon">🛬</span>
+        <select name="destino" required>
+          <option value="Europa" selected>Europa</option>
+          <option value="Asia">Asia</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Tipo de viaje</label>
+      <div class="radio-toggle">
+        <label class="toggle-option active">
+          <input type="radio" name="tipo_viaje" value="ida_vuelta" checked>
+          🔄 Ida y vuelta
+        </label>
+        <label class="toggle-option">
+          <input type="radio" name="tipo_viaje" value="solo_ida">
+          🔀 Solo ida
+        </label>
+      </div>
+    </div>
+
+    <!-- Row 2 -->
+    <div class="form-group">
+      <label>Fecha de ida (aprox)</label>
+      <div class="input-wrapper">
+        <input type="date" name="fecha_ida_min" required />
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Fecha de vuelta (aprox)</label>
+      <div class="input-wrapper">
+        <input type="date" name="fecha_vuelta_min" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Países que te interesan</label>
+      <div class="input-wrapper">
+        <span class="input-icon">🌍</span>
+        <select name="paises">
+          <option value="Cualquiera" selected>Cualquiera</option>
+          <option value="España">España</option>
+          <option value="Francia">Francia</option>
+          <option value="Italia">Italia</option>
+          <option value="Reino Unido">Reino Unido</option>
+          <option value="Japón">Japón</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Row 3 -->
+    <div class="form-group">
+      <label>Presupuesto total (USD)</label>
+      <div class="dual-input">
+        <div class="input-wrapper">
+          <span class="input-prefix">Mín</span>
+          <input type="number" name="presupuesto_min" placeholder="800" value="800" />
+        </div>
+        <span class="separator">-</span>
+        <div class="input-wrapper">
+          <span class="input-prefix">Máx</span>
+          <input type="number" name="presupuesto_max" placeholder="2400" value="2400" required />
+        </div>
+      </div>
+    </div>
+    <div class="form-group" style="grid-column: span 2;">
+      <label>Escalas máximas</label>
+      <div class="radio-pills">
+        <label class="pill">
+          <input type="radio" name="escalas_max" value="0">
+          🚫 Sin escalas
+        </label>
+        <label class="pill active">
+          <input type="radio" name="escalas_max" value="1" checked>
+          ✈️ 1 escala
+        </label>
+        <label class="pill">
+          <input type="radio" name="escalas_max" value="2">
+          ⏱️ 2 o más
+        </label>
+      </div>
+    </div>
+
+    <!-- Row 4 -->
+    <div class="form-group full-width">
+      <label>Email para recibir alertas y guardar búsqueda</label>
+      <div class="input-wrapper">
+        <span class="input-icon">✉️</span>
+        <input type="email" name="email" id="user-email" placeholder="tucorreo@ejemplo.com" required />
+      </div>
+      <small class="hint">🔒 Te enviaremos un Link Mágico para guardar tus preferencias de forma segura.</small>
+    </div>
+
+    <button type="submit" id="submit-btn" class="btn btn-primary submit-btn">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      Cazar pasajes
+    </button>
+  </form>
+
+  <div id="auth-message" class="auth-message hidden">
+    ¡Link enviado! Revisa tu correo para confirmar y guardar tu alerta.
+  </div>
+</div>
+
+<style>
+  .search-widget-container {
+    background: rgba(10, 10, 12, 0.8);
+    border: 1px solid var(--accent-color);
+    box-shadow: 0 0 20px rgba(209, 255, 76, 0.05);
+    margin-bottom: 3rem;
+    padding: 2rem;
+  }
+  
+  .widget-header {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  
+  .icon-container {
+    width: 60px;
+    height: 60px;
+    background: rgba(209, 255, 76, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent-color);
+  }
+  
+  .icon-container svg {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .widget-header h2 {
+    margin: 0 0 0.2rem 0;
+    font-size: 1.6rem;
+  }
+  
+  .widget-header p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+  }
+  
+  .widget-form {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+  
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .full-width {
+    grid-column: span 3;
+  }
+  
+  label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+  
+  .input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius-sm);
+    transition: all 0.2s ease;
+  }
+  
+  .input-wrapper:focus-within {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 1px var(--accent-color);
+  }
+  
+  .input-icon, .input-prefix {
+    padding-left: 1rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+  }
+  
+  select, input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    padding: 0.8rem 1rem;
+    font-family: inherit;
+    font-size: 0.95rem;
+    outline: none;
+  }
+  
+  select option {
+    background: var(--bg-base);
+    color: var(--text-primary);
+  }
+  
+  .dual-input {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .separator {
+    color: var(--text-secondary);
+  }
+  
+  /* Toggle Styles */
+  .radio-toggle, .radio-pills {
+    display: flex;
+    gap: 0.5rem;
+    height: 100%;
+  }
+  
+  .toggle-option, .pill {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+  }
+  
+  .toggle-option input, .pill input {
+    display: none;
+  }
+  
+  .toggle-option.active, .pill.active {
+    background: rgba(209, 255, 76, 0.1);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+  }
+  
+  .hint {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+  }
+  
+  .submit-btn {
+    grid-column: span 3;
+    padding: 1.2rem;
+    font-size: 1.1rem;
+    display: flex;
+    gap: 0.5rem;
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+  
+  .hidden {
+    display: none;
+  }
+  
+  .auth-message {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: rgba(30, 215, 96, 0.1);
+    border: 1px solid var(--success-color);
+    color: var(--success-color);
+    border-radius: var(--border-radius-sm);
+    text-align: center;
+    font-weight: 500;
+  }
+  
+  @media (max-width: 768px) {
+    .widget-form {
+      grid-template-columns: 1fr;
+    }
+    .full-width, .submit-btn, .form-group[style] {
+      grid-column: span 1 !important;
+    }
+  }
+</style>
+
+<script>
+  import { supabase } from '../lib/supabase';
+  
+  // UI interaction logic for toggles
+  document.querySelectorAll('.toggle-option, .pill').forEach(el => {
+    el.addEventListener('click', function(this: HTMLElement) {
+      const parent = this.parentElement;
+      if (parent) {
+        parent.querySelectorAll('.active').forEach(child => child.classList.remove('active'));
+        this.classList.add('active');
+        const input = this.querySelector('input');
+        if (input) input.checked = true;
+      }
+    });
+  });
+
+  // Load existing user email if logged in
+  window.addEventListener('DOMContentLoaded', async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user?.email) {
+      const emailInput = document.getElementById('user-email') as HTMLInputElement;
+      if (emailInput) {
+        emailInput.value = session.user.email;
+        emailInput.disabled = true; // Prevents changing email if logged in
+      }
+    }
+  });
+
+  // Handle Form Submission
+  const form = document.getElementById('search-alert-form') as HTMLFormElement;
+  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+  const authMessage = document.getElementById('auth-message');
+  
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = 'Procesando...';
+    
+    const formData = new FormData(form);
+    const email = formData.get('email') as string;
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      // User is not logged in -> Send Magic Link
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email,
+        options: {
+          emailRedirectTo: window.location.origin
+        }
+      });
+      
+      if (error) {
+        alert('Error enviando enlace: ' + error.message);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Cazar pasajes';
+        return;
+      }
+      
+      // We will save their preferences in localStorage so when they return via magic link we can save it
+      const prefs = Object.fromEntries(formData.entries());
+      localStorage.setItem('pending_alert_save', JSON.stringify(prefs));
+      
+      form.classList.add('hidden');
+      if(authMessage) authMessage.classList.remove('hidden');
+    } else {
+      // User is logged in -> Save Alert directly via API or Supabase client
+      // Since RLS is enabled, we need to insert the row
+      const payload = {
+        user_id: session.user.id,
+        origen: formData.get('origen'),
+        destino: formData.get('destino'),
+        tipo_viaje: formData.get('tipo_viaje'),
+        fecha_ida_min: formData.get('fecha_ida_min') || null,
+        fecha_vuelta_min: formData.get('fecha_vuelta_min') || null,
+        presupuesto_min: formData.get('presupuesto_min') ? Number(formData.get('presupuesto_min')) : null,
+        presupuesto_max: formData.get('presupuesto_max') ? Number(formData.get('presupuesto_max')) : null,
+        escalas_max: Number(formData.get('escalas_max')),
+        email: session.user.email
+      };
+      
+      const { error } = await supabase
+        .from('search_alerts')
+        .upsert(payload, { onConflict: 'user_id' }); // Upsert ensures 1 per user for now
+        
+      if (error) {
+        alert('Error guardando alerta: ' + error.message);
+      } else {
+        alert('¡Alerta guardada con éxito!');
+      }
+      
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = 'Actualizar pasajes';
+    }
+  });
+
+  // Check if returning from Magic Link with pending data
+  window.addEventListener('DOMContentLoaded', async () => {
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        const pending = localStorage.getItem('pending_alert_save');
+        if (pending) {
+          const data = JSON.parse(pending);
+          
+          const payload = {
+            user_id: session.user.id,
+            origen: data.origen,
+            destino: data.destino,
+            tipo_viaje: data.tipo_viaje,
+            fecha_ida_min: data.fecha_ida_min || null,
+            fecha_vuelta_min: data.fecha_vuelta_min || null,
+            presupuesto_min: data.presupuesto_min ? Number(data.presupuesto_min) : null,
+            presupuesto_max: data.presupuesto_max ? Number(data.presupuesto_max) : null,
+            escalas_max: Number(data.escalas_max),
+            email: session.user.email
+          };
+          
+          await supabase.from('search_alerts').upsert(payload, { onConflict: 'user_id' });
+          localStorage.removeItem('pending_alert_save');
+          
+          // Show a nice success toast (simple alert for MVP)
+          alert('¡Tu alerta ha sido activada exitosamente!');
+          window.location.reload();
+        }
+      }
+    });
+  });
+</script>
