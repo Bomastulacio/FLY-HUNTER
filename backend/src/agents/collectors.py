@@ -1,22 +1,11 @@
 import os
-import random
 import requests
-import datetime
 from typing import List, Dict, Any
 import diskcache
 
 # Inicializar caché en el directorio del proyecto
 cache_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '.cache_vuelos')
 flight_cache = diskcache.Cache(cache_dir)
-
-# Constantes de destinos (IATA codes)
-ORIGIN = "EZE" # Buenos Aires (EZE/AEP)
-EUROPE_DESTINATIONS = ["MAD", "CDG", "LHR", "BER"] # Madrid, Paris (CDG), London (LHR), Berlin (BER)
-ASIA_DESTINATIONS = ["NRT", "KIX"] # Tokyo (NRT), Osaka (KIX)
-
-# Constantes de fechas base (2027)
-DEPARTURE_DATES = ["2027-04-17", "2027-04-18", "2027-04-19"]
-RETURN_DATES = ["2027-04-26", "2027-04-27", "2027-04-28", "2027-04-29", "2027-04-30", "2027-05-01", "2027-05-02"]
 
 SERPAPI_KEY = os.environ.get("SERPAPI_KEY", "")
 
@@ -90,34 +79,25 @@ def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str) 
         print(f"Error fetching from SerpApi: {e}")
         return []
 
-def collect_europe(mission: Dict) -> List[Dict]:
-    if not mission.get("run_europe"):
-        return []
+def collect_dynamic_flights(mission: Dict) -> List[Dict]:
+    """
+    Recolector Genérico: Ejecuta las búsquedas dinámicas definidas por el Estratega.
+    """
     results = []
-    dep = mission.get("dep_date")
-    ret = mission.get("ret_date")
-    for dest in mission.get("europe_dests", []):
-        results.extend(fetch_serpapi_flights(ORIGIN, dest, dep, ret))
-    return results
-
-def collect_asia(mission: Dict) -> List[Dict]:
-    if not mission.get("run_asia"):
+    searches = mission.get("searches", [])
+    
+    if not searches:
+        print("Recolector: No hay búsquedas asignadas en la misión.")
         return []
-    results = []
-    dep = mission.get("dep_date")
-    ret = mission.get("ret_date")
-    for dest in mission.get("asia_dests", []):
-        results.extend(fetch_serpapi_flights(ORIGIN, dest, dep, ret))
-    return results
-
-def collect_lufthansa(mission: Dict) -> List[Dict]:
-    if not mission.get("run_lufthansa"):
-        return []
-    results = []
-    dep = mission.get("dep_date")
-    ret = mission.get("ret_date")
-    for dest in mission.get("lufthansa_dests", []):
-        flights = fetch_serpapi_flights(ORIGIN, dest, dep, ret)
-        lufthansa_deals = [f for f in flights if "lufthansa" in f.get("aerolinea", "").lower()]
-        results.extend(lufthansa_deals)
+        
+    for search in searches:
+        origin = search.get("origin")
+        dest = search.get("dest")
+        dep_date = search.get("dep_date")
+        ret_date = search.get("ret_date")
+        
+        if all([origin, dest, dep_date, ret_date]):
+            flights = fetch_serpapi_flights(origin, dest, dep_date, ret_date)
+            results.extend(flights)
+            
     return results

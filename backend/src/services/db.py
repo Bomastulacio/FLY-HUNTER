@@ -85,3 +85,12 @@ def get_recent_flight_deals(days: int = 30) -> List[dict]:
     except Exception as e:
         print(f"Error fetching recent deals: {e}")
         return []
+
+def get_active_search_alerts() -> List[dict]:
+    client = get_supabase_client()
+    try:
+        response = client.table('search_alerts').select('*').eq('activo', True).execute()
+        return response.data
+    except Exception as e:
+        print(f"Error fetching active search alerts: {e}")
+        return []

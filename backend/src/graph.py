@@ -1,7 +1,7 @@
 from typing import TypedDict, List, Dict, Any
 from langgraph.graph import StateGraph, END
 from .agents.strategist import define_daily_mission
-from .agents.collectors import collect_europe, collect_asia, collect_lufthansa
+from .agents.collectors import collect_dynamic_flights
 from .agents.sanitizer import sanitize_flights
 from .agents.analyst import consolidate_and_analyze
 from .agents.critic import filter_and_evaluate
@@ -29,12 +29,10 @@ def supervisor_node(state: GraphState) -> GraphState:
         state["raw_flights"] = mission.get("mock_data", [])
         return state
         
-    # Recolección
-    europe = collect_europe(mission)
-    asia = collect_asia(mission)
-    lufthansa = collect_lufthansa(mission)
+    # Recolección Dinámica
+    flights = collect_dynamic_flights(mission)
     
-    state["raw_flights"] = europe + asia + lufthansa
+    state["raw_flights"] = flights
     return state
 
 def sanitizer_node(state: GraphState) -> GraphState:

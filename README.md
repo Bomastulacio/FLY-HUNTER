@@ -1,34 +1,32 @@
 # Flight Hunter
 
-Un sistema proactivo de rastreo y alerta de vuelos construido sobre una arquitectura de **Inteligencia Artificial Agentiva (LangGraph)**. Diseñado para buscar de manera autónoma, evaluar mediante reglas de negocio y notificar las mejores oportunidades de pasajes aéreos (incluyendo *Error Fares* o tarifas de error) hacia Europa, Asia o cualquier destino global.
+Un sistema proactivo de rastreo y alerta de vuelos construido sobre una arquitectura de **Inteligencia Artificial Agentiva (LangGraph)**. Diseñado para buscar de manera autónoma, evaluar mediante reglas de negocio y notificar las mejores oportunidades de pasajes aéreos hacia cualquier destino global definido por el usuario.
 
 ## El Origen del Proyecto
 
-La idea nació de una necesidad personal real: planificar unas vacaciones. Buscar vuelos manualmente todos los días, comparar precios en diferentes pestañas y rogar cruzarse con una oferta relámpago resulta en un proceso exhaustivo. En lugar de depender de alertas genéricas de sitios agregadores de viajes, decidí construir una solución propia, ajustada exactamente a fechas estrictas, un presupuesto definido y destinos de interés.
+La idea nació de una necesidad personal real: planificar unas vacaciones. En lugar de depender de alertas genéricas de sitios agregadores de viajes, decidí construir una solución propia, ajustada exactamente a fechas estrictas, un presupuesto definido y destinos de interés.
 
-Lo que comenzó como un simple script evolucionó hasta convertirse en la excusa perfecta para poner a prueba y consolidar arquitecturas de software modernas que venía explorando, específicamente el diseño de flujos de trabajo basados en Agentes (Agentic Workflows) y arquitecturas Serverless orientadas a eventos, preparado escalar desde rutas personales (ej. Argentina a Europa) hacia búsquedas globales.
+Lo que comenzó como un simple script evolucionó hasta convertirse en la excusa perfecta para consolidar arquitecturas modernas: **flujos de trabajo basados en Agentes (Agentic Workflows)**, una interfaz web inmersiva, **autenticación de usuarios** y un modelo **Serverless**. Hoy el sistema es multiusuario, leyendo de la base de datos las alertas deseadas por diferentes personas, y optimizando las llamadas a las APIs de vuelo para minimizar costos.
 
 ## Arquitectura Técnica
 
-Flight Hunter es una aplicación full-stack completamente autónoma. No espera a que un usuario dispare una búsqueda; se ejecuta de forma programada, delega tareas a agentes especializados, limpia la data, evalúa los resultados con un motor de decisiones y alerta cuando surgen oportunidades reales.
+Flight Hunter es una aplicación full-stack completamente autónoma. El frontend captura las preferencias de los usuarios logueados, y el backend se ejecuta de forma programada, delega tareas a agentes especializados, limpia la data, evalúa los resultados con un motor de decisiones y alerta cuando surgen oportunidades reales.
 
 ### Agentes Inteligentes (LangGraph)
 
-El núcleo del backend es un grafo de estados construido con **LangGraph** en Python, el cual simula el trabajo de un equipo de analistas de viaje:
+El núcleo del backend es un grafo de estados construido con **LangGraph** en Python:
 
 ```mermaid
 graph TD
-    Trigger([GitHub Actions Cron<br>Cada 6 horas]) --> Sup
+    Trigger([GitHub Actions Cron<br>Cada 6 horas]) --> Estratega
+    
+    Estratega[Agente Estratega<br>Lee Alertas y Optimiza Cuota] --> Sup
     
     subgraph Equipo de Recolección
-        Sup[Supervisor<br>Recibe el Goal] -->|Delega| AE[Subagente Europa]
-        Sup -->|Delega| AA[Subagente Asia]
-        Sup -->|Delega| AC[Subagente Global]
+        Sup[Supervisor<br>Recibe el Goal] -->|Delega| Recolector[Recolector Dinámico Universal]
     end
 
-    AE --> Sanitizador
-    AA --> Sanitizador
-    AC --> Sanitizador
+    Recolector --> Sanitizador
 
     subgraph Procesamiento y Evaluación
         Sanitizador[Agente Sanitizador<br>Filtro de Escalas y Basura] --> Analista
@@ -38,7 +36,7 @@ graph TD
 
     Critico -->|Precio < $900 USD| Glitch[Error Fare / Glitch]
     Critico -->|Precio < $1500 USD| Oro[Oportunidad de Oro]
-    Critico -->|Dentro de $1700-$2400| OK[Aprobado Estándar]
+    Critico -->|Dentro de Presupuesto| OK[Aprobado Estándar]
     Critico -->|Rompe regla levemente| Anomalia[Anomalía Pendiente]
 
     Glitch --> NotifUrgente[Alerta Urgente]
@@ -59,42 +57,40 @@ graph TD
 
 ### Roles de los Agentes
 
-1. **Supervisor:** Recibe el objetivo principal (fechas, presupuesto, destinos) y orquesta la ejecución en paralelo de los recolectores.
-2. **Subagentes Recolectores (Europa, Asia, Global):** Especialistas en consultar rutas específicas y escalables a cualquier país. Utilizan **SerpApi** (Google Flights API) para extraer datos en tiempo real de manera confiable, respetando los límites de rate-limits mensuales de la API.
-3. **Agente Sanitizador:** Interviene justo después de la recolección para limpiar combinaciones de escalas basura, precios irrisorios falsos y viajes de duración extrema (ej. > 30hs). Esto garantiza que la información basura de la API no contamine nuestra base de datos.
-4. **Agente Analista:** Utiliza `pandas` para consolidar las distintas estructuras JSON ya sanitizadas. Compara los datos actuales con los promedios históricos (`precio_promedio_7d`) almacenados en Supabase y normaliza el esquema.
-5. **Agente Crítico:** El motor de decisiones. Evalúa las ofertas normalizadas contra reglas de negocio estrictas:
-   - **Error Fare (Glitch Fare):** Si detecta una tarifa que cae por debajo del umbral crítico (`GLITCH_THRESHOLD = 900`), la clasifica como `es_tarifa_error` y dispara una notificación urgente inmediatamente.
-   - **Oportunidad de Oro:** Si el precio es muy bajo (ej. <$1500 USD total), lo aprueba.
-   - **Aprobado:** Pasa directo a la base de datos si cumple con las fechas y presupuesto estándar.
-   - **Anomalía (Human-in-the-Loop):** Detecta vuelos muy económicos que rompen levemente los parámetros (ej. salida un día antes o conexiones largas). Los marca para revisión humana desde el frontend, pausando esa rama del proceso hasta recibir feedback.
-6. **Agente Data Scientist (Analítica Predictiva):** Se ejecuta al final del pipeline. Extrae el historial de los últimos 30 días, agrupa por ruta y utiliza `numpy` para realizar una regresión lineal (Polyfit) que predice tendencias de precio. Además, implementa la librería `holidays` para cruzar automáticamente las fechas de los vuelos con el calendario oficial de feriados.
+1. **Agente Estratega (Cerebro):** Se conecta a Supabase para leer todas las alertas activas de los usuarios (`search_alerts`). Traduce destinos genéricos (ej. "Europa") a aeropuertos específicos, agrupa búsquedas idénticas para no gastar cuota en vano, y define una "Misión" limitando la cantidad de peticiones para cuidar el límite de uso de SerpApi.
+2. **Supervisor:** Recibe la misión optimizada y orquesta la recolección.
+3. **Recolector Dinámico Universal:** Especialista en consultar rutas a nivel global de forma parametrizada. Utiliza **SerpApi** (Google Flights API).
+4. **Agente Sanitizador:** Interviene para limpiar combinaciones de escalas basura, precios irrisorios falsos y viajes de duración extrema (ej. > 30hs). 
+5. **Agente Analista:** Utiliza `pandas` para consolidar las distintas estructuras JSON ya sanitizadas y calcular promedios históricos (`precio_promedio_7d`).
+6. **Agente Crítico:** Evalúa las ofertas contra las alertas de los usuarios y reglas de negocio:
+   - **Error Fare (Glitch Fare):** Tarifa que cae por debajo de umbrales críticos.
+   - **Oportunidad de Oro / Aprobado:** Cumplen con presupuesto y se guardan.
+   - **Anomalía (Human-in-the-Loop):** Detecta vuelos muy económicos que rompen levemente parámetros y espera aprobación desde el frontend.
+7. **Agente Data Scientist (Analítica Predictiva):** Extrae historial, utiliza `numpy` para predecir tendencias de precio y se cruza con calendarios de feriados (`holidays`).
 
 ## Stack Tecnológico
 
-El sistema fue diseñado priorizando la eficiencia, los costos nulos o mínimos (Serverless) y la escalabilidad global.
-
 - **Orquestación (Backend):** Python + LangGraph + Pandas.
-- **Motor de Ejecución:** GitHub Actions. Corre el pipeline cada 6 horas vía `cron`. Esto evita mantener servidores activos 24/7 y tolera tiempos de ejecución prolongados sin problemas de timeout.
-- **Base de Datos:** Supabase (PostgreSQL). Implementa `hash_dedupe` para evitar duplicar ofertas, registra los promedios de 7 días, y usa Row Level Security (RLS) para la API cliente.
-- **Frontend y API:** Astro desplegado en Vercel. Presenta un dashboard inmersivo (con animaciones CSS 3D puras, diseño "Glassmorphism" y temática "Radar") para monitorear vuelos, tendencias de IA y resolver anomalías.
+- **Motor de Ejecución:** GitHub Actions. Corre el pipeline automáticamente vía `cron`.
+- **Base de Datos & Auth:** Supabase (PostgreSQL). Gestiona usuarios, alertas, y vuelos rastreados usando RLS (Row Level Security).
+- **Frontend y API:** Astro desplegado en Vercel. Ofrece un dashboard de "radar" y un flujo formal de autenticación (`/login`, `/registro`, `/alertas`) basado en diseño Glassmorphism y modelos responsivos.
 - **Correos Transaccionales:** Resend.
 
 ## Estructura del Repositorio
 
 - `/backend`: Lógica de agentes en Python. Punto de entrada principal: `main.py`.
-- `/frontend`: Dashboard web desarrollado con Astro.
-- `.github/workflows`: Definición de los pipelines periódicos y los dispatches (webhooks).
-- `schema.sql`: Script DDL para replicar la estructura de la base de datos (incluyendo la nueva tabla/columna `es_tarifa_error`).
+- `/frontend`: Dashboard web y Auth Flow desarrollados con Astro.
+- `.github/workflows`: Definición de pipelines (cron).
+- `schema.sql`: Script DDL para replicar la estructura de la base de datos en Supabase.
 
 ## Despliegue Rápido
 
 1. **Base de Datos:** Ejecutar `schema.sql` en el SQL Editor del proyecto de Supabase.
 2. **Backend (GitHub Actions):** 
-   - Cargar los secretos en la configuración del repositorio: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `ALERT_EMAIL_TO`, `GH_DISPATCH_TOKEN`, `SERPAPI_KEY`.
+   - Secretos requeridos: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `SERPAPI_KEY`.
 3. **Frontend (Vercel):** 
-   - Vincular el directorio `/frontend` a un proyecto en Vercel.
-   - Configurar variables de entorno: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `GH_DISPATCH_TOKEN`, `GH_REPO`, `ADMIN_TOKEN`.
+   - Directorio raíz: `/frontend`.
+   - Configurar variables: `PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY`.
 
 ---
-*Desarrollado para resolver un problema real, aprendiendo en el proceso.*
+*Desarrollado para resolver un problema real, aprendiendo Inteligencia Artificial Agentiva en el proceso.*

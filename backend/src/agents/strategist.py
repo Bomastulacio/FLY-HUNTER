@@ -1,6 +1,19 @@
 import os
 import datetime
-from typing import Dict, Any
+from typing import Dict, Any, List
+from ..services.db import get_active_search_alerts
+
+# Mapeo Geográfico Simple (Pseudo-OpenWiki)
+GEO_MAP = {
+    "Europa": ["MAD", "CDG", "LHR", "BER", "FCO", "AMS"],
+    "Asia": ["NRT", "KIX", "ICN", "BKK"],
+    "España": ["MAD", "BCN"],
+    "Francia": ["CDG", "ORY"],
+    "Italia": ["FCO", "MXP"],
+    "Reino Unido": ["LHR", "LGW"],
+    "Japón": ["NRT", "HND", "KIX"],
+    "Cualquiera": ["MAD", "CDG", "MIA", "NRT"] # Destinos globales por defecto
+}
 
 # Datos de prueba para el modo manual sin consumir API
 MOCK_FLIGHTS = [
@@ -17,86 +30,85 @@ MOCK_FLIGHTS = [
         "duracion_total_minutos": 780,
         "link_reserva": "https://google.com/flights",
         "fuente": "mock"
-    },
-    {
-        "ida_fecha": "2027-04-17",
-        "vuelta_fecha": "2027-04-26",
-        "ida_origen_destino": "EZE-CDG",
-        "vuelta_origen_destino": "CDG-EZE",
-        "precio_original": 2500.0,
-        "moneda_original": "USD",
-        "precio_total_usd": 2500.0,
-        "aerolinea": "Air France",
-        "cantidad_escalas": 0,
-        "duracion_total_minutos": 700,
-        "link_reserva": "https://google.com/flights",
-        "fuente": "mock"
     }
 ]
 
 def define_daily_mission() -> Dict[str, Any]:
     """
-    Estratega: Decide qué buscar hoy para no exceder la cuota mensual de 250 peticiones.
-    También soporta un modo TEST_MODE para correr el pipeline sin golpear a SerpApi.
+    Estratega: Lee las alertas de los usuarios, mapea los destinos, 
+    elimina duplicados y devuelve las búsquedas optimizadas respetando la cuota.
     """
-    # 1. Chequear Modo Test / Manual Override
     if os.environ.get("TEST_MODE", "").lower() == "true":
-        print("--- ESTRATEGA: MODO TEST ACTIVADO. Usando datos Mock (0 consumo de API) ---")
+        print("--- ESTRATEGA: MODO TEST ACTIVADO. Usando datos Mock ---")
         return {
             "use_mock": True,
-            "mock_data": MOCK_FLIGHTS
+            "mock_data": MOCK_FLIGHTS,
+            "searches": []
         }
         
+    print("--- ESTRATEGA: Analizando alertas de usuarios ---")
+    alerts = get_active_search_alerts()
+    
+    if not alerts:
+        print("No hay alertas activas. Generando misión vacía.")
+        return {"use_mock": False, "searches": []}
+        
+    unique_searches = set()
+    
+    # Defaults in case of missing dates (for fallback MVP)
+    default_dep = "2027-04-17"
+    default_ret = "2027-04-26"
+    
+    for alert in alerts:
+        # Obtener origen (Si es EZE,AEP tomamos EZE como primario para Google Flights)
+        origen_raw = alert.get("origen", "EZE")
+        origen = "EZE" if "EZE" in origen_raw else origen_raw
+        
+        # Mapeo de Destino principal o Países
+        paises_interes = alert.get("paises", [])
+        destino_principal = alert.get("destino", "Europa")
+        
+        # Fechas (Tomamos las mínimas exactas como lo solicita la API por ahora)
+        dep_date = alert.get("fecha_ida_min") or default_dep
+        ret_date = alert.get("fecha_vuelta_min") or default_ret
+        
+        # Determinar a qué códigos IATA corresponde
+        targets = set()
+        
+        if paises_interes and paises_interes[0] != "Cualquiera":
+            for pais in paises_interes:
+                targets.update(GEO_MAP.get(pais, [pais])) # Si no está en el mapa, asume que es IATA válido
+        else:
+            targets.update(GEO_MAP.get(destino_principal, [destino_principal]))
+            
+        # Añadir al set de búsquedas (De-duplicación)
+        for t in targets:
+            # Tupla: (origen, destino, fecha_ida, fecha_vuelta)
+            unique_searches.add((origen, t, dep_date, ret_date))
+            
+    # Convertir a lista de diccionarios
+    all_searches = [{"origin": s[0], "dest": s[1], "dep_date": s[2], "ret_date": s[3]} for s in unique_searches]
+    
+    # LÓGICA DE CUOTA: 
+    # Supongamos que tenemos límite de 5 búsquedas por ejecución del cron
+    MAX_SEARCHES = 5
+    
+    # Ordenamiento por proximidad de fecha (opcional). Por ahora, seleccionamos aleatoriamente 
+    # o de manera determinística basada en el día para asegurar cobertura.
+    import random
+    # Para ser determinísticos con el día y rotar, podríamos usar el día del año como semilla
     now = datetime.datetime.now()
-    day_of_year = now.timetuple().tm_yday
-    hour = now.hour
+    seed = now.timetuple().tm_yday + now.hour
+    random.seed(seed)
     
-    # Destinos actuales de collectors.py
-    europe = ["MAD", "CDG", "LHR", "BER"]
-    asia = ["NRT", "KIX"]
+    selected_searches = random.sample(all_searches, min(MAX_SEARCHES, len(all_searches)))
     
-    # Fechas
-    dep_dates = ["2027-04-17", "2027-04-18", "2027-04-19"]
-    ret_dates = ["2027-04-26", "2027-04-27", "2027-04-28", "2027-04-29", "2027-04-30", "2027-05-01", "2027-05-02"]
-    dep = dep_dates[day_of_year % len(dep_dates)]
-    ret = ret_dates[day_of_year % len(ret_dates)]
-    
-    mission = {
+    print(f"--- ESTRATEGA: De {len(all_searches)} búsquedas únicas, se ejecutarán {len(selected_searches)} para cuidar cuota API ---")
+    for s in selected_searches:
+        print(f"  -> {s['origin']} a {s['dest']} ({s['dep_date']} / {s['ret_date']})")
+        
+    return {
         "use_mock": False,
-        "dep_date": dep,
-        "ret_date": ret,
-        "run_europe": False,
-        "europe_dests": [],
-        "run_asia": False,
-        "asia_dests": [],
-        "run_lufthansa": False,
-        "lufthansa_dests": []
+        "searches": selected_searches,
+        "alerts_context": alerts # Enviamos las alertas para que el crítico sepa evaluar los presupuestos
     }
-    
-    # 2. Lógica de partición de API (máximo 2 peticiones por corrida)
-    print(f"--- ESTRATEGA: Calculando misión para hora {hour}:00 ---")
-    if 0 <= hour < 6:
-        mission["run_europe"] = True
-        idx = (day_of_year * 2) % len(europe)
-        mission["europe_dests"] = [europe[idx], europe[(idx+1)%len(europe)]]
-        print(f"Misión Asignada: Europa {mission['europe_dests']}")
-        
-    elif 6 <= hour < 12:
-        mission["run_lufthansa"] = True
-        idx = (day_of_year * 2) % len(europe)
-        mission["lufthansa_dests"] = [europe[idx], europe[(idx+1)%len(europe)]]
-        print(f"Misión Asignada: Lufthansa {mission['lufthansa_dests']}")
-        
-    elif 12 <= hour < 18:
-        mission["run_asia"] = True
-        mission["asia_dests"] = asia
-        print(f"Misión Asignada: Asia {mission['asia_dests']}")
-        
-    else:
-        # 18:00 a 23:59
-        mission["run_europe"] = True
-        idx = (day_of_year * 2 + 2) % len(europe)
-        mission["europe_dests"] = [europe[idx], europe[(idx+1)%len(europe)]]
-        print(f"Misión Asignada: Europa {mission['europe_dests']}")
-        
-    return mission
