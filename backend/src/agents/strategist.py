@@ -7,10 +7,10 @@ from ..services.db import get_active_search_alerts
 GEO_MAP = {
     # Zonas Generales
     "Norteamérica": ["JFK", "MIA", "LAX", "YYZ", "MEX"],
-    "Latinoamérica": ["GRU", "BOG", "LIM", "SCL", "GIG"],
-    "Caribe": ["CUN", "PUJ", "HAV"],
-    "Europa": ["MAD", "CDG", "LHR", "BER", "FCO", "AMS"],
-    "Asia": ["NRT", "HND", "KIX", "ICN", "BKK", "SIN"],
+    "Latinoamérica": ["GRU", "BOG", "LIM", "SCL", "GIG", "MVD"],
+    "Caribe": ["CUN", "PUJ", "HAV", "SJO", "SJU"],
+    "Europa": ["MAD", "CDG", "LHR", "BER", "FCO", "AMS", "LIS", "ZRH", "ATH"],
+    "Asia": ["NRT", "HND", "KIX", "ICN", "BKK", "SIN", "DXB"],
     "Oceanía": ["SYD", "MEL", "AKL"],
     "Cualquiera": ["MAD", "MIA", "NRT", "CUN"], # Destinos globales por defecto
 
@@ -22,22 +22,34 @@ GEO_MAP = {
     "Chile": ["SCL"],
     "Colombia": ["BOG", "MDE"],
     "Perú": ["LIM"],
+    "Uruguay": ["MVD"],
     "República Dominicana": ["PUJ", "SDQ"],
+    "Cuba": ["HAV"],
+    "Costa Rica": ["SJO"],
+    "Puerto Rico": ["SJU"],
     "España": ["MAD", "BCN"],
     "Francia": ["CDG", "ORY"],
-    "Reino Unido": ["LHR", "LGW"],
     "Italia": ["FCO", "MXP"],
+    "Reino Unido": ["LHR", "LGW"],
     "Alemania": ["BER", "FRA", "MUC"],
+    "Portugal": ["LIS", "OPO"],
+    "Países Bajos": ["AMS"],
+    "Suiza": ["ZRH", "GVA"],
+    "Grecia": ["ATH"],
     "Japón": ["NRT", "HND", "KIX"],
     "Tailandia": ["BKK", "HKT"],
+    "Corea del Sur": ["ICN"],
+    "Emiratos Árabes": ["DXB"],
     "Australia": ["SYD", "MEL"],
+    "Nueva Zelanda": ["AKL"],
 
     # Ciudades / Monitoreo Ultra-específico
     "Miami": ["MIA"],
     "Nueva York": ["JFK", "EWR"],
     "Tokio": ["NRT", "HND"],
     "Cancún": ["CUN"],
-    "París": ["CDG", "ORY"]
+    "París": ["CDG", "ORY"],
+    "Río de Janeiro": ["GIG"]
 }
 
 # Datos de prueba para el modo manual sin consumir API
