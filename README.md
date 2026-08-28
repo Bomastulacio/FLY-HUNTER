@@ -68,6 +68,23 @@ graph TD
    - **Anomalía (Human-in-the-Loop):** Detecta vuelos muy económicos que rompen levemente parámetros y espera aprobación desde el frontend.
 7. **Agente Data Scientist (Analítica Predictiva):** Extrae historial, utiliza `numpy` para predecir tendencias de precio y se cruza con calendarios de feriados (`holidays`).
 
+### Mecánica de Evaluación y Persistencia (El ciclo de vida de un vuelo)
+
+Uno de los mayores desafíos del proyecto es cómo el sistema determina si un vuelo sigue existiendo o no sin requerir un mantenimiento manual intensivo de la base de datos. Esto se resolvió mediante los siguientes principios arquitectónicos:
+
+1. **Rastreo y Deduplicación por Hashes:**
+   Cuando SerpApi devuelve los vuelos en tiempo real, el **Agente Crítico** genera una huella dactilar (`hash_dedupe`) para cada vuelo basándose en su origen, destino, fechas, aerolínea y precio. Esto permite a la base de datos (Supabase) realizar un `UPSERT` (Update or Insert) en lugar de insertar vuelos repetidos.
+
+2. **Liveness Check por Omisión (Filtro de 24hs):**
+   No existe un mecanismo que "borre" vuelos viejos. En su lugar, cuando se realiza un `UPSERT` de un vuelo que el bot acaba de encontrar, se actualiza forzosamente su campo `created_at` a la fecha actual (`now()`). 
+   - Si un vuelo barato deja de estar disponible en Google Flights, el bot no lo volverá a encontrar y su `created_at` quedará estancado en el pasado.
+   - El frontend está programado rígidamente para consultar y mostrar únicamente los vuelos que tengan un `created_at` dentro de las últimas **24 horas**. De esta manera, las ofertas expiradas desaparecen mágicamente del radar sin intervención humana.
+
+3. **Rangos de Precio y Toma de Decisiones:**
+   La lógica para aceptar o descartar ofertas se maneja íntegramente en el código Python de `critic.py`. En lugar de tener reglas fijas, el Crítico recibe las preferencias del usuario (alojadas en la tabla `search_alerts`) y evalúa:
+   - `presupuesto_ok = (BUDGET_MIN <= precio <= BUDGET_MAX)`
+   - Si el vuelo cuesta mucho menos de lo esperado (`< GLITCH_THRESHOLD`), se cataloga automáticamente como una "Tarifa Error" (Glitch Fare) y se aprueba incondicionalmente, detonando notificaciones de alta prioridad.
+
 ## Stack Tecnológico
 
 - **Orquestación (Backend):** Python + LangGraph + Pandas.
