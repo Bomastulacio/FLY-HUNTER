@@ -5,13 +5,13 @@ import '../styles/global.css';
 // Habilitar SSR (Server-Side Rendering) en Vercel
 export const prerender = false;
 
-const yesterday = new Date();
-yesterday.setDate(yesterday.getDate() - 1);
+const pastDate = new Date();
+pastDate.setDate(pastDate.getDate() - 7);
 
 const { data: deals, error } = await supabase
   .from('flight_deals')
   .select('*')
-  .gte('created_at', yesterday.toISOString())
+  .gte('created_at', pastDate.toISOString())
   .order('precio_total_usd', { ascending: true });
 
 const { data: insightsData } = await supabase.from('route_insights').select('*');
