@@ -64,7 +64,6 @@ import '../styles/global.css';
 
       // Expose to window for inline onclick
       (window as any).loginWithGoogle = async (btnElement: HTMLButtonElement) => {
-        alert('Botón clickeado. Iniciando redirección a Google...');
         if(btnElement) {
           btnElement.disabled = true;
           btnElement.innerText = 'Redirigiendo...';
@@ -78,7 +77,6 @@ import '../styles/global.css';
             }
           });
           if (error) {
-            alert('Error de Supabase: ' + error.message);
             if (errorMsg) {
               errorMsg.innerText = error.message;
               errorMsg.style.display = 'block';
@@ -89,7 +87,6 @@ import '../styles/global.css';
             }
           }
         } catch (err) {
-          alert('Excepción capturada: ' + err);
           if(btnElement) {
             btnElement.disabled = false;
             btnElement.innerText = 'Continuar con Google';

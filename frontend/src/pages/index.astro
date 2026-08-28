@@ -67,6 +67,12 @@ const formatDate = (dateStr: string) => {
     <link rel="apple-touch-icon" href="/favicon.svg" />
   </head>
   <body>
+    <!-- Auth Guard Loader -->
+    <div id="auth-loader" style="position: fixed; inset: 0; background: var(--bg-color); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+      <div style="font-size: 3rem; margin-bottom: 1rem; animation: pulse 1.5s infinite;">✈️</div>
+      <h3 style="color: var(--text-secondary); font-weight: normal;">Conectando al radar...</h3>
+    </div>
+
     <!-- 3D Animated Background -->
     <div class="bg-3d-scene">
       <div class="radar-circles">
@@ -309,6 +315,18 @@ const formatDate = (dateStr: string) => {
     </main>
 
     <script>
+      import { supabase } from '../lib/supabase';
+
+      // Middleware de protección: si no hay sesión, manda a login
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session) {
+          window.location.href = '/login';
+        } else {
+          const loader = document.getElementById('auth-loader');
+          if (loader) loader.style.display = 'none';
+        }
+      });
+
       // Countdown Logic
       const targetDate = new Date('2027-04-16T00:00:00').getTime();
       
