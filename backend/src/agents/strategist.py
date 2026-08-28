@@ -49,6 +49,10 @@ def define_daily_mission() -> Dict[str, Any]:
     print("--- ESTRATEGA: Analizando alertas de usuarios ---")
     alerts = get_active_search_alerts()
     
+    # Defaults in case of missing dates (for fallback MVP)
+    default_dep = "2027-04-17"
+    default_ret = "2027-04-26"
+    
     if not alerts:
         print("No hay alertas activas o hubo un error. Usando misión de fallback por defecto (Europa).")
         alerts = [
@@ -62,10 +66,6 @@ def define_daily_mission() -> Dict[str, Any]:
         ]
         
     unique_searches = set()
-    
-    # Defaults in case of missing dates (for fallback MVP)
-    default_dep = "2027-04-17"
-    default_ret = "2027-04-26"
     
     for alert in alerts:
         # Obtener origen (Si es EZE,AEP tomamos EZE como primario para Google Flights)
