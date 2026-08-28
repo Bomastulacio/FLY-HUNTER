@@ -58,54 +58,65 @@ import '../styles/global.css';
     <script>
       import { supabase } from '../lib/supabase';
       
-      const form = document.getElementById('login-form') as HTMLFormElement;
-      const btn = document.getElementById('submit-btn') as HTMLButtonElement;
-      const googleBtn = document.getElementById('google-login-btn') as HTMLButtonElement;
-      const errorMsg = document.getElementById('error-msg');
+      document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('login-form') as HTMLFormElement;
+        const btn = document.getElementById('submit-btn') as HTMLButtonElement;
+        const googleBtn = document.getElementById('google-login-btn') as HTMLButtonElement;
+        const errorMsg = document.getElementById('error-msg');
 
-      googleBtn.addEventListener('click', async () => {
-        googleBtn.disabled = true;
-        googleBtn.innerText = 'Redirigiendo...';
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: window.location.origin + '/alertas'
-          }
-        });
-        if (error) {
-          if (errorMsg) {
-            errorMsg.innerText = error.message;
-            errorMsg.style.display = 'block';
-          }
-          googleBtn.disabled = false;
-          googleBtn.innerText = 'Continuar con Google';
+        if (googleBtn) {
+          googleBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            googleBtn.disabled = true;
+            googleBtn.innerText = 'Redirigiendo...';
+            const { error } = await supabase.auth.signInWithOAuth({
+              provider: 'google',
+              options: {
+                redirectTo: window.location.origin + '/alertas'
+              }
+            });
+            if (error) {
+              if (errorMsg) {
+                errorMsg.innerText = error.message;
+                errorMsg.style.display = 'block';
+              }
+              googleBtn.disabled = false;
+              googleBtn.innerText = 'Continuar con Google';
+            }
+          });
         }
-      });
 
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        btn.disabled = true;
-        btn.innerText = 'Cargando...';
-        if (errorMsg) errorMsg.style.display = 'none';
+        if (form) {
+          form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if(btn) {
+              btn.disabled = true;
+              btn.innerText = 'Cargando...';
+            }
+            if (errorMsg) errorMsg.style.display = 'none';
 
-        const formData = new FormData(form);
-        const email = formData.get('email') as string;
-        const password = formData.get('password') as string;
+            const formData = new FormData(form);
+            const email = formData.get('email') as string;
+            const password = formData.get('password') as string;
 
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
+            const { data, error } = await supabase.auth.signInWithPassword({
+              email,
+              password
+            });
 
-        if (error) {
-          if (errorMsg) {
-            errorMsg.innerText = error.message;
-            errorMsg.style.display = 'block';
-          }
-          btn.disabled = false;
-          btn.innerText = 'Iniciar sesión';
-        } else {
-          window.location.href = '/alertas';
+            if (error) {
+              if (errorMsg) {
+                errorMsg.innerText = error.message;
+                errorMsg.style.display = 'block';
+              }
+              if(btn) {
+                btn.disabled = false;
+                btn.innerText = 'Iniciar sesión';
+              }
+            } else {
+              window.location.href = '/alertas';
+            }
+          });
         }
       });
     </script>
