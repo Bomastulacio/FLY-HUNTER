@@ -11,13 +11,13 @@ import { supabase } from '../lib/supabase';
       </svg>
     </div>
     <div>
-      <h2>Buscá tu próximo vuelo</h2>
-      <p>Completá tus preferencias y te avisamos por email cuando encontremos las mejores tarifas.</p>
+      <h2>Personalizá tu radar de vuelos</h2>
+      <p>Elegí tu zona favorita y hasta 4 destinos específicos. Te avisamos cuando haya oportunidades de oro.</p>
     </div>
   </div>
 
   <form id="search-alert-form" class="widget-form">
-    <!-- Row 1 -->
+    <!-- Row 1: Origen y Fechas -->
     <div class="form-group">
       <label>Origen</label>
       <div class="input-wrapper">
@@ -28,31 +28,6 @@ import { supabase } from '../lib/supabase';
         </select>
       </div>
     </div>
-    <div class="form-group">
-      <label>Destino</label>
-      <div class="input-wrapper">
-        <span class="input-icon">🛬</span>
-        <select name="destino" required>
-          <option value="Europa" selected>Europa</option>
-          <option value="Asia">Asia</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-group">
-      <label>Tipo de viaje</label>
-      <div class="radio-toggle">
-        <label class="toggle-option active">
-          <input type="radio" name="tipo_viaje" value="ida_vuelta" checked>
-          🔄 Ida y vuelta
-        </label>
-        <label class="toggle-option">
-          <input type="radio" name="tipo_viaje" value="solo_ida">
-          🔀 Solo ida
-        </label>
-      </div>
-    </div>
-
-    <!-- Row 2 -->
     <div class="form-group">
       <label>Fecha de ida (aprox)</label>
       <div class="input-wrapper">
@@ -65,23 +40,60 @@ import { supabase } from '../lib/supabase';
         <input type="date" name="fecha_vuelta_min" />
       </div>
     </div>
-    <div class="form-group">
-      <label>Países que te interesan</label>
-      <div class="input-wrapper">
-        <span class="input-icon">🌍</span>
-        <select name="paises">
-          <option value="Cualquiera" selected>Cualquiera</option>
-          <option value="España">España</option>
-          <option value="Francia">Francia</option>
-          <option value="Italia">Italia</option>
-          <option value="Reino Unido">Reino Unido</option>
-          <option value="Japón">Japón</option>
-        </select>
+
+    <!-- Row 2: Zonas -->
+    <div class="form-group full-width">
+      <label>¿A qué zona del mundo querés viajar?</label>
+      <div class="zones-grid" id="zones-container">
+        <label class="zone-card active">
+          <input type="radio" name="destino" value="Europa" checked>
+          <span class="zone-icon">🏰</span>
+          <span class="zone-name">Europa</span>
+        </label>
+        <label class="zone-card">
+          <input type="radio" name="destino" value="Norteamérica">
+          <span class="zone-icon">🗽</span>
+          <span class="zone-name">Norteamérica</span>
+        </label>
+        <label class="zone-card">
+          <input type="radio" name="destino" value="Latinoamérica">
+          <span class="zone-icon">⛰️</span>
+          <span class="zone-name">Latinoamérica</span>
+        </label>
+        <label class="zone-card">
+          <input type="radio" name="destino" value="Caribe">
+          <span class="zone-icon">🏝️</span>
+          <span class="zone-name">Caribe</span>
+        </label>
+        <label class="zone-card">
+          <input type="radio" name="destino" value="Asia">
+          <span class="zone-icon">⛩️</span>
+          <span class="zone-name">Asia</span>
+        </label>
+        <label class="zone-card">
+          <input type="radio" name="destino" value="Oceanía">
+          <span class="zone-icon">🦘</span>
+          <span class="zone-name">Oceanía</span>
+        </label>
+        <label class="zone-card">
+          <input type="radio" name="destino" value="Cualquiera">
+          <span class="zone-icon">🌍</span>
+          <span class="zone-name">Cualquier parte</span>
+        </label>
       </div>
     </div>
 
-    <!-- Row 3 -->
-    <div class="form-group">
+    <!-- Row 3: Destinos Específicos (Dinámico) -->
+    <div class="form-group full-width" id="countries-section">
+      <label>Destinos específicos (Elegí hasta 4 o dejalo vacío para buscar en toda la zona)</label>
+      <div class="countries-grid" id="countries-container">
+        <!-- Renderizado dinámico vía JS -->
+      </div>
+      <small class="hint mt-1" id="countries-counter">0/4 seleccionados</small>
+    </div>
+
+    <!-- Row 4: Presupuesto y Escalas -->
+    <div class="form-group" style="grid-column: span 2;">
       <label>Presupuesto total (USD)</label>
       <div class="dual-input">
         <div class="input-wrapper">
@@ -95,37 +107,37 @@ import { supabase } from '../lib/supabase';
         </div>
       </div>
     </div>
-    <div class="form-group" style="grid-column: span 2;">
+    <div class="form-group">
       <label>Escalas máximas</label>
       <div class="radio-pills">
         <label class="pill">
           <input type="radio" name="escalas_max" value="0">
-          🚫 Sin escalas
+          🚫 0
         </label>
         <label class="pill active">
           <input type="radio" name="escalas_max" value="1" checked>
-          ✈️ 1 escala
+          ✈️ 1
         </label>
         <label class="pill">
           <input type="radio" name="escalas_max" value="2">
-          ⏱️ 2 o más
+          ⏱️ 2+
         </label>
       </div>
     </div>
 
-    <!-- Row 4 -->
-    <div class="form-group full-width">
+    <!-- Row 5: Email Auth (Solo si no está logueado) -->
+    <div class="form-group full-width" id="email-auth-section">
       <label>Email para recibir alertas y guardar búsqueda</label>
       <div class="input-wrapper">
         <span class="input-icon">✉️</span>
-        <input type="email" name="email" id="user-email" placeholder="tucorreo@ejemplo.com" required />
+        <input type="email" name="email" id="user-email" placeholder="tucorreo@ejemplo.com" />
       </div>
       <small class="hint">🔒 Te enviaremos un Link Mágico para guardar tus preferencias de forma segura.</small>
     </div>
 
     <button type="submit" id="submit-btn" class="btn btn-primary submit-btn">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-      Cazar pasajes
+      Activar Radar
     </button>
   </form>
 
@@ -161,11 +173,6 @@ import { supabase } from '../lib/supabase';
     color: var(--accent-color);
   }
   
-  .icon-container svg {
-    width: 30px;
-    height: 30px;
-  }
-  
   .widget-header h2 {
     margin: 0 0 0.2rem 0;
     font-size: 1.6rem;
@@ -198,6 +205,85 @@ import { supabase } from '../lib/supabase';
     font-weight: 500;
     color: var(--text-secondary);
   }
+
+  /* ZONES GRID */
+  .zones-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.8rem;
+  }
+
+  .zone-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius-md);
+    padding: 1rem 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+
+  .zone-card input {
+    display: none;
+  }
+
+  .zone-card .zone-icon {
+    font-size: 1.8rem;
+  }
+
+  .zone-card .zone-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  .zone-card.active {
+    background: rgba(209, 255, 76, 0.1);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+  }
+
+  /* COUNTRIES GRID */
+  .countries-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 0.6rem;
+  }
+
+  .country-pill {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.6rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    text-align: center;
+    user-select: none;
+  }
+
+  .country-pill input {
+    display: none;
+  }
+
+  .country-pill.selected {
+    background: var(--accent-color);
+    color: #000;
+    border-color: var(--accent-color);
+    font-weight: 600;
+  }
+
+  .country-pill.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
   
   .input-wrapper {
     position: relative;
@@ -220,7 +306,7 @@ import { supabase } from '../lib/supabase';
     font-size: 0.9rem;
   }
   
-  select, input {
+  select, input[type="text"], input[type="email"], input[type="number"], input[type="date"] {
     width: 100%;
     background: transparent;
     border: none;
@@ -246,14 +332,13 @@ import { supabase } from '../lib/supabase';
     color: var(--text-secondary);
   }
   
-  /* Toggle Styles */
-  .radio-toggle, .radio-pills {
+  .radio-pills {
     display: flex;
     gap: 0.5rem;
     height: 100%;
   }
   
-  .toggle-option, .pill {
+  .pill {
     flex: 1;
     display: flex;
     align-items: center;
@@ -267,11 +352,11 @@ import { supabase } from '../lib/supabase';
     transition: all 0.2s;
   }
   
-  .toggle-option input, .pill input {
+  .pill input {
     display: none;
   }
   
-  .toggle-option.active, .pill.active {
+  .pill.active {
     background: rgba(209, 255, 76, 0.1);
     border-color: var(--accent-color);
     color: var(--accent-color);
@@ -281,6 +366,7 @@ import { supabase } from '../lib/supabase';
     color: var(--text-secondary);
     font-size: 0.75rem;
   }
+  .mt-1 { margin-top: 0.25rem; }
   
   .submit-btn {
     grid-column: span 3;
@@ -293,7 +379,7 @@ import { supabase } from '../lib/supabase';
   }
   
   .hidden {
-    display: none;
+    display: none !important;
   }
   
   .auth-message {
@@ -320,8 +406,97 @@ import { supabase } from '../lib/supabase';
 <script>
   import { supabase } from '../lib/supabase';
   
-  // UI interaction logic for toggles
-  document.querySelectorAll('.toggle-option, .pill').forEach(el => {
+  // MAPEO DE DESTINOS DINÁMICO
+  const zoneCountries: Record<string, string[]> = {
+    "Europa": ["España", "Francia", "Reino Unido", "Italia", "Alemania", "París"],
+    "Norteamérica": ["Estados Unidos", "Canadá", "México", "Miami", "Nueva York"],
+    "Latinoamérica": ["Brasil", "Chile", "Colombia", "Perú"],
+    "Caribe": ["República Dominicana", "Cancún"],
+    "Asia": ["Japón", "Tailandia", "Tokio"],
+    "Oceanía": ["Australia"],
+    "Cualquiera": []
+  };
+
+  const countriesContainer = document.getElementById('countries-container');
+  const countriesSection = document.getElementById('countries-section');
+  const countriesCounter = document.getElementById('countries-counter');
+  let selectedCountries: string[] = [];
+
+  // Function to render countries based on zone
+  function renderCountries(zone: string) {
+    selectedCountries = [];
+    if (!countriesContainer || !countriesSection || !countriesCounter) return;
+
+    const countries = zoneCountries[zone] || [];
+    if (countries.length === 0) {
+      countriesSection.classList.add('hidden');
+      return;
+    }
+    
+    countriesSection.classList.remove('hidden');
+    countriesCounter.innerText = `0/4 seleccionados`;
+    
+    countriesContainer.innerHTML = countries.map(country => `
+      <label class="country-pill">
+        <input type="checkbox" name="paises" value="${country}">
+        ${country}
+      </label>
+    `).join('');
+
+    // Add click listeners to new pills
+    countriesContainer.querySelectorAll('.country-pill').forEach(pill => {
+      pill.addEventListener('click', function(e) {
+        e.preventDefault(); // Handle logic manually
+        const el = this as HTMLElement;
+        const input = el.querySelector('input') as HTMLInputElement;
+        const value = input.value;
+        
+        if (selectedCountries.includes(value)) {
+          // Deselect
+          selectedCountries = selectedCountries.filter(c => c !== value);
+          el.classList.remove('selected');
+          input.checked = false;
+        } else {
+          // Select (only if < 4)
+          if (selectedCountries.length < 4) {
+            selectedCountries.push(value);
+            el.classList.add('selected');
+            input.checked = true;
+          }
+        }
+        
+        countriesCounter.innerText = `${selectedCountries.length}/4 seleccionados`;
+        
+        // Update disabled state
+        countriesContainer.querySelectorAll('.country-pill').forEach(p => {
+          const pEl = p as HTMLElement;
+          const pVal = (p.querySelector('input') as HTMLInputElement).value;
+          if (selectedCountries.length >= 4 && !selectedCountries.includes(pVal)) {
+            pEl.classList.add('disabled');
+          } else {
+            pEl.classList.remove('disabled');
+          }
+        });
+      });
+    });
+  }
+
+  // Zone selection logic
+  document.querySelectorAll('.zone-card').forEach(el => {
+    el.addEventListener('click', function(this: HTMLElement) {
+      const parent = this.parentElement;
+      if (parent) {
+        parent.querySelectorAll('.active').forEach(child => child.classList.remove('active'));
+        this.classList.add('active');
+        const input = this.querySelector('input') as HTMLInputElement;
+        input.checked = true;
+        renderCountries(input.value);
+      }
+    });
+  });
+
+  // Basic pills logic (Escalas)
+  document.querySelectorAll('.pill').forEach(el => {
     el.addEventListener('click', function(this: HTMLElement) {
       const parent = this.parentElement;
       if (parent) {
@@ -333,35 +508,63 @@ import { supabase } from '../lib/supabase';
     });
   });
 
-  // Load existing user email if logged in
+  // Init Form (Check Auth)
+  const form = document.getElementById('search-alert-form') as HTMLFormElement;
+  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+  const authMessage = document.getElementById('auth-message');
+  const emailAuthSection = document.getElementById('email-auth-section');
+  const emailInput = document.getElementById('user-email') as HTMLInputElement;
+  
+  let currentUserId: string | null = null;
+  let currentUserEmail: string | null = null;
+
   window.addEventListener('DOMContentLoaded', async () => {
+    // Render initial zone
+    renderCountries('Europa');
+
     const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user?.email) {
-      const emailInput = document.getElementById('user-email') as HTMLInputElement;
+    if (session?.user) {
+      currentUserId = session.user.id;
+      currentUserEmail = session.user.email || null;
+      if (emailAuthSection) emailAuthSection.classList.add('hidden');
       if (emailInput) {
-        emailInput.value = session.user.email;
-        emailInput.disabled = true; // Prevents changing email if logged in
+        emailInput.value = session.user.email || '';
+        emailInput.removeAttribute('required');
       }
+    } else {
+      if (emailInput) emailInput.setAttribute('required', 'true');
     }
   });
 
   // Handle Form Submission
-  const form = document.getElementById('search-alert-form') as HTMLFormElement;
-  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
-  const authMessage = document.getElementById('auth-message');
-  
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
     submitBtn.disabled = true;
     submitBtn.innerHTML = 'Procesando...';
     
     const formData = new FormData(form);
-    const email = formData.get('email') as string;
     
-    const { data: { session } } = await supabase.auth.getSession();
+    // Fallback: If they didn't select any specific countries, put "Cualquiera" so the backend searches the whole zone
+    let finalCountries = selectedCountries;
+    if (finalCountries.length === 0) {
+      finalCountries = ["Cualquiera"];
+    }
+
+    const payload = {
+      origen: formData.get('origen'),
+      destino: formData.get('destino'), // The Zone
+      paises: finalCountries,           // Specific targets
+      tipo_viaje: 'ida_vuelta',         // Hardcoded for now based on UI simplicity
+      fecha_ida_min: formData.get('fecha_ida_min') || null,
+      fecha_vuelta_min: formData.get('fecha_vuelta_min') || null,
+      presupuesto_min: formData.get('presupuesto_min') ? Number(formData.get('presupuesto_min')) : null,
+      presupuesto_max: formData.get('presupuesto_max') ? Number(formData.get('presupuesto_max')) : null,
+      escalas_max: Number(formData.get('escalas_max'))
+    };
     
-    if (!session) {
+    if (!currentUserId) {
       // User is not logged in -> Send Magic Link
+      const email = formData.get('email') as string;
       const { error } = await supabase.auth.signInWithOtp({
         email: email,
         options: {
@@ -372,44 +575,31 @@ import { supabase } from '../lib/supabase';
       if (error) {
         alert('Error enviando enlace: ' + error.message);
         submitBtn.disabled = false;
-        submitBtn.innerHTML = 'Cazar pasajes';
+        submitBtn.innerHTML = 'Activar Radar';
         return;
       }
       
-      // We will save their preferences in localStorage so when they return via magic link we can save it
-      const prefs = Object.fromEntries(formData.entries());
-      localStorage.setItem('pending_alert_save', JSON.stringify(prefs));
+      localStorage.setItem('pending_alert_save', JSON.stringify({...payload, email: email}));
       
       form.classList.add('hidden');
       if(authMessage) authMessage.classList.remove('hidden');
     } else {
-      // User is logged in -> Save Alert directly via API or Supabase client
-      // Since RLS is enabled, we need to insert the row
-      const payload = {
-        user_id: session.user.id,
-        origen: formData.get('origen'),
-        destino: formData.get('destino'),
-        tipo_viaje: formData.get('tipo_viaje'),
-        fecha_ida_min: formData.get('fecha_ida_min') || null,
-        fecha_vuelta_min: formData.get('fecha_vuelta_min') || null,
-        presupuesto_min: formData.get('presupuesto_min') ? Number(formData.get('presupuesto_min')) : null,
-        presupuesto_max: formData.get('presupuesto_max') ? Number(formData.get('presupuesto_max')) : null,
-        escalas_max: Number(formData.get('escalas_max')),
-        email: session.user.email
-      };
+      // User is logged in -> Save Alert directly
+      const finalPayload = { ...payload, user_id: currentUserId, email: currentUserEmail };
       
       const { error } = await supabase
         .from('search_alerts')
-        .upsert(payload, { onConflict: 'user_id' }); // Upsert ensures 1 per user for now
+        .upsert(finalPayload, { onConflict: 'user_id' }); 
         
       if (error) {
         alert('Error guardando alerta: ' + error.message);
       } else {
-        alert('¡Alerta guardada con éxito!');
+        alert('¡Radar activado con éxito!');
+        window.location.reload();
       }
       
       submitBtn.disabled = false;
-      submitBtn.innerHTML = 'Actualizar pasajes';
+      submitBtn.innerHTML = 'Actualizar Radar';
     }
   });
 
@@ -420,25 +610,13 @@ import { supabase } from '../lib/supabase';
         const pending = localStorage.getItem('pending_alert_save');
         if (pending) {
           const data = JSON.parse(pending);
+          data.user_id = session.user.id;
+          data.email = session.user.email;
           
-          const payload = {
-            user_id: session.user.id,
-            origen: data.origen,
-            destino: data.destino,
-            tipo_viaje: data.tipo_viaje,
-            fecha_ida_min: data.fecha_ida_min || null,
-            fecha_vuelta_min: data.fecha_vuelta_min || null,
-            presupuesto_min: data.presupuesto_min ? Number(data.presupuesto_min) : null,
-            presupuesto_max: data.presupuesto_max ? Number(data.presupuesto_max) : null,
-            escalas_max: Number(data.escalas_max),
-            email: session.user.email
-          };
-          
-          await supabase.from('search_alerts').upsert(payload, { onConflict: 'user_id' });
+          await supabase.from('search_alerts').upsert(data, { onConflict: 'user_id' });
           localStorage.removeItem('pending_alert_save');
           
-          // Show a nice success toast (simple alert for MVP)
-          alert('¡Tu alerta ha sido activada exitosamente!');
+          alert('¡Tu radar ha sido activado exitosamente!');
           window.location.reload();
         }
       }

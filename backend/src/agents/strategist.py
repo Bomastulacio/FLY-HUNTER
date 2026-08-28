@@ -3,16 +3,41 @@ import datetime
 from typing import Dict, Any, List
 from ..services.db import get_active_search_alerts
 
-# Mapeo Geográfico Simple (Pseudo-OpenWiki)
+# Mapeo Geográfico Avanzado (Zonas, Países y Ciudades)
 GEO_MAP = {
+    # Zonas Generales
+    "Norteamérica": ["JFK", "MIA", "LAX", "YYZ", "MEX"],
+    "Latinoamérica": ["GRU", "BOG", "LIM", "SCL", "GIG"],
+    "Caribe": ["CUN", "PUJ", "HAV"],
     "Europa": ["MAD", "CDG", "LHR", "BER", "FCO", "AMS"],
-    "Asia": ["NRT", "KIX", "ICN", "BKK"],
+    "Asia": ["NRT", "HND", "KIX", "ICN", "BKK", "SIN"],
+    "Oceanía": ["SYD", "MEL", "AKL"],
+    "Cualquiera": ["MAD", "MIA", "NRT", "CUN"], # Destinos globales por defecto
+
+    # Países Específicos
+    "Estados Unidos": ["JFK", "MIA", "LAX", "ORD"],
+    "Canadá": ["YYZ", "YVR"],
+    "México": ["MEX", "CUN"],
+    "Brasil": ["GRU", "GIG"],
+    "Chile": ["SCL"],
+    "Colombia": ["BOG", "MDE"],
+    "Perú": ["LIM"],
+    "República Dominicana": ["PUJ", "SDQ"],
     "España": ["MAD", "BCN"],
     "Francia": ["CDG", "ORY"],
-    "Italia": ["FCO", "MXP"],
     "Reino Unido": ["LHR", "LGW"],
+    "Italia": ["FCO", "MXP"],
+    "Alemania": ["BER", "FRA", "MUC"],
     "Japón": ["NRT", "HND", "KIX"],
-    "Cualquiera": ["MAD", "CDG", "MIA", "NRT"] # Destinos globales por defecto
+    "Tailandia": ["BKK", "HKT"],
+    "Australia": ["SYD", "MEL"],
+
+    # Ciudades / Monitoreo Ultra-específico
+    "Miami": ["MIA"],
+    "Nueva York": ["JFK", "EWR"],
+    "Tokio": ["NRT", "HND"],
+    "Cancún": ["CUN"],
+    "París": ["CDG", "ORY"]
 }
 
 # Datos de prueba para el modo manual sin consumir API
