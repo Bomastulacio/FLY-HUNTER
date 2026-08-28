@@ -318,14 +318,25 @@ const formatDate = (dateStr: string) => {
       import { supabase } from '../lib/supabase';
 
       // Middleware de protección: si no hay sesión, manda a login
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (!session) {
-          window.location.href = '/login';
-        } else {
-          const loader = document.getElementById('auth-loader');
-          if (loader) loader.style.display = 'none';
-        }
-      });
+      if (window.location.hash.includes('access_token')) {
+        // Esperamos a que Supabase guarde la sesión si venimos de OAuth
+        supabase.auth.onAuthStateChange((event, session) => {
+          if (event === 'SIGNED_IN') {
+            window.location.hash = ''; // Limpiar la URL visualmente
+            const loader = document.getElementById('auth-loader');
+            if (loader) loader.style.display = 'none';
+          }
+        });
+      } else {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (!session) {
+            window.location.href = '/login';
+          } else {
+            const loader = document.getElementById('auth-loader');
+            if (loader) loader.style.display = 'none';
+          }
+        });
+      }
 
       // Countdown Logic
       const targetDate = new Date('2027-04-16T00:00:00').getTime();

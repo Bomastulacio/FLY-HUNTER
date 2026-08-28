@@ -40,9 +40,19 @@ import '../styles/global.css';
 
       // Proteger ruta
       window.addEventListener('DOMContentLoaded', async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          window.location.href = '/login';
+        // Si venimos de un redirect de Google, hay un hash en la URL.
+        // Debemos esperar a que Supabase lo procese antes de decidir si echamos al usuario.
+        if (window.location.hash.includes('access_token')) {
+           supabase.auth.onAuthStateChange((event, session) => {
+             if (event === 'SIGNED_IN') {
+                window.location.hash = ''; // Limpiar URL
+             }
+           });
+        } else {
+           const { data: { session } } = await supabase.auth.getSession();
+           if (!session) {
+             window.location.href = '/login';
+           }
         }
       });
 
