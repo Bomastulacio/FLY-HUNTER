@@ -32,12 +32,20 @@ class FlightDeal(BaseModel):
     fuente: str = 'fli'
     link_reserva: str = ""
     hash_dedupe: str
+    created_at: Optional[str] = None
 
 def upsert_deals(deals: List[FlightDeal]) -> None:
     if not deals:
         return
     client = get_supabase_client()
-    data = [deal.model_dump() for deal in deals]
+    
+    from datetime import datetime, timezone
+    now_iso = datetime.now(timezone.utc).isoformat()
+    
+    data = []
+    for deal in deals:
+        deal.created_at = now_iso
+        data.append(deal.model_dump(exclude_none=True))
     try:
         # We rely on Supabase unique constraint to avoid duplicates 
         # (on conflict do nothing is the default behavior if we just use insert and catch exception or if we do an upsert ignoring updates)
