@@ -50,8 +50,16 @@ def define_daily_mission() -> Dict[str, Any]:
     alerts = get_active_search_alerts()
     
     if not alerts:
-        print("No hay alertas activas. Generando misión vacía.")
-        return {"use_mock": False, "searches": []}
+        print("No hay alertas activas o hubo un error. Usando misión de fallback por defecto (Europa).")
+        alerts = [
+            {
+                "origen": "EZE",
+                "destino": "Europa",
+                "paises": ["España", "Francia", "Reino Unido", "Alemania"],
+                "fecha_ida_min": default_dep,
+                "fecha_vuelta_min": default_ret
+            }
+        ]
         
     unique_searches = set()
     
