@@ -113,9 +113,26 @@ def define_daily_mission() -> Dict[str, Any]:
         paises_interes = alert.get("paises", [])
         destino_principal = alert.get("destino", "Europa")
         
-        # Fechas (Tomamos las mínimas exactas como lo solicita la API por ahora)
-        dep_date = alert.get("fecha_ida_min") or default_dep
-        ret_date = alert.get("fecha_vuelta_min") or default_ret
+        # Fechas
+        dep_date_min_str = alert.get("fecha_ida_min") or default_dep
+        dep_date_max_str = alert.get("fecha_ida_max") or dep_date_min_str
+        ret_date_min_str = alert.get("fecha_vuelta_min") or default_ret
+        ret_date_max_str = alert.get("fecha_vuelta_max") or ret_date_min_str
+        
+        # Generar lista de fechas
+        def get_date_range(start_str, end_str):
+            start = datetime.datetime.strptime(start_str, "%Y-%m-%d").date()
+            end = datetime.datetime.strptime(end_str, "%Y-%m-%d").date()
+            if end < start: end = start
+            return [start + datetime.timedelta(days=x) for x in range((end - start).days + 1)]
+            
+        try:
+            dep_dates = get_date_range(dep_date_min_str, dep_date_max_str)
+            ret_dates = get_date_range(ret_date_min_str, ret_date_max_str)
+        except Exception as e:
+            print(f"Error parseando fechas para alerta {alert.get('id')}: {e}")
+            dep_dates = [datetime.datetime.strptime(default_dep, "%Y-%m-%d").date()]
+            ret_dates = [datetime.datetime.strptime(default_ret, "%Y-%m-%d").date()]
         
         # Determinar a qué códigos IATA corresponde
         targets = set()
@@ -128,15 +145,18 @@ def define_daily_mission() -> Dict[str, Any]:
             
         # Añadir al set de búsquedas (De-duplicación)
         for t in targets:
-            # Tupla: (origen, destino, fecha_ida, fecha_vuelta)
-            unique_searches.add((origen, t, dep_date, ret_date))
+            for d_date in dep_dates:
+                for r_date in ret_dates:
+                    if r_date > d_date: # Solo viajes lógicos donde la vuelta es después de la ida
+                        unique_searches.add((origen, t, d_date.strftime("%Y-%m-%d"), r_date.strftime("%Y-%m-%d")))
             
     # Convertir a lista de diccionarios
     all_searches = [{"origin": s[0], "dest": s[1], "dep_date": s[2], "ret_date": s[3]} for s in unique_searches]
     
-    # LÓGICA DE CUOTA: 
-    # Supongamos que tenemos límite de 5 búsquedas por ejecución del cron
-    MAX_SEARCHES = 5
+    # LÓGICA DE CUOTA: 250 búsquedas al mes.
+    # Asumiendo que el cron corre 2 veces al día = 60 ejecuciones al mes.
+    # 250 / 60 = 4.16 búsquedas por ejecución.
+    MAX_SEARCHES = 4
     
     # Ordenamiento por proximidad de fecha (opcional). Por ahora, seleccionamos aleatoriamente 
     # o de manera determinística basada en el día para asegurar cobertura.

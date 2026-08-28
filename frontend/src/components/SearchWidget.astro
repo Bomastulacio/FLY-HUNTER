@@ -28,16 +28,33 @@ import { supabase } from '../lib/supabase';
         </select>
       </div>
     </div>
-    <div class="form-group">
-      <label>Fecha de ida (aprox)</label>
-      <div class="input-wrapper">
-        <input type="date" name="fecha_ida_min" required />
+    <div class="form-group" style="grid-column: span 2;">
+      <label>Rango de Fecha de Ida</label>
+      <div class="dual-input">
+        <div class="input-wrapper">
+          <span class="input-prefix">Desde</span>
+          <input type="date" name="fecha_ida_min" required />
+        </div>
+        <span class="separator">-</span>
+        <div class="input-wrapper">
+          <span class="input-prefix">Hasta</span>
+          <input type="date" name="fecha_ida_max" required />
+        </div>
       </div>
     </div>
-    <div class="form-group">
-      <label>Fecha de vuelta (aprox)</label>
-      <div class="input-wrapper">
-        <input type="date" name="fecha_vuelta_min" />
+    
+    <div class="form-group" style="grid-column: span 2;">
+      <label>Rango de Fecha de Vuelta</label>
+      <div class="dual-input">
+        <div class="input-wrapper">
+          <span class="input-prefix">Desde</span>
+          <input type="date" name="fecha_vuelta_min" required />
+        </div>
+        <span class="separator">-</span>
+        <div class="input-wrapper">
+          <span class="input-prefix">Hasta</span>
+          <input type="date" name="fecha_vuelta_max" required />
+        </div>
       </div>
     </div>
 
@@ -186,7 +203,7 @@ import { supabase } from '../lib/supabase';
   
   .widget-form {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 1.5rem;
   }
   
@@ -197,7 +214,7 @@ import { supabase } from '../lib/supabase';
   }
   
   .full-width {
-    grid-column: span 3;
+    grid-column: span 2;
   }
   
   label {
@@ -369,7 +386,7 @@ import { supabase } from '../lib/supabase';
   .mt-1 { margin-top: 0.25rem; }
   
   .submit-btn {
-    grid-column: span 3;
+    grid-column: span 2;
     padding: 1.2rem;
     font-size: 1.1rem;
     display: flex;
@@ -556,7 +573,9 @@ import { supabase } from '../lib/supabase';
       paises: finalCountries,           // Specific targets
       tipo_viaje: 'ida_vuelta',         // Hardcoded for now based on UI simplicity
       fecha_ida_min: formData.get('fecha_ida_min') || null,
+      fecha_ida_max: formData.get('fecha_ida_max') || null,
       fecha_vuelta_min: formData.get('fecha_vuelta_min') || null,
+      fecha_vuelta_max: formData.get('fecha_vuelta_max') || null,
       presupuesto_min: formData.get('presupuesto_min') ? Number(formData.get('presupuesto_min')) : null,
       presupuesto_max: formData.get('presupuesto_max') ? Number(formData.get('presupuesto_max')) : null,
       escalas_max: Number(formData.get('escalas_max'))
