@@ -66,19 +66,27 @@ import '../styles/global.css';
       if (googleBtn) {
         googleBtn.addEventListener('click', async (e) => {
           e.preventDefault();
+          alert('Iniciando redirección a Google...');
           googleBtn.disabled = true;
           googleBtn.innerText = 'Redirigiendo...';
-          const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-              redirectTo: window.location.origin + '/alertas'
+          try {
+            const { error } = await supabase.auth.signInWithOAuth({
+              provider: 'google',
+              options: {
+                redirectTo: window.location.origin + '/alertas'
+              }
+            });
+            if (error) {
+              alert('Error de Supabase: ' + error.message);
+              if (errorMsg) {
+                errorMsg.innerText = error.message;
+                errorMsg.style.display = 'block';
+              }
+              googleBtn.disabled = false;
+              googleBtn.innerText = 'Continuar con Google';
             }
-          });
-          if (error) {
-            if (errorMsg) {
-              errorMsg.innerText = error.message;
-              errorMsg.style.display = 'block';
-            }
+          } catch (err) {
+            alert('Excepción capturada: ' + err);
             googleBtn.disabled = false;
             googleBtn.innerText = 'Continuar con Google';
           }
