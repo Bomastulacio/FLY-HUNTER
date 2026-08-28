@@ -24,12 +24,12 @@ const pendingAnomalies = allDeals.filter(d => d.estado_aprobacion === 'pendiente
 
 const mainDeal = approvedDeals.length > 0 ? approvedDeals[0] : null;
 
-// Encontrar mejores por destino
-const getBestForDest = (dest: string) => approvedDeals.find(d => d.ida_origen_destino.includes(dest));
-const spainDeal = getBestForDest('MAD');
-const franceDeal = getBestForDest('CDG');
-const ukDeal = getBestForDest('LHR');
-const germanyDeal = getBestForDest('BER');
+// Encontrar mejores por destino (soporta múltiples aeropuertos por país)
+const getBestForDest = (dests: string[]) => approvedDeals.find(d => dests.some(dest => d.ida_origen_destino.includes(dest)));
+const spainDeal = getBestForDest(['MAD', 'BCN']);
+const franceDeal = getBestForDest(['CDG', 'ORY']);
+const ukDeal = getBestForDest(['LHR', 'LGW']);
+const germanyDeal = getBestForDest(['BER', 'FRA', 'MUC']);
 const lufthansaDeal = approvedDeals.find(d => d.aerolinea.toLowerCase().includes('lufthansa'));
 
 // Asia
