@@ -170,6 +170,7 @@ import { supabase } from '../lib/supabase';
     box-shadow: 0 0 20px rgba(209, 255, 76, 0.05);
     margin-bottom: 3rem;
     padding: 2rem;
+    border-radius: 1.5rem;
   }
   
   .widget-header {
@@ -266,8 +267,8 @@ import { supabase } from '../lib/supabase';
 
   /* COUNTRIES GRID */
   .countries-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 0.6rem;
   }
 
@@ -291,8 +292,8 @@ import { supabase } from '../lib/supabase';
   }
 
   .country-pill.selected {
-    background: var(--accent-color);
-    color: #000;
+    background: rgba(209, 255, 76, 0.1);
+    color: var(--accent-color);
     border-color: var(--accent-color);
     font-weight: 600;
   }
@@ -310,6 +311,7 @@ import { supabase } from '../lib/supabase';
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: var(--border-radius-sm);
     transition: all 0.2s ease;
+    min-width: 0;
   }
   
   .input-wrapper:focus-within {
@@ -321,6 +323,7 @@ import { supabase } from '../lib/supabase';
     padding-left: 1rem;
     color: var(--text-secondary);
     font-size: 0.9rem;
+    white-space: nowrap;
   }
   
   select, input[type="text"], input[type="email"], input[type="number"], input[type="date"] {
@@ -411,11 +414,40 @@ import { supabase } from '../lib/supabase';
   }
   
   @media (max-width: 768px) {
+    .search-widget-container {
+      border: none;
+      box-shadow: none;
+      padding: 0;
+      background: transparent;
+    }
     .widget-form {
       grid-template-columns: 1fr;
     }
     .full-width, .submit-btn, .form-group[style] {
       grid-column: span 1 !important;
+    }
+    .zones-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    select, input[type="text"], input[type="email"], input[type="number"], input[type="date"] {
+      padding: 0.8rem 0.5rem;
+      font-size: 0.9rem;
+    }
+    .input-icon, .input-prefix {
+      padding-left: 0.5rem;
+      font-size: 0.85rem;
+    }
+    .widget-header {
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .icon-container {
+      width: 48px;
+      height: 48px;
+      flex-shrink: 0;
+    }
+    .widget-header h2 {
+      font-size: 1.3rem;
     }
   }
 </style>
