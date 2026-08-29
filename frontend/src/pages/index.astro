@@ -20,7 +20,6 @@ const routeInsights = insightsData || [];
 // Procesar datos para enviarlos completos al cliente
 const allDeals = deals || [];
 const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' || d.es_oportunidad_oro);
-const pendingAnomalies = allDeals.filter(d => d.estado_aprobacion === 'pendiente');
 ---
 
 <html lang="es">
@@ -81,26 +80,6 @@ const pendingAnomalies = allDeals.filter(d => d.estado_aprobacion === 'pendiente
           <a href="/alertas" class="btn btn-primary" style="min-width: 150px; background-color: var(--accent-color); color: #000;">✈️ Configurar Radar</a>
         </div>
       </header>
-
-      <!-- Pendientes de Aprobación (Se mantiene SSR para admins) -->
-      {pendingAnomalies.length > 0 && (
-        <div class="anomalies-section card" style="margin-bottom: 2rem;">
-          <div class="card-header" style="color: var(--danger-color); border-color: rgba(255, 76, 76, 0.3);">❓ Anomalías Pendientes</div>
-          {pendingAnomalies.map(anomalia => (
-            <div class="anomaly-item">
-              <div>
-                <strong style="font-size: 1.1rem; letter-spacing: -0.02em;">{anomalia.ida_origen_destino} a {anomalia.vuelta_origen_destino}</strong>
-                <span style="color: var(--accent-color); font-weight: bold; font-size: 1.1rem; margin-left: 1rem; text-shadow: 0 0 10px var(--accent-glow);">${anomalia.precio_total_usd}</span>
-                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.2rem;">ID: {anomalia.id}</div>
-              </div>
-              <div class="anomaly-actions">
-                <button class="btn btn-approve" data-id={anomalia.id} data-action="aprobado">Aprobar</button>
-                <button class="btn btn-reject" data-id={anomalia.id} data-action="rechazado">Rechazar</button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
 
       <!-- CONTENEDOR DINÁMICO DEL RADAR -->
       <div id="dynamic-dashboard" style="display: none;">
@@ -376,43 +355,6 @@ const pendingAnomalies = allDeals.filter(d => d.estado_aprobacion === 'pendiente
       // Iniciar cuando el DOM esté listo
       window.addEventListener('DOMContentLoaded', initDashboard);
 
-      // Admin actions para anomalías
-      document.querySelectorAll('.btn-approve, .btn-reject').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          const target = e.currentTarget as HTMLButtonElement;
-          const id = target.dataset.id;
-          const action = target.dataset.action;
-          
-          target.innerText = 'Procesando...';
-          target.disabled = true;
-
-          const token = window.prompt("Ingresa el Token de Administrador para confirmar:");
-          if (!token) {
-             target.innerText = action === 'aprobado' ? 'Aprobar' : 'Rechazar';
-             target.disabled = false;
-             return;
-          }
-
-          try {
-            const res = await fetch('/api/aprobar-anomalia', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id, action, token })
-            });
-            
-            if(res.ok) {
-              window.location.reload();
-            } else {
-              alert("Error al procesar la solicitud");
-              target.disabled = false;
-              target.innerText = action === 'aprobado' ? 'Aprobar' : 'Rechazar';
-            }
-          } catch(err) {
-            alert("Error de conexión");
-            target.disabled = false;
-          }
-        });
-      });
     </script>
   </body>
 </html>

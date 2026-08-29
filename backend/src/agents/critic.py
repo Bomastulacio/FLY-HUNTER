@@ -60,11 +60,10 @@ def evaluate_deal(deal: Dict) -> Dict:
     presupuesto_ok = (BUDGET_MIN <= precio <= BUDGET_MAX)
     escalas_ok = (escalas <= 1) # Máximo de escalas razonables (sin escala o 1)
     
-    # Regla 2: Anomalía (rompe parámetros levemente pero es barata)
-    if not fecha_ok and precio < (BUDGET_MAX - 200):
-        # Ej: Fecha fuera de rango, pero buen precio
-        deal['es_anomalia'] = True
-        deal['estado_aprobacion'] = 'pendiente'
+    # Regla 2: Oportunidad de Oro por precio (incluso si la fecha no es exacta)
+    if precio < (BUDGET_MAX - 200):
+        deal['es_oportunidad_oro'] = True
+        deal['estado_aprobacion'] = 'aprobado'
         return deal
         
 
