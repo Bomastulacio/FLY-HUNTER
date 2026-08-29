@@ -604,6 +604,67 @@ import { supabase } from '../lib/supabase';
         emailInput.value = session.user.email || '';
         emailInput.removeAttribute('required');
       }
+      
+      // Intentar cargar la alerta existente del usuario
+      const { data: alertData } = await supabase
+        .from('search_alerts')
+        .select('*')
+        .eq('user_id', currentUserId)
+        .single();
+        
+      if (alertData) {
+        const f = document.getElementById('search-alert-form') as HTMLFormElement;
+        if (f) {
+          // Origen
+          const origen = f.querySelector('[name="origen"]') as HTMLSelectElement;
+          if (origen) origen.value = alertData.origen;
+          
+          // Fechas
+          if (alertData.fecha_ida_min) (f.querySelector('[name="fecha_ida_min"]') as HTMLInputElement).value = alertData.fecha_ida_min;
+          if (alertData.fecha_ida_max) (f.querySelector('[name="fecha_ida_max"]') as HTMLInputElement).value = alertData.fecha_ida_max;
+          if (alertData.fecha_vuelta_min) (f.querySelector('[name="fecha_vuelta_min"]') as HTMLInputElement).value = alertData.fecha_vuelta_min;
+          if (alertData.fecha_vuelta_max) (f.querySelector('[name="fecha_vuelta_max"]') as HTMLInputElement).value = alertData.fecha_vuelta_max;
+          
+          // Zona
+          const zoneInput = f.querySelector(`input[name="destino"][value="${alertData.destino}"]`) as HTMLInputElement;
+          if (zoneInput) {
+            zoneInput.checked = true;
+            document.querySelectorAll('.zone-card').forEach(c => c.classList.remove('active'));
+            zoneInput.parentElement?.classList.add('active');
+            renderCountries(alertData.destino); // Esto limpia los selectedCountries
+          }
+          
+          // Paises
+          if (alertData.paises && alertData.paises.length > 0 && !alertData.paises.includes('Cualquiera')) {
+             selectedCountries = alertData.paises;
+             const pills = document.querySelectorAll('.country-pill input');
+             pills.forEach(p => {
+               const pVal = (p as HTMLInputElement).value;
+               if (selectedCountries.includes(pVal)) {
+                 (p as HTMLInputElement).checked = true;
+                 p.parentElement?.classList.add('selected');
+               }
+             });
+             const counter = document.getElementById('countries-counter');
+             if (counter) counter.innerText = `${selectedCountries.length}/4 seleccionados`;
+          }
+          
+          // Presupuesto
+          if (alertData.presupuesto_min) (f.querySelector('[name="presupuesto_min"]') as HTMLInputElement).value = alertData.presupuesto_min;
+          if (alertData.presupuesto_max) (f.querySelector('[name="presupuesto_max"]') as HTMLInputElement).value = alertData.presupuesto_max;
+          
+          // Escalas
+          const escalas = f.querySelector(`input[name="escalas_max"][value="${alertData.escalas_max}"]`) as HTMLInputElement;
+          if (escalas) {
+            escalas.checked = true;
+            document.querySelectorAll('.pill').forEach(c => c.classList.remove('active'));
+            escalas.parentElement?.classList.add('active');
+          }
+          
+          // Boton
+          submitBtn.innerHTML = 'Actualizar Radar';
+        }
+      }
     } else {
       if (emailInput) emailInput.setAttribute('required', 'true');
     }
@@ -670,7 +731,6 @@ import { supabase } from '../lib/supabase';
         alert('Error guardando alerta: ' + error.message);
       } else {
         alert('¡Radar activado con éxito!');
-        window.location.reload();
       }
       
       submitBtn.disabled = false;
@@ -692,7 +752,7 @@ import { supabase } from '../lib/supabase';
           localStorage.removeItem('pending_alert_save');
           
           alert('¡Tu radar ha sido activado exitosamente!');
-          window.location.reload();
+          // window.location.reload();
         }
       }
     });
