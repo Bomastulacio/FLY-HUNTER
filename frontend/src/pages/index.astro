@@ -66,48 +66,60 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
     </div>
     
     <main>
-      <header style="margin-bottom: 2rem;">
-        <h1>Flight Hunter</h1>
-        <p>Buscando las mejores tarifas desde Buenos Aires.</p>
-        
-        <!-- Header Dinámico del Usuario -->
-        <div id="dynamic-header-stats" style="display: none; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin-top: 1.5rem; font-size: 0.85rem;">
-          <!-- Llenado por JS -->
-        </div>
-        
-        <div style="margin-top: 2rem; display: flex; justify-content: center; gap: 1rem;">
-          <a href="/login" id="nav-login-btn" class="btn btn-outline" style="min-width: 120px; display: none;">🔑 Ingresar</a>
-          <a href="/alertas" class="btn btn-primary" style="min-width: 150px; background-color: var(--accent-color); color: #000;">✈️ Configurar Radar</a>
-        </div>
-      </header>
-
-      <!-- CONTENEDOR DINÁMICO DEL RADAR -->
-      <div id="dynamic-dashboard" style="display: none;">
-        
-        <!-- Countdown -->
-        <div class="card countdown-card" style="margin-bottom: 1rem; background: linear-gradient(135deg, rgba(20, 20, 25, 0.9) 0%, rgba(30, 35, 45, 0.9) 100%); border-color: var(--accent-color); text-align: center;">
-          <h2 id="cd-title" style="margin-bottom: 0.5rem; color: var(--accent-color);">🌴 Vacaciones</h2>
-          <p id="cd-subtitle" style="color: var(--text-secondary); margin-bottom: 1rem;">Cargando fechas...</p>
-          <div id="countdown" style="display: flex; justify-content: center; gap: 1.5rem; font-size: 1.5rem; font-weight: bold;">
-            <div style="display: flex; flex-direction: column; align-items: center;">
-              <span id="cd-days" style="font-size: 2.5rem; color: var(--text-primary); text-shadow: 0 0 15px var(--accent-glow);">00</span>
-              <span style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Días</span>
+      <!-- Top Navigation (Desktop) -->
+      <nav class="top-nav">
+        <a href="/" class="top-nav-logo">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="2"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.2-1.1.6L3 8l6.5 4.5L6 16l-3.2-1.3c-.4-.1-.8.2-1 .6L1 17l4.5 2.5L8 24l1.7-.8c.4-.2.7-.6.6-1L9 19l3.5-3.5 8.2 6.5c.4.2.8 0 .6-.5z"/></svg>
+          Flight Hunter
+        </a>
+        <div class="top-nav-actions" id="desktop-user-actions">
+          <a href="/login" id="nav-login-btn" class="btn btn-outline" style="display: none; padding: 0.4rem 1rem;">🔑 Ingresar</a>
+          
+          <div id="user-profile-dropdown" class="profile-dropdown" style="display: none;">
+            <div class="profile-btn">
+              <span id="user-email-display">usuario</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
             </div>
-            <div style="display: flex; flex-direction: column; align-items: center;">
-              <span id="cd-hours" style="font-size: 2.5rem; color: var(--text-primary); text-shadow: 0 0 15px var(--accent-glow);">00</span>
-              <span style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Horas</span>
-            </div>
-            <div style="display: flex; flex-direction: column; align-items: center;">
-              <span id="cd-minutes" style="font-size: 2.5rem; color: var(--text-primary); text-shadow: 0 0 15px var(--accent-glow);">00</span>
-              <span style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Min</span>
-            </div>
-            <div style="display: flex; flex-direction: column; align-items: center;">
-              <span id="cd-seconds" style="font-size: 2.5rem; color: var(--text-primary); text-shadow: 0 0 15px var(--accent-glow);">00</span>
-              <span style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Seg</span>
+            <div class="dropdown-content">
+              <a href="/alertas">⚙️ Configuración</a>
+              <a href="#" id="btn-logout" class="danger">🚪 Cerrar Sesión</a>
             </div>
           </div>
         </div>
+      </nav>
 
+      <!-- Hero & Radar Config -->
+      <header>
+        <h1>Encontramos las mejores tarifas desde Buenos Aires.</h1>
+        <p id="hero-subtitle">Configura tu radar para empezar a recibir alertas.</p>
+      </header>
+
+      <div id="radar-config-container" class="radar-config-panel" style="display: none;">
+        <div class="radar-field">
+          <label>Origen</label>
+          <div class="radar-field-value">Buenos Aires (EZE)</div>
+        </div>
+        <div class="radar-field">
+          <label>Destino</label>
+          <div class="radar-field-value" id="radar-val-destino">Europa</div>
+        </div>
+        <div class="radar-field">
+          <label>Fechas de viaje</label>
+          <div class="radar-field-value" id="radar-val-fechas">--</div>
+        </div>
+        <div class="radar-field">
+          <label>Escalas máximas</label>
+          <div class="radar-field-value" id="radar-val-escalas">--</div>
+        </div>
+        <div class="radar-field">
+          <label>Presupuesto</label>
+          <div class="radar-field-value" id="radar-val-presupuesto">--</div>
+        </div>
+        <a href="/alertas" class="btn btn-primary" style="padding: 0.8rem 2rem; margin: 0;">Editar Radar</a>
+      </div>
+
+      <!-- CONTENEDOR DINÁMICO DEL RADAR -->
+      <div id="dynamic-dashboard" style="display: none;">
         <div class="bento-grid" id="destinations-grid">
            <!-- Renderizado por JS -->
         </div>
@@ -121,6 +133,22 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
       </div>
 
     </main>
+
+    <!-- Bottom Navigation (Mobile) -->
+    <nav class="bottom-nav">
+      <a href="/" class="active">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Radar
+      </a>
+      <a href="/alertas">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        Alertas
+      </a>
+      <a href="/login" id="mobile-nav-profile">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Cuenta
+      </a>
+    </nav>
 
     <!-- Pasar datos del servidor al cliente -->
     <script is:inline define:vars={{ approvedDeals }}>
@@ -188,34 +216,33 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
         const dash = document.getElementById('dynamic-dashboard');
         if(dash) dash.style.display = 'block';
         
-        // 1. Header Stats
-        const headerStats = document.getElementById('dynamic-header-stats');
-        if (headerStats) {
-          headerStats.style.display = 'flex';
-          headerStats.innerHTML = `
-            <span style="background: rgba(255,255,255,0.05); padding: 0.4rem 1rem; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary);">🛫 <strong style="color: var(--text-primary);">Ida:</strong> ${formatDate(alert.fecha_ida_min)}</span>
-            <span style="background: rgba(255,255,255,0.05); padding: 0.4rem 1rem; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary);">🛬 <strong style="color: var(--text-primary);">Vuelta:</strong> ${formatDate(alert.fecha_vuelta_max)}</span>
-            <span style="background: rgba(255,255,255,0.05); padding: 0.4rem 1rem; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary);">💰 <strong style="color: var(--text-primary);">Tope:</strong> US$ ${alert.presupuesto_max}</span>
-            <span style="background: rgba(255,255,255,0.05); padding: 0.4rem 1rem; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary);">⏱️ <strong style="color: var(--text-primary);">Escalas:</strong> Máx ${alert.escalas_max}</span>
-          `;
-        }
-
-        // 2. Countdown
-        const cdTitle = document.getElementById('cd-title');
-        const cdSub = document.getElementById('cd-subtitle');
-        if (cdTitle) cdTitle.innerText = `🌴 Viaje a ${alert.destino}`;
-        if (cdSub) cdSub.innerText = `${formatDate(alert.fecha_ida_min)} al ${formatDate(alert.fecha_vuelta_max)}`;
+        // Setup Radar Config Panel
+        const configPanel = document.getElementById('radar-config-container');
+        if (configPanel) configPanel.style.display = 'flex';
         
+        const heroSub = document.getElementById('hero-subtitle');
+        if (heroSub) heroSub.style.display = 'none'; // Hide subtitle if logged in
+
+        const elDest = document.getElementById('radar-val-destino');
+        if (elDest) elDest.innerText = alert.destino;
+        const elFechas = document.getElementById('radar-val-fechas');
+        if (elFechas) elFechas.innerText = `${formatDate(alert.fecha_ida_min)} - ${formatDate(alert.fecha_vuelta_max)}`;
+        const elEscalas = document.getElementById('radar-val-escalas');
+        if (elEscalas) elEscalas.innerText = `Máx. ${alert.escalas_max}`;
+        const elPresupuesto = document.getElementById('radar-val-presupuesto');
+        if (elPresupuesto) elPresupuesto.innerText = `US$ ${alert.presupuesto_max}`;
+
+        // 2. Countdown logic (will be inserted into innerHTML later)
         if(cdInterval) clearInterval(cdInterval);
         const targetDate = new Date(alert.fecha_ida_min + 'T00:00:00').getTime();
         
         const updateCountdown = () => {
           const distance = targetDate - new Date().getTime();
-          const countdownEl = document.getElementById('countdown');
+          const countdownEl = document.getElementById('countdown-inner');
           if (!countdownEl) return;
           
           if (distance < 0) {
-            countdownEl.innerHTML = "<span style='font-size: 2rem; color: var(--accent-color);'>¡Llegó el día del viaje! ✈️</span>";
+            countdownEl.innerHTML = "<span style='font-size: 2rem; color: var(--accent-color);'>¡Llegó el día! ✈️</span>";
             return;
           }
           const days = Math.floor(distance / (1000 * 60 * 60 * 24));
@@ -233,14 +260,35 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
           if(mEl) mEl.innerText = mins.toString().padStart(2, '0');
           if(sEl) sEl.innerText = secs.toString().padStart(2, '0');
         };
-        updateCountdown();
         cdInterval = setInterval(updateCountdown, 1000);
 
         // 3. Destinations Grid
         const grid = document.getElementById('destinations-grid');
         if (!grid) return;
         
-        let html = '';
+        let html = `
+          <!-- Countdown block on the left -->
+          <div class="card countdown-card" style="grid-column: span 2; display: flex; flex-direction: row; justify-content: space-between; align-items: center; border-color: rgba(255,255,255,0.1);">
+            <div>
+              <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem; display:flex; align-items:center; gap: 0.5rem;">🌴 Viaje a ${alert.destino} <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></h2>
+              <p style="color: var(--text-secondary); margin: 0; font-size: 0.9rem;">${formatDate(alert.fecha_ida_min)} al ${formatDate(alert.fecha_vuelta_max)}</p>
+            </div>
+            <div id="countdown-inner" style="display: flex; justify-content: center; gap: 1rem; font-size: 1.5rem; font-weight: bold;">
+              <div style="display: flex; flex-direction: column; align-items: center;">
+                <span id="cd-days" style="font-size: 2rem; color: var(--text-primary);">00</span>
+                <span style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Días</span>
+              </div>
+              <div style="display: flex; flex-direction: column; align-items: center;">
+                <span id="cd-hours" style="font-size: 2rem; color: var(--text-primary);">00</span>
+                <span style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Hs</span>
+              </div>
+              <div style="display: flex; flex-direction: column; align-items: center;">
+                <span id="cd-minutes" style="font-size: 2rem; color: var(--text-primary);">00</span>
+                <span style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Min</span>
+              </div>
+            </div>
+          </div>
+        `;
         
         // Filtramos TODOS los vuelos para que solo queden los que cumplen con el presupuesto y escalas
         const affordableDeals = allDeals.filter((d: any) => 
@@ -305,6 +353,7 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
         }
 
         grid.innerHTML = html;
+        updateCountdown(); // Call immediately to avoid initial flash
       };
 
       const initDashboard = async () => {
@@ -328,7 +377,32 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
         if (loader) loader.style.display = 'none';
 
         if (session) {
-          // El usuario está logueado, traemos sus alertas
+          // Actualizar UI para usuario logueado
+          const loginBtn = document.getElementById('nav-login-btn');
+          if (loginBtn) loginBtn.style.display = 'none';
+          
+          const profileDropdown = document.getElementById('user-profile-dropdown');
+          if (profileDropdown) profileDropdown.style.display = 'inline-block';
+          
+          const emailDisplay = document.getElementById('user-email-display');
+          if (emailDisplay) emailDisplay.innerText = session.user.email?.split('@')[0] || 'Usuario';
+
+          const mobileProfile = document.getElementById('mobile-nav-profile');
+          if (mobileProfile) {
+            mobileProfile.href = "/alertas"; // En mobile, cuenta los lleva a config por ahora
+          }
+
+          // Escuchar logout
+          const logoutBtn = document.getElementById('btn-logout');
+          if (logoutBtn) {
+            logoutBtn.addEventListener('click', async (e) => {
+              e.preventDefault();
+              await supabase.auth.signOut();
+              window.location.reload();
+            });
+          }
+
+          // Traemos sus alertas
           const { data: alertData } = await supabase
             .from('search_alerts')
             .select('*')
@@ -344,8 +418,11 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
           }
         } else {
           // No logueado
-          const btn = document.getElementById('nav-login-btn');
-          if(btn) btn.style.display = 'inline-block';
+          const loginBtn = document.getElementById('nav-login-btn');
+          if(loginBtn) loginBtn.style.display = 'inline-block';
+          
+          const profileDropdown = document.getElementById('user-profile-dropdown');
+          if(profileDropdown) profileDropdown.style.display = 'none';
           
           const empty = document.getElementById('empty-state');
           if(empty) empty.style.display = 'block';
