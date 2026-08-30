@@ -89,7 +89,7 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
       </nav>
 
       <!-- Hero & Radar Config -->
-      <header>
+      <header id="main-hero">
         <h1>Encontramos las mejores tarifas desde Buenos Aires.</h1>
         <p id="hero-subtitle">Configura tu radar para empezar a recibir alertas.</p>
       </header>
@@ -220,8 +220,8 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
         const configPanel = document.getElementById('radar-config-container');
         if (configPanel) configPanel.style.display = 'flex';
         
-        const heroSub = document.getElementById('hero-subtitle');
-        if (heroSub) heroSub.style.display = 'none'; // Hide subtitle if logged in
+        const mainHero = document.getElementById('main-hero');
+        if (mainHero) mainHero.style.display = 'none'; // Hide entirely if logged in
 
         const elDest = document.getElementById('radar-val-destino');
         if (elDest) elDest.innerText = alert.destino;
@@ -266,8 +266,35 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
         const grid = document.getElementById('destinations-grid');
         if (!grid) return;
         
-        let html = `
-          <!-- Countdown block on the left -->
+        let html = '';
+        
+        // Filtramos TODOS los vuelos para que solo queden los que cumplen con el presupuesto y escalas
+        const affordableDeals = allDeals.filter((d: any) => 
+          d.precio_total_usd <= alert.presupuesto_max && 
+          d.cantidad_escalas <= alert.escalas_max
+        );
+        
+        // 1. Tarjeta Principal (El Vuelo Absoluto más barato que cumpla las reglas, de cualquier destino)
+        // AL RENDERIZARLA PRIMERO Y CON SPAN 2 / ROW SPAN 2, QUEDA A LA IZQUIERDA.
+        const mainDeal = affordableDeals.length > 0 ? affordableDeals[0] : null;
+        
+        html += `
+          <div class="card main-deal">
+            <div class="card-header">🔥 Vuelo Más Barato (Tu Presupuesto)</div>
+            ${mainDeal ? `
+              <div class="card-route">${mainDeal.ida_origen_destino} <span style="opacity: 0.5; margin: 0 4px;">✈</span> ${mainDeal.vuelta_origen_destino}</div>
+              <div class="card-date">🗓 ${formatDate(mainDeal.ida_fecha)} al ${formatDate(mainDeal.vuelta_fecha)}</div>
+              <div style="color: var(--text-secondary); margin-top: 0.5rem; font-weight: 500;">${mainDeal.aerolinea} • ${mainDeal.cantidad_escalas} escalas</div>
+              <div class="card-price">${formatPrice(mainDeal)}</div>
+              ${mainDeal.link_reserva ? `<a href="${mainDeal.link_reserva}" target="_blank" class="btn btn-primary" style="align-self: flex-start; margin-top: 1.5rem;">Reserva en Google Flights</a>` : ''}
+            ` : `
+              <div style="margin: auto; color: var(--text-secondary); font-weight: 500;">No hay vuelos dentro de tu presupuesto y reglas.</div>
+            `}
+          </div>
+        `;
+        
+        // 2. Countdown block (Ocupa la parte superior derecha)
+        html += `
           <div class="card countdown-card" style="grid-column: span 2; display: flex; flex-direction: row; justify-content: space-between; align-items: center; border-color: rgba(255,255,255,0.1);">
             <div>
               <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem; display:flex; align-items:center; gap: 0.5rem;">🌴 Viaje a ${alert.destino} <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></h2>
@@ -287,30 +314,6 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
                 <span style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Min</span>
               </div>
             </div>
-          </div>
-        `;
-        
-        // Filtramos TODOS los vuelos para que solo queden los que cumplen con el presupuesto y escalas
-        const affordableDeals = allDeals.filter((d: any) => 
-          d.precio_total_usd <= alert.presupuesto_max && 
-          d.cantidad_escalas <= alert.escalas_max
-        );
-        
-        // Tarjeta Principal (El Vuelo Absoluto más barato que cumpla las reglas, de cualquier destino)
-        const mainDeal = affordableDeals.length > 0 ? affordableDeals[0] : null;
-        
-        html += `
-          <div class="card main-deal">
-            <div class="card-header">🔥 Vuelo Más Barato (Tu Presupuesto)</div>
-            ${mainDeal ? `
-              <div class="card-route">${mainDeal.ida_origen_destino} <span style="opacity: 0.5; margin: 0 4px;">✈</span> ${mainDeal.vuelta_origen_destino}</div>
-              <div class="card-date">🗓 ${formatDate(mainDeal.ida_fecha)} al ${formatDate(mainDeal.vuelta_fecha)}</div>
-              <div style="color: var(--text-secondary); margin-top: 0.5rem; font-weight: 500;">${mainDeal.aerolinea} • ${mainDeal.cantidad_escalas} escalas</div>
-              <div class="card-price">${formatPrice(mainDeal)}</div>
-              ${mainDeal.link_reserva ? `<a href="${mainDeal.link_reserva}" target="_blank" class="btn btn-primary" style="align-self: flex-start; margin-top: 1.5rem;">Reserva en Google Flights</a>` : ''}
-            ` : `
-              <div style="margin: auto; color: var(--text-secondary); font-weight: 500;">No hay vuelos dentro de tu presupuesto y reglas.</div>
-            `}
           </div>
         `;
 
