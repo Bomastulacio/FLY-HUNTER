@@ -23,7 +23,7 @@ import { supabase } from '../lib/supabase';
       <div class="form-group full-width">
         <label>Origen</label>
         <div class="input-wrapper">
-          <span class="input-icon">🛫</span>
+          <span class="input-icon"><i class="ph ph-airplane-takeoff"></i></span>
           <select name="origen" required>
             <option value="EZE,AEP" selected>Buenos Aires (EZE/AEP)</option>
             <option value="COR">Córdoba (COR)</option>
@@ -45,7 +45,7 @@ import { supabase } from '../lib/supabase';
             <input type="date" name="fecha_ida_max" required />
           </div>
         </div>
-        <small class="hint">✓ Flexibilidad en la ida: Buscamos combinaciones ideales.</small>
+        <small class="hint"><i class="ph ph-check" style="color: var(--success-color);"></i> Flexibilidad en la ida: Buscamos combinaciones ideales.</small>
       </div>
       
       <div class="form-group">
@@ -61,7 +61,7 @@ import { supabase } from '../lib/supabase';
             <input type="date" name="fecha_vuelta_max" required />
           </div>
         </div>
-        <small class="hint">✓ Flexibilidad en la vuelta.</small>
+        <small class="hint"><i class="ph ph-check" style="color: var(--success-color);"></i> Flexibilidad en la vuelta.</small>
       </div>
 
       <!-- Fila 3 -->
@@ -70,37 +70,37 @@ import { supabase } from '../lib/supabase';
         <div class="zones-grid" id="zones-container">
           <label class="zone-card active">
             <input type="radio" name="destino" value="Europa" checked>
-            <span class="zone-icon">🏰</span>
+            <span class="zone-icon"><i class="ph ph-castle-turret"></i></span>
             <span class="zone-name">Europa</span>
           </label>
           <label class="zone-card">
             <input type="radio" name="destino" value="Norteamérica">
-            <span class="zone-icon">🗽</span>
+            <span class="zone-icon"><i class="ph ph-buildings"></i></span>
             <span class="zone-name">Norteamérica</span>
           </label>
           <label class="zone-card">
             <input type="radio" name="destino" value="Latinoamérica">
-            <span class="zone-icon">⛰️</span>
+            <span class="zone-icon"><i class="ph ph-mountains"></i></span>
             <span class="zone-name">Latinoamérica</span>
           </label>
           <label class="zone-card">
             <input type="radio" name="destino" value="Caribe">
-            <span class="zone-icon">🏝️</span>
+            <span class="zone-icon"><i class="ph ph-palm-tree"></i></span>
             <span class="zone-name">Caribe</span>
           </label>
           <label class="zone-card">
             <input type="radio" name="destino" value="Asia">
-            <span class="zone-icon">⛩️</span>
+            <span class="zone-icon"><i class="ph ph-globe-hemisphere-east"></i></span>
             <span class="zone-name">Asia</span>
           </label>
           <label class="zone-card">
             <input type="radio" name="destino" value="Oceanía">
-            <span class="zone-icon">🦘</span>
+            <span class="zone-icon"><i class="ph ph-compass"></i></span>
             <span class="zone-name">Oceanía</span>
           </label>
           <label class="zone-card">
             <input type="radio" name="destino" value="Cualquiera">
-            <span class="zone-icon">🌍</span>
+            <span class="zone-icon"><i class="ph ph-globe-hemisphere-west"></i></span>
             <span class="zone-name">Cualquier parte</span>
           </label>
         </div>
@@ -120,7 +120,7 @@ import { supabase } from '../lib/supabase';
       <div class="form-group full-width" id="airlines-section">
         <label>Aerolíneas a excluir (Opcional)</label>
         <div class="input-wrapper autocomplete-wrapper">
-          <span class="input-icon">🚫</span>
+          <span class="input-icon"><i class="ph ph-prohibit"></i></span>
           <input type="text" id="airline-exclude-input" placeholder="Ej. Iberia, Ryanair..." autocomplete="off" />
           <div class="autocomplete-dropdown hidden" id="airline-dropdown">
             <!-- Renderizado dinámico vía JS -->
@@ -137,15 +137,15 @@ import { supabase } from '../lib/supabase';
         <div class="radio-pills">
           <label class="pill">
             <input type="radio" name="escalas_max" value="0">
-            🚫 0
+            <i class="ph ph-prohibit"></i> 0
           </label>
           <label class="pill active">
             <input type="radio" name="escalas_max" value="1" checked>
-            ✈️ 1
+            <i class="ph ph-airplane"></i> 1
           </label>
           <label class="pill">
             <input type="radio" name="escalas_max" value="2">
-            ⏱️ 2+
+            <i class="ph ph-clock"></i> 2+
           </label>
         </div>
       </div>
@@ -154,11 +154,11 @@ import { supabase } from '../lib/supabase';
         <div class="radio-pills">
           <label class="pill active">
             <input type="radio" name="pasajeros" value="1" checked>
-            👤 1
+            <i class="ph ph-user"></i> 1
           </label>
           <label class="pill">
             <input type="radio" name="pasajeros" value="2">
-            👥 2
+            <i class="ph ph-users"></i> 2
           </label>
         </div>
       </div>
@@ -194,7 +194,7 @@ import { supabase } from '../lib/supabase';
       <div class="form-group full-width" id="email-auth-section">
         <label>Email para recibir alertas</label>
         <div class="input-wrapper">
-          <span class="input-icon">✉️</span>
+          <span class="input-icon"><i class="ph ph-envelope"></i></span>
           <input type="email" name="email" id="user-email" placeholder="tucorreo@ejemplo.com" />
         </div>
       </div>
@@ -218,27 +218,27 @@ import { supabase } from '../lib/supabase';
       </h3>
       <div class="summary-list">
         <div class="summary-item">
-          <span class="icon">✈️</span>
+          <span class="icon"><i class="ph ph-airplane-takeoff"></i></span>
           <span class="label">Origen</span>
           <span class="value" id="summary-origin">Buenos Aires (EZE/AEP)</span>
         </div>
         <div class="summary-item">
-          <span class="icon">📅</span>
+          <span class="icon"><i class="ph ph-calendar-blank"></i></span>
           <span class="label">Ida</span>
           <span class="value" id="summary-ida">-</span>
         </div>
         <div class="summary-item">
-          <span class="icon">📅</span>
+          <span class="icon"><i class="ph ph-calendar-blank"></i></span>
           <span class="label">Vuelta</span>
           <span class="value" id="summary-vuelta">-</span>
         </div>
         <div class="summary-item">
-          <span class="icon">🌍</span>
+          <span class="icon"><i class="ph ph-globe-hemisphere-west"></i></span>
           <span class="label">Zona</span>
           <span class="value" id="summary-zone">Europa</span>
         </div>
         <div class="summary-item">
-          <span class="icon">📍</span>
+          <span class="icon"><i class="ph ph-map-pin"></i></span>
           <span class="label">Destinos</span>
           <span class="value" id="summary-dest">Toda la zona</span>
         </div>
@@ -246,7 +246,7 @@ import { supabase } from '../lib/supabase';
     </div>
 
     <div class="promo-card card">
-      <div class="promo-icon">✨</div>
+      <div class="promo-icon"><i class="ph-fill ph-sparkle"></i></div>
       <div class="promo-content">
         <h3>Buscamos por vos</h3>
         <p>Nuestro Agente Estratega monitorea precios y te alerta cuando encuentra oportunidades increíbles.</p>
@@ -956,7 +956,7 @@ import { supabase } from '../lib/supabase';
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     
-    const icon = type === 'success' ? '✓' : '✕';
+    const icon = type === 'success' ? '<i class="ph ph-check"></i>' : '<i class="ph ph-x"></i>';
     toast.innerHTML = `<span class="toast-icon">${icon}</span><span>${message}</span>`;
     
     container.appendChild(toast);
@@ -1061,7 +1061,7 @@ import { supabase } from '../lib/supabase';
     excludedAirlinesContainer.innerHTML = excludedAirlines.map(a => `
       <div class="excluded-pill" data-value="${a}">
         <span>${a}</span>
-        <span class="remove-icon">×</span>
+        <span class="remove-icon"><i class="ph ph-x"></i></span>
       </div>
     `).join('');
     

@@ -36,11 +36,12 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="FlyHunter" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
   </head>
   <body>
     <!-- Auth Guard Loader -->
     <div id="auth-loader" style="position: fixed; inset: 0; background: var(--bg-color); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-      <div style="font-size: 3rem; margin-bottom: 1rem; animation: pulse 1.5s infinite;">✈️</div>
+      <div style="font-size: 3rem; margin-bottom: 1rem; animation: pulse 1.5s infinite;"><i class="ph ph-airplane-tilt"></i></div>
       <h3 style="color: var(--text-secondary); font-weight: normal;">Conectando al radar...</h3>
     </div>
 
@@ -73,7 +74,7 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
           Flight Hunter
         </a>
         <div class="top-nav-actions" id="desktop-user-actions">
-          <a href="/login" id="nav-login-btn" class="btn btn-outline" style="display: none; padding: 0.4rem 1rem;">🔑 Ingresar</a>
+          <a href="/login" id="nav-login-btn" class="btn btn-outline" style="display: none; padding: 0.4rem 1rem;"><i class="ph ph-key" style="margin-right: 0.5rem;"></i> Ingresar</a>
           
           <div id="user-profile-dropdown" class="profile-dropdown" style="display: none;">
             <div class="profile-btn">
@@ -81,8 +82,9 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
             </div>
             <div class="dropdown-content">
-              <a href="/alertas">⚙️ Configuración</a>
-              <a href="#" id="btn-logout" class="danger">🚪 Cerrar Sesión</a>
+              <div style="padding: 0.5rem 1rem; color: var(--text-secondary); font-size: 0.8rem; text-align: center;">Opciones</div>
+              <div class="dropdown-divider"></div>
+              <a href="#" id="btn-logout" class="danger"><i class="ph ph-sign-out" style="margin-right: 0.5rem;"></i> Cerrar Sesión</a>
             </div>
           </div>
         </div>
@@ -127,7 +129,7 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
       
       <!-- EMPTY STATE (Sin Alerta) -->
       <div id="empty-state" style="display: none; text-align: center; margin: 4rem 0;">
-        <div style="font-size: 4rem; margin-bottom: 1rem;">📡</div>
+        <div style="font-size: 4rem; margin-bottom: 1rem; color: var(--text-secondary);"><i class="ph ph-broadcast"></i></div>
         <h2>Aún no tienes un radar activo</h2>
         <p style="color: var(--text-secondary); margin-bottom: 2rem;">Configura tus preferencias para que nuestra IA busque los mejores vuelos por vos.</p>
       </div>
@@ -269,10 +271,10 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
         
         html += `
           <div class="card main-deal">
-            <div class="card-header">🔥 Vuelo Más Barato (Tu Presupuesto)</div>
+            <div class="card-header"><i class="ph-fill ph-fire" style="color: #ffaa00; margin-right: 4px;"></i> Vuelo Más Barato (Tu Presupuesto)</div>
             ${mainDeal ? `
-              <div class="card-route">${mainDeal.ida_origen_destino} <span style="opacity: 0.5; margin: 0 4px;">✈</span> ${mainDeal.vuelta_origen_destino}</div>
-              <div class="card-date">🗓 ${formatDate(mainDeal.ida_fecha)} al ${formatDate(mainDeal.vuelta_fecha)}</div>
+              <div class="card-route">${mainDeal.ida_origen_destino} <i class="ph ph-airplane-tilt" style="opacity: 0.5; margin: 0 4px;"></i> ${mainDeal.vuelta_origen_destino}</div>
+              <div class="card-date"><i class="ph ph-calendar-blank"></i> ${formatDate(mainDeal.ida_fecha)} al ${formatDate(mainDeal.vuelta_fecha)}</div>
               <div style="color: var(--text-secondary); margin-top: 0.5rem; font-weight: 500;">${mainDeal.aerolinea} • ${mainDeal.cantidad_escalas} escalas</div>
               <div class="card-price">${formatPrice(mainDeal)}</div>
               ${mainDeal.link_reserva ? `<a href="${mainDeal.link_reserva}" target="_blank" class="btn btn-primary" style="align-self: flex-start; margin-top: 1.5rem;">Reserva en Google Flights</a>` : ''}
@@ -327,15 +329,15 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
             
             cardsHtml += `
               <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
-                <div class="card-header">📍 ${country}</div>
+                <div class="card-header"><i class="ph ph-map-pin"></i> ${country}</div>
                 ${destDeal ? `
                   <div class="card-route">${destDeal.ida_origen_destino}</div>
-                  <div class="card-date">🗓 ${formatDate(destDeal.ida_fecha)} al ${formatDate(destDeal.vuelta_fecha)}</div>
+                  <div class="card-date"><i class="ph ph-calendar-blank"></i> ${formatDate(destDeal.ida_fecha)} al ${formatDate(destDeal.vuelta_fecha)}</div>
                   <div class="card-price" style="font-size: clamp(1.4rem, 4vw, 1.8rem); margin-top: auto; margin-bottom: 0.5rem;">${formatPrice(destDeal)}</div>
                   ${destDeal.link_reserva ? `<a href="${destDeal.link_reserva}" target="_blank" class="btn btn-primary" style="width: 100%; box-sizing: border-box;">Ver Vuelo</a>` : ''}
                 ` : `
                   <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.5; gap: 0.5rem; padding: 1rem 0;">
-                    <span style="font-size: 1.5rem;">📡</span>
+                    <i class="ph ph-broadcast" style="font-size: 1.5rem;"></i>
                     <span style="font-size: 0.85rem; font-weight: 500; text-align: center;">Buscando ofertas...</span>
                   </div>
                 `}

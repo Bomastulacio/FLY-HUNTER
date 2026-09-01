@@ -18,6 +18,7 @@ import '../styles/global.css';
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="FlyHunter" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
   </head>
   <body>
     <div class="bg-3d-scene">
@@ -30,7 +31,7 @@ import '../styles/global.css';
     <main>
       <header class="alertas-header">
         <div class="alertas-header-text">
-          <a href="/" class="back-link">← Volver al Radar</a>
+          <a href="/" class="back-link"><i class="ph ph-arrow-left"></i> Volver al Radar</a>
           <h1>Mis Alertas</h1>
           <p>Configurá el Agente Estratega para que busque por ti.</p>
         </div>
@@ -43,7 +44,7 @@ import '../styles/global.css';
             <div id="profile-dropdown" class="profile-dropdown hidden">
               <div style="padding: 0.5rem 1rem; color: var(--text-secondary); font-size: 0.8rem; text-align: center;">Opciones</div>
               <div class="dropdown-divider"></div>
-              <button id="logout-btn" class="dropdown-item danger">Cerrar Sesión</button>
+              <button id="logout-btn" class="dropdown-item danger"><i class="ph ph-sign-out" style="margin-right: 0.5rem;"></i> Cerrar Sesión</button>
             </div>
           </div>
         </div>
