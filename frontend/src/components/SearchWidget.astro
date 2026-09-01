@@ -5,15 +5,69 @@ import { supabase } from '../lib/supabase';
 <div class="search-widget-wrapper">
   
   <div class="main-content card">
-    <div class="widget-header">
-      <div style="flex-shrink: 0;">
-        <img src="/favicon.svg" alt="FlyHunter" width="56" height="56" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(159, 219, 22, 0.2);" />
+    <!-- DASHBOARD VIEW (Shown if active alert exists) -->
+    <div id="radar-dashboard" class="hidden">
+      <div class="radar-status-header">
+         <div class="radar-pulse-icon">
+            <div class="pulse-ring"></div>
+            <i class="ph ph-radar"></i>
+         </div>
+         <div>
+           <h2 style="margin:0; font-size: 1.3rem;">Tu radar está activo <span style="font-size: 0.9rem;">🟢</span></h2>
+           <p style="margin: 4px 0 0; color: var(--text-secondary); font-size: 0.85rem;">Buscando automáticamente oportunidades para vos.</p>
+         </div>
       </div>
-      <div>
-        <h2>Personalizá tu radar de vuelos</h2>
-        <p>Elegí tu origen, fechas y destinos. Te avisamos cuando haya oportunidades de oro.</p>
+
+      <div class="radar-summary-card">
+         <div class="summary-section">
+            <div class="section-header">
+              <h3><i class="ph ph-map-pin"></i> Destino y Fechas</h3>
+              <button type="button" class="btn btn-icon edit-step-btn" data-step="1"><i class="ph ph-pencil-simple"></i></button>
+            </div>
+            <div class="section-content">
+              <div class="summary-row"><span>Origen</span> <strong id="dash-origen">EZE/AEP</strong></div>
+              <div class="summary-row"><span>Ida</span> <strong id="dash-ida">-</strong></div>
+              <div class="summary-row"><span>Vuelta</span> <strong id="dash-vuelta">-</strong></div>
+              <div class="summary-row"><span>Zona</span> <strong id="dash-zona">Europa</strong></div>
+            </div>
+         </div>
+         
+         <div class="summary-section">
+            <div class="section-header">
+              <h3><i class="ph ph-wallet"></i> Presupuesto y Pasajeros</h3>
+              <button type="button" class="btn btn-icon edit-step-btn" data-step="2"><i class="ph ph-pencil-simple"></i></button>
+            </div>
+            <div class="section-content">
+              <div class="summary-row"><span>Presupuesto</span> <strong id="dash-presupuesto">US$800 - US$2.400</strong></div>
+              <div class="summary-row"><span>Pasajeros</span> <strong id="dash-pasajeros">2</strong></div>
+            </div>
+         </div>
+
+         <div class="summary-section">
+            <div class="section-header">
+              <h3><i class="ph ph-sliders"></i> Opciones Avanzadas</h3>
+              <button type="button" class="btn btn-icon edit-step-btn" data-step="3"><i class="ph ph-pencil-simple"></i></button>
+            </div>
+            <div class="section-content">
+              <div class="summary-row"><span>Destinos Específicos</span> <strong id="dash-paises">Toda la zona</strong></div>
+              <div class="summary-row"><span>Escalas máx.</span> <strong id="dash-escalas">1</strong></div>
+              <div class="summary-row"><span>Excluye</span> <strong id="dash-aerolineas">Ninguna</strong></div>
+            </div>
+         </div>
       </div>
     </div>
+
+    <!-- WIZARD VIEW (Shown if creating or editing) -->
+    <div id="wizard-view-container">
+      <div class="widget-header">
+        <div style="flex-shrink: 0;">
+          <img src="/favicon.svg" alt="FlyHunter" width="56" height="56" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(159, 219, 22, 0.2);" />
+        </div>
+        <div>
+          <h2 id="wizard-title">Personalizá tu radar de vuelos</h2>
+          <p id="wizard-subtitle">Elegí tu origen, fechas y destinos. Te avisamos cuando haya oportunidades de oro.</p>
+        </div>
+      </div>
 
     <form id="search-alert-form" class="widget-form">
       <!-- WIZARD PROGRESS -->
@@ -220,6 +274,7 @@ import { supabase } from '../lib/supabase';
         </div>
       </div>
     </form>
+    </div> <!-- End Wizard View Container -->
 
     <div id="auth-message" class="auth-message hidden">
       ¡Link enviado! Revisa tu correo para confirmar y guardar tu alerta.
@@ -1325,7 +1380,7 @@ import { supabase } from '../lib/supabase';
     updateRangeFill();
   }
 
-  // SUMMARY DYNAMIC LOGIC
+  // SUMMARY & DASHBOARD DYNAMIC LOGIC
   const form = document.getElementById('search-alert-form') as HTMLFormElement;
   function updateSummary() {
     if (!form) return;
@@ -1335,14 +1390,22 @@ import { supabase } from '../lib/supabase';
     const vueltaMinEl = form.querySelector('input[name="fecha_vuelta_min"]') as HTMLInputElement;
     const vueltaMaxEl = form.querySelector('input[name="fecha_vuelta_max"]') as HTMLInputElement;
     const zoneEl = form.querySelector('input[name="destino"]:checked') as HTMLInputElement;
+    const budgetMinEl = form.querySelector('input[name="presupuesto_min"]') as HTMLInputElement;
+    const budgetMaxEl = form.querySelector('input[name="presupuesto_max"]') as HTMLInputElement;
+    const paxEl = form.querySelector('input[name="pasajeros"]:checked') as HTMLInputElement;
+    const escalasEl = form.querySelector('input[name="escalas_max"]:checked') as HTMLInputElement;
     
-    const sumOrigin = document.getElementById('summary-origin');
-    if (sumOrigin && originEl) sumOrigin.textContent = originEl.options[originEl.selectedIndex].text;
+    if (originEl) {
+      const txt = originEl.options[originEl.selectedIndex].text;
+      const sumOrigin = document.getElementById('summary-origin');
+      const dashOrigin = document.getElementById('dash-origen');
+      if (sumOrigin) sumOrigin.textContent = txt;
+      if (dashOrigin) dashOrigin.textContent = txt;
+    }
     
     const formatDate = (dStr: string) => {
       if (!dStr) return '';
       try {
-        // Fix timezone issue with simple split
         const parts = dStr.split('-');
         const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
         return new Intl.DateTimeFormat('es-AR', {day: 'numeric', month: 'short', year: 'numeric'}).format(d);
@@ -1350,40 +1413,79 @@ import { supabase } from '../lib/supabase';
     };
     
     const sumIda = document.getElementById('summary-ida');
-    if (sumIda) {
-      if (idaMinEl?.value && idaMaxEl?.value) {
-        sumIda.textContent = `${formatDate(idaMinEl.value)} - ${formatDate(idaMaxEl.value)}`;
-      } else {
-        sumIda.textContent = '-';
-      }
+    const dashIda = document.getElementById('dash-ida');
+    if (sumIda || dashIda) {
+      const text = (idaMinEl?.value && idaMaxEl?.value) ? `${formatDate(idaMinEl.value)} - ${formatDate(idaMaxEl.value)}` : '-';
+      if (sumIda) sumIda.textContent = text;
+      if (dashIda) dashIda.textContent = text;
     }
     
     const sumVuelta = document.getElementById('summary-vuelta');
-    if (sumVuelta) {
-      if (vueltaMinEl?.value && vueltaMaxEl?.value) {
-        sumVuelta.textContent = `${formatDate(vueltaMinEl.value)} - ${formatDate(vueltaMaxEl.value)}`;
-      } else {
-        sumVuelta.textContent = '-';
-      }
+    const dashVuelta = document.getElementById('dash-vuelta');
+    if (sumVuelta || dashVuelta) {
+      const text = (vueltaMinEl?.value && vueltaMaxEl?.value) ? `${formatDate(vueltaMinEl.value)} - ${formatDate(vueltaMaxEl.value)}` : '-';
+      if (sumVuelta) sumVuelta.textContent = text;
+      if (dashVuelta) dashVuelta.textContent = text;
     }
     
-    const sumZone = document.getElementById('summary-zone');
-    if (sumZone && zoneEl) sumZone.textContent = zoneEl.value;
+    if (zoneEl) {
+      const sumZone = document.getElementById('summary-zone');
+      const dashZone = document.getElementById('dash-zona');
+      if (sumZone) sumZone.textContent = zoneEl.value;
+      if (dashZone) dashZone.textContent = zoneEl.value;
+    }
     
     const sumDest = document.getElementById('summary-dest');
-    if (sumDest) {
-      if (selectedCountries.length > 0) {
-        sumDest.textContent = selectedCountries.join(', ');
-      } else {
-        sumDest.textContent = 'Toda la zona';
-      }
+    const dashPaises = document.getElementById('dash-paises');
+    if (sumDest || dashPaises) {
+      const text = selectedCountries.length > 0 ? selectedCountries.join(', ') : 'Toda la zona';
+      if (sumDest) sumDest.textContent = text;
+      if (dashPaises) dashPaises.textContent = text;
     }
+
+    const dashPresupuesto = document.getElementById('dash-presupuesto');
+    if (dashPresupuesto && budgetMinEl && budgetMaxEl) {
+      dashPresupuesto.textContent = `US$${budgetMinEl.value} - US$${budgetMaxEl.value}`;
+    }
+
+    const dashPax = document.getElementById('dash-pasajeros');
+    if (dashPax && paxEl) dashPax.textContent = paxEl.value;
+
+    const dashEscalas = document.getElementById('dash-escalas');
+    if (dashEscalas && escalasEl) dashEscalas.textContent = escalasEl.value;
+
+    const dashAirlines = document.getElementById('dash-aerolineas');
+    if (dashAirlines) dashAirlines.textContent = excludedAirlines.length > 0 ? excludedAirlines.join(', ') : 'Ninguna';
   }
 
   if (form) {
     form.addEventListener('input', updateSummary);
     form.addEventListener('change', updateSummary);
   }
+
+  // DASHBOARD TOGGLE LOGIC
+  const radarDashboard = document.getElementById('radar-dashboard');
+  const wizardContainer = document.getElementById('wizard-view-container');
+
+  function showDashboardView() {
+    if (radarDashboard) radarDashboard.classList.remove('hidden');
+    if (wizardContainer) wizardContainer.classList.add('hidden');
+  }
+
+  function showWizardView(step: number = 1) {
+    if (radarDashboard) radarDashboard.classList.add('hidden');
+    if (wizardContainer) wizardContainer.classList.remove('hidden');
+    currentStep = step;
+    showStep(step);
+  }
+
+  document.querySelectorAll('.edit-step-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const step = parseInt((btn as HTMLElement).dataset.step || '1');
+      showWizardView(step);
+    });
+  });
 
   // Init Form (Check Auth)
   const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
@@ -1487,6 +1589,8 @@ import { supabase } from '../lib/supabase';
         
         // Boton
         submitBtn.innerHTML = 'Actualizar Radar';
+        
+        showDashboardView();
       }
     } else {
       if (emailInput) emailInput.setAttribute('required', 'true');
@@ -1555,6 +1659,8 @@ import { supabase } from '../lib/supabase';
         showToast('Error guardando alerta: ' + error.message, 'error');
       } else {
         showToast('¡Radar actualizado con éxito!', 'success');
+        updateSummary();
+        showDashboardView();
       }
       
       submitBtn.disabled = false;
