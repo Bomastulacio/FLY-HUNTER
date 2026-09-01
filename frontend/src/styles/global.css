@@ -390,7 +390,7 @@ header p {
   }
 
   .top-nav-actions {
-    display: none;
+    display: flex;
   }
 
   .bottom-nav {
