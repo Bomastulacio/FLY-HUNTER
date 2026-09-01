@@ -272,11 +272,15 @@ import { supabase } from '../lib/supabase';
     gap: 2rem;
     align-items: flex-start;
     margin-bottom: 3rem;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
   }
   
   .main-content {
     flex: 2;
     min-width: 0; /* Prevents flex blowout */
+    box-sizing: border-box;
   }
 
   .sidebar-content {
@@ -286,6 +290,8 @@ import { supabase } from '../lib/supabase';
     gap: 1.5rem;
     position: sticky;
     top: 2rem;
+    box-sizing: border-box;
+    min-width: 0;
   }
 
   .card {
@@ -874,11 +880,16 @@ import { supabase } from '../lib/supabase';
   @media (max-width: 1024px) {
     .search-widget-wrapper {
       flex-direction: column;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .main-content, .sidebar-content {
+      width: 100%;
+      box-sizing: border-box;
     }
     .sidebar-content {
       position: relative;
       top: 0;
-      width: 100%;
     }
     .widget-form {
       grid-template-columns: 1fr;
@@ -893,7 +904,43 @@ import { supabase } from '../lib/supabase';
 
   @media (max-width: 768px) {
     .card {
-      padding: 1.5rem;
+      padding: 1.25rem;
+    }
+    .widget-header {
+      flex-direction: column;
+      text-align: center;
+      gap: 1rem;
+    }
+    .budget-inputs {
+      flex-direction: column;
+      align-items: stretch;
+      max-width: 100%;
+      gap: 0.8rem;
+    }
+    .budget-inputs .separator {
+      display: none;
+    }
+    .budget-inputs .input-wrapper {
+      width: 100%;
+    }
+    .dual-input {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.8rem;
+    }
+    .dual-input .separator {
+      display: none;
+    }
+    .countries-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+    .country-pill {
+      justify-content: center;
+      padding: 0.5rem;
+    }
+    .submit-btn {
+      margin-top: 1.5rem;
     }
   }
 </style>
