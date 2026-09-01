@@ -2,244 +2,400 @@
 import { supabase } from '../lib/supabase';
 ---
 
-<div class="search-widget-container card">
-  <div class="widget-header">
-    <div class="icon-container">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.2-1.1.6L3 8l6.5 4.5L6 16l-3.2-1.3c-.4-.1-.8.2-1 .6L1 17l4.5 2.5L8 24l1.7-.8c.4-.2.7-.6.6-1L9 19l3.5-3.5 8.2 6.5c.4.2.8 0 .6-.5z" />
-        <circle cx="12" cy="12" r="10" stroke-dasharray="4 4" stroke-opacity="0.5"/>
-      </svg>
-    </div>
-    <div>
-      <h2>Personalizá tu radar de vuelos</h2>
-      <p>Elegí tu zona favorita y hasta 4 destinos específicos. Te avisamos cuando haya oportunidades de oro.</p>
-    </div>
-  </div>
-
-  <form id="search-alert-form" class="widget-form">
-    <!-- Row 1: Origen y Fechas -->
-    <div class="form-group">
-      <label>Origen</label>
-      <div class="input-wrapper">
-        <span class="input-icon">🛫</span>
-        <select name="origen" required>
-          <option value="EZE,AEP" selected>Buenos Aires (EZE/AEP)</option>
-          <option value="COR">Córdoba (COR)</option>
-        </select>
+<div class="search-widget-wrapper">
+  
+  <div class="main-content card">
+    <div class="widget-header">
+      <div class="icon-container">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.2-1.1.6L3 8l6.5 4.5L6 16l-3.2-1.3c-.4-.1-.8.2-1 .6L1 17l4.5 2.5L8 24l1.7-.8c.4-.2.7-.6.6-1L9 19l3.5-3.5 8.2 6.5c.4.2.8 0 .6-.5z" />
+          <circle cx="12" cy="12" r="10" stroke-dasharray="4 4" stroke-opacity="0.5"/>
+        </svg>
       </div>
-    </div>
-    <div class="form-group" style="grid-column: span 2;">
-      <label>Rango de Fecha de Ida</label>
-      <div class="dual-input">
-        <div class="input-wrapper">
-          <span class="input-prefix">Desde</span>
-          <input type="date" name="fecha_ida_min" required />
-        </div>
-        <span class="separator">-</span>
-        <div class="input-wrapper">
-          <span class="input-prefix">Hasta</span>
-          <input type="date" name="fecha_ida_max" required />
-        </div>
-      </div>
-    </div>
-    
-    <div class="form-group" style="grid-column: span 2;">
-      <label>Rango de Fecha de Vuelta</label>
-      <div class="dual-input">
-        <div class="input-wrapper">
-          <span class="input-prefix">Desde</span>
-          <input type="date" name="fecha_vuelta_min" required />
-        </div>
-        <span class="separator">-</span>
-        <div class="input-wrapper">
-          <span class="input-prefix">Hasta</span>
-          <input type="date" name="fecha_vuelta_max" required />
-        </div>
+      <div>
+        <h2>Personalizá tu radar de vuelos</h2>
+        <p>Elegí tu origen, fechas y destinos. Te avisamos cuando haya oportunidades de oro.</p>
       </div>
     </div>
 
-    <!-- Row 2: Zonas -->
-    <div class="form-group full-width">
-      <label>¿A qué zona del mundo querés viajar?</label>
-      <div class="zones-grid" id="zones-container">
-        <label class="zone-card active">
-          <input type="radio" name="destino" value="Europa" checked>
-          <span class="zone-icon">🏰</span>
-          <span class="zone-name">Europa</span>
-        </label>
-        <label class="zone-card">
-          <input type="radio" name="destino" value="Norteamérica">
-          <span class="zone-icon">🗽</span>
-          <span class="zone-name">Norteamérica</span>
-        </label>
-        <label class="zone-card">
-          <input type="radio" name="destino" value="Latinoamérica">
-          <span class="zone-icon">⛰️</span>
-          <span class="zone-name">Latinoamérica</span>
-        </label>
-        <label class="zone-card">
-          <input type="radio" name="destino" value="Caribe">
-          <span class="zone-icon">🏝️</span>
-          <span class="zone-name">Caribe</span>
-        </label>
-        <label class="zone-card">
-          <input type="radio" name="destino" value="Asia">
-          <span class="zone-icon">⛩️</span>
-          <span class="zone-name">Asia</span>
-        </label>
-        <label class="zone-card">
-          <input type="radio" name="destino" value="Oceanía">
-          <span class="zone-icon">🦘</span>
-          <span class="zone-name">Oceanía</span>
-        </label>
-        <label class="zone-card">
-          <input type="radio" name="destino" value="Cualquiera">
-          <span class="zone-icon">🌍</span>
-          <span class="zone-name">Cualquier parte</span>
-        </label>
+    <form id="search-alert-form" class="widget-form">
+      <!-- Fila 1 -->
+      <div class="form-group full-width">
+        <label>Origen</label>
+        <div class="input-wrapper">
+          <span class="input-icon">🛫</span>
+          <select name="origen" required>
+            <option value="EZE,AEP" selected>Buenos Aires (EZE/AEP)</option>
+            <option value="COR">Córdoba (COR)</option>
+          </select>
+        </div>
       </div>
-    </div>
 
-    <!-- Row 3: Destinos Específicos (Dinámico) -->
-    <div class="form-group full-width" id="countries-section">
-      <label>Destinos específicos (Elegí hasta 4 o dejalo vacío para buscar en toda la zona)</label>
-      <div class="countries-grid" id="countries-container">
-        <!-- Renderizado dinámico vía JS -->
+      <!-- Fila 2 -->
+      <div class="form-group">
+        <label>Rango de fecha de ida</label>
+        <div class="dual-input">
+          <div class="input-wrapper">
+            <span class="input-prefix">Desde</span>
+            <input type="date" name="fecha_ida_min" required />
+          </div>
+          <span class="separator">-</span>
+          <div class="input-wrapper">
+            <span class="input-prefix">Hasta</span>
+            <input type="date" name="fecha_ida_max" required />
+          </div>
+        </div>
+        <small class="hint">✓ Flexibilidad en la ida: Buscamos combinaciones ideales.</small>
       </div>
-      <small class="hint mt-1" id="countries-counter">0/4 seleccionados</small>
-    </div>
+      
+      <div class="form-group">
+        <label>Rango de fecha de vuelta</label>
+        <div class="dual-input">
+          <div class="input-wrapper">
+            <span class="input-prefix">Desde</span>
+            <input type="date" name="fecha_vuelta_min" required />
+          </div>
+          <span class="separator">-</span>
+          <div class="input-wrapper">
+            <span class="input-prefix">Hasta</span>
+            <input type="date" name="fecha_vuelta_max" required />
+          </div>
+        </div>
+        <small class="hint">✓ Flexibilidad en la vuelta.</small>
+      </div>
 
-    <!-- Row 3.5: Aerolíneas a Excluir -->
-    <div class="form-group full-width" id="airlines-section">
-      <label>Aerolíneas a excluir (Opcional)</label>
-      <div class="input-wrapper autocomplete-wrapper">
-        <span class="input-icon">🚫</span>
-        <input type="text" id="airline-exclude-input" placeholder="Ej. Iberia, Ryanair..." autocomplete="off" />
-        <div class="autocomplete-dropdown hidden" id="airline-dropdown">
+      <!-- Fila 3 -->
+      <div class="form-group full-width">
+        <label>¿A qué zona del mundo querés viajar?</label>
+        <div class="zones-grid" id="zones-container">
+          <label class="zone-card active">
+            <input type="radio" name="destino" value="Europa" checked>
+            <span class="zone-icon">🏰</span>
+            <span class="zone-name">Europa</span>
+          </label>
+          <label class="zone-card">
+            <input type="radio" name="destino" value="Norteamérica">
+            <span class="zone-icon">🗽</span>
+            <span class="zone-name">Norteamérica</span>
+          </label>
+          <label class="zone-card">
+            <input type="radio" name="destino" value="Latinoamérica">
+            <span class="zone-icon">⛰️</span>
+            <span class="zone-name">Latinoamérica</span>
+          </label>
+          <label class="zone-card">
+            <input type="radio" name="destino" value="Caribe">
+            <span class="zone-icon">🏝️</span>
+            <span class="zone-name">Caribe</span>
+          </label>
+          <label class="zone-card">
+            <input type="radio" name="destino" value="Asia">
+            <span class="zone-icon">⛩️</span>
+            <span class="zone-name">Asia</span>
+          </label>
+          <label class="zone-card">
+            <input type="radio" name="destino" value="Oceanía">
+            <span class="zone-icon">🦘</span>
+            <span class="zone-name">Oceanía</span>
+          </label>
+          <label class="zone-card">
+            <input type="radio" name="destino" value="Cualquiera">
+            <span class="zone-icon">🌍</span>
+            <span class="zone-name">Cualquier parte</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Fila 4 -->
+      <div class="form-group full-width" id="countries-section">
+        <label>Destinos específicos (hasta 4)</label>
+        <small class="hint" style="margin-top:-0.3rem; margin-bottom:0.5rem; display:block;">Elegí destinos puntuales dentro de la zona seleccionada (opcional)</small>
+        <div class="countries-grid" id="countries-container">
           <!-- Renderizado dinámico vía JS -->
         </div>
+        <small class="hint mt-1" id="countries-counter">0/4 seleccionados</small>
       </div>
-      <div class="excluded-airlines-grid mt-1" id="excluded-airlines-container">
-        <!-- Renderizado dinámico de pills -->
-      </div>
-    </div>
 
-    <!-- Row 4: Presupuesto y Escalas -->
-    <div class="form-group" style="grid-column: span 2;">
-      <label>Presupuesto total (USD)</label>
-      <div class="dual-input">
-        <div class="input-wrapper">
-          <span class="input-prefix">Mín</span>
-          <input type="number" name="presupuesto_min" placeholder="800" value="800" />
+      <!-- Fila 5: Excluir Aerolineas -->
+      <div class="form-group full-width" id="airlines-section">
+        <label>Aerolíneas a excluir (Opcional)</label>
+        <div class="input-wrapper autocomplete-wrapper">
+          <span class="input-icon">🚫</span>
+          <input type="text" id="airline-exclude-input" placeholder="Ej. Iberia, Ryanair..." autocomplete="off" />
+          <div class="autocomplete-dropdown hidden" id="airline-dropdown">
+            <!-- Renderizado dinámico vía JS -->
+          </div>
         </div>
-        <span class="separator">-</span>
-        <div class="input-wrapper">
-          <span class="input-prefix">Máx</span>
-          <input type="number" name="presupuesto_max" placeholder="2400" value="2400" required />
+        <div class="excluded-airlines-grid mt-1" id="excluded-airlines-container">
+          <!-- Renderizado dinámico de pills -->
         </div>
       </div>
-    </div>
-    <div class="form-group">
-      <label>Escalas máximas</label>
-      <div class="radio-pills">
-        <label class="pill">
-          <input type="radio" name="escalas_max" value="0">
-          🚫 0
-        </label>
-        <label class="pill active">
-          <input type="radio" name="escalas_max" value="1" checked>
-          ✈️ 1
-        </label>
-        <label class="pill">
-          <input type="radio" name="escalas_max" value="2">
-          ⏱️ 2+
-        </label>
-      </div>
-    </div>
-    <div class="form-group">
-      <label>Pasajeros (Para el presupuesto)</label>
-      <div class="radio-pills">
-        <label class="pill active">
-          <input type="radio" name="pasajeros" value="1" checked>
-          👤 1
-        </label>
-        <label class="pill">
-          <input type="radio" name="pasajeros" value="2">
-          👥 2
-        </label>
-      </div>
-    </div>
 
-    <!-- Row 5: Email Auth (Solo si no está logueado) -->
-    <div class="form-group full-width" id="email-auth-section">
-      <label>Email para recibir alertas y guardar búsqueda</label>
-      <div class="input-wrapper">
-        <span class="input-icon">✉️</span>
-        <input type="email" name="email" id="user-email" placeholder="tucorreo@ejemplo.com" />
+      <!-- Fila 6: Escalas y Pasajeros -->
+      <div class="form-group">
+        <label>Escalas máximas</label>
+        <div class="radio-pills">
+          <label class="pill">
+            <input type="radio" name="escalas_max" value="0">
+            🚫 0
+          </label>
+          <label class="pill active">
+            <input type="radio" name="escalas_max" value="1" checked>
+            ✈️ 1
+          </label>
+          <label class="pill">
+            <input type="radio" name="escalas_max" value="2">
+            ⏱️ 2+
+          </label>
+        </div>
       </div>
-      <small class="hint">🔒 Te enviaremos un Link Mágico para guardar tus preferencias de forma segura.</small>
+      <div class="form-group">
+        <label>Pasajeros (Para el presupuesto)</label>
+        <div class="radio-pills">
+          <label class="pill active">
+            <input type="radio" name="pasajeros" value="1" checked>
+            👤 1
+          </label>
+          <label class="pill">
+            <input type="radio" name="pasajeros" value="2">
+            👥 2
+          </label>
+        </div>
+      </div>
+
+      <!-- Fila 7: Presupuesto (Dual Slider) -->
+      <div class="form-group full-width budget-section">
+        <label>Presupuesto objetivo (USD)</label>
+        <div class="budget-inputs">
+          <div class="input-wrapper">
+            <span class="input-prefix">Mín.</span>
+            <input type="number" name="presupuesto_min" id="budget-min-input" value="800" />
+          </div>
+          <span class="separator">-</span>
+          <div class="input-wrapper">
+            <span class="input-prefix">Máx.</span>
+            <input type="number" name="presupuesto_max" id="budget-max-input" value="2400" required />
+          </div>
+        </div>
+        
+        <div class="range-slider">
+          <span class="range-track"></span>
+          <span class="range-fill" id="range-fill"></span>
+          <input type="range" min="0" max="5000" value="800" id="slider-min">
+          <input type="range" min="0" max="5000" value="2400" id="slider-max">
+          <div class="slider-labels">
+            <span>0</span>
+            <span>5000+</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fila 8: Auth -->
+      <div class="form-group full-width" id="email-auth-section">
+        <label>Email para recibir alertas</label>
+        <div class="input-wrapper">
+          <span class="input-icon">✉️</span>
+          <input type="email" name="email" id="user-email" placeholder="tucorreo@ejemplo.com" />
+        </div>
+      </div>
+
+      <button type="submit" id="submit-btn" class="btn btn-primary submit-btn">
+        Actualizar Radar
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="margin-left: 8px;"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+    </form>
+
+    <div id="auth-message" class="auth-message hidden">
+      ¡Link enviado! Revisa tu correo para confirmar y guardar tu alerta.
     </div>
-
-    <button type="submit" id="submit-btn" class="btn btn-primary submit-btn">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-      Activar Radar
-    </button>
-  </form>
-
-  <div id="auth-message" class="auth-message hidden">
-    ¡Link enviado! Revisa tu correo para confirmar y guardar tu alerta.
   </div>
+
+  <aside class="sidebar-content">
+    <div class="summary-card card">
+      <h3 class="summary-title">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--accent-color)" stroke-width="2" style="margin-right:8px"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+        Resumen de tu búsqueda
+      </h3>
+      <div class="summary-list">
+        <div class="summary-item">
+          <span class="icon">✈️</span>
+          <span class="label">Origen</span>
+          <span class="value" id="summary-origin">Buenos Aires (EZE/AEP)</span>
+        </div>
+        <div class="summary-item">
+          <span class="icon">📅</span>
+          <span class="label">Ida</span>
+          <span class="value" id="summary-ida">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="icon">📅</span>
+          <span class="label">Vuelta</span>
+          <span class="value" id="summary-vuelta">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="icon">🌍</span>
+          <span class="label">Zona</span>
+          <span class="value" id="summary-zone">Europa</span>
+        </div>
+        <div class="summary-item">
+          <span class="icon">📍</span>
+          <span class="label">Destinos</span>
+          <span class="value" id="summary-dest">Toda la zona</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="promo-card card">
+      <div class="promo-icon">✨</div>
+      <div class="promo-content">
+        <h3>Buscamos por vos</h3>
+        <p>Nuestro Agente Estratega monitorea precios y te alerta cuando encuentra oportunidades increíbles.</p>
+      </div>
+    </div>
+  </aside>
+
 </div>
 
 <style>
-  .search-widget-container {
-    background: rgba(10, 10, 12, 0.8);
-    border: 1px solid var(--accent-color);
-    box-shadow: 0 0 20px rgba(209, 255, 76, 0.05);
+  .search-widget-wrapper {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
     margin-bottom: 3rem;
-    padding: 2rem;
-    border-radius: 1.5rem;
   }
   
+  .main-content {
+    flex: 2;
+    min-width: 0; /* Prevents flex blowout */
+  }
+
+  .sidebar-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    position: sticky;
+    top: 2rem;
+  }
+
+  .card {
+    background: rgba(10, 10, 12, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+    padding: 2.5rem;
+    border-radius: 1.5rem;
+  }
+
+  .sidebar-content .card {
+    padding: 1.8rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  /* SIDEBAR STYLES */
+  .summary-title {
+    display: flex;
+    align-items: center;
+    font-size: 1.1rem;
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: var(--text-primary);
+  }
+
+  .summary-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+  }
+
+  .summary-item {
+    display: grid;
+    grid-template-columns: 24px 80px 1fr;
+    align-items: center;
+    font-size: 0.9rem;
+  }
+
+  .summary-item .icon {
+    font-size: 1.1rem;
+    opacity: 0.8;
+  }
+
+  .summary-item .label {
+    color: var(--text-secondary);
+  }
+
+  .summary-item .value {
+    color: var(--text-primary);
+    font-weight: 500;
+    text-align: right;
+  }
+
+  .promo-card {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    background: linear-gradient(145deg, rgba(209, 255, 76, 0.05) 0%, rgba(10, 10, 12, 0.9) 100%);
+    border: 1px solid rgba(209, 255, 76, 0.2);
+  }
+
+  .promo-icon {
+    font-size: 1.8rem;
+    line-height: 1;
+  }
+
+  .promo-content h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+    color: var(--accent-color);
+  }
+
+  .promo-content p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+
+  /* FORM STYLES */
   .widget-header {
     display: flex;
     align-items: center;
-    gap: 1.5rem;
-    margin-bottom: 2rem;
+    gap: 1.2rem;
+    margin-bottom: 2.5rem;
   }
   
   .icon-container {
-    width: 60px;
-    height: 60px;
+    width: 50px;
+    height: 50px;
     background: rgba(209, 255, 76, 0.1);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--accent-color);
+    flex-shrink: 0;
   }
   
   .widget-header h2 {
-    margin: 0 0 0.2rem 0;
-    font-size: 1.6rem;
+    margin: 0 0 0.3rem 0;
+    font-size: 1.4rem;
   }
   
   .widget-header p {
     margin: 0;
     color: var(--text-secondary);
-    font-size: 0.95rem;
+    font-size: 0.9rem;
   }
   
   .widget-form {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
+    gap: 1.5rem 1.5rem;
   }
   
   .form-group {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.6rem;
   }
   
   .full-width {
@@ -255,7 +411,7 @@ import { supabase } from '../lib/supabase';
   /* ZONES GRID */
   .zones-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
     gap: 0.8rem;
   }
 
@@ -268,10 +424,12 @@ import { supabase } from '../lib/supabase';
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: var(--border-radius-md);
-    padding: 1rem 0.5rem;
+    padding: 0.8rem 0.5rem;
     cursor: pointer;
     transition: all 0.2s;
     text-align: center;
+    position: relative;
+    overflow: hidden;
   }
 
   .zone-card input {
@@ -279,24 +437,20 @@ import { supabase } from '../lib/supabase';
   }
 
   .zone-card .zone-icon {
-    font-size: 1.8rem;
+    font-size: 1.5rem;
   }
 
   .zone-card .zone-name {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 500;
   }
 
   .zone-card.active {
-    background: transparent;
+    background: rgba(209, 255, 76, 0.05);
     border-color: var(--accent-color);
     color: var(--accent-color);
   }
   
-  .zone-card:last-child {
-    grid-column: span 2;
-  }
-
   /* COUNTRIES GRID */
   .countries-grid {
     display: flex;
@@ -309,10 +463,10 @@ import { supabase } from '../lib/supabase';
     align-items: center;
     justify-content: flex-start;
     gap: 0.5rem;
-    padding: 0.6rem 0.8rem;
+    padding: 0.5rem 0.8rem;
     background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
     cursor: pointer;
     font-size: 0.85rem;
     transition: all 0.2s;
@@ -323,10 +477,10 @@ import { supabase } from '../lib/supabase';
   :global(.country-pill::before) {
     content: '';
     display: inline-block;
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 4px;
+    border-radius: 3px;
     background: rgba(255, 255, 255, 0.05);
     transition: all 0.2s;
   }
@@ -338,7 +492,7 @@ import { supabase } from '../lib/supabase';
   :global(.country-pill.selected) {
     border-color: var(--accent-color);
     color: var(--accent-color);
-    font-weight: 600;
+    font-weight: 500;
   }
   
   :global(.country-pill.selected::before) {
@@ -351,7 +505,7 @@ import { supabase } from '../lib/supabase';
   }
 
   :global(.country-pill.disabled) {
-    opacity: 0.3;
+    opacity: 0.4;
     cursor: not-allowed;
   }
 
@@ -367,7 +521,7 @@ import { supabase } from '../lib/supabase';
     left: 0;
     right: 0;
     margin-top: 0.5rem;
-    background: var(--bg-base, #1c1c1e);
+    background: #1c1c1e;
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: var(--border-radius-sm);
     max-height: 200px;
@@ -385,10 +539,6 @@ import { supabase } from '../lib/supabase';
     transition: background 0.2s;
   }
 
-  .autocomplete-item:last-child {
-    border-bottom: none;
-  }
-
   .autocomplete-item:hover {
     background: rgba(209, 255, 76, 0.1);
     color: var(--accent-color);
@@ -403,16 +553,14 @@ import { supabase } from '../lib/supabase';
   :global(.excluded-pill) {
     display: flex;
     align-items: center;
-    justify-content: flex-start;
     gap: 0.5rem;
-    padding: 0.4rem 0.8rem;
+    padding: 0.3rem 0.7rem;
     background: rgba(255, 85, 85, 0.1);
     border: 1px solid rgba(255, 85, 85, 0.3);
-    border-radius: 20px;
+    border-radius: 12px;
     cursor: pointer;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     transition: all 0.2s;
-    user-select: none;
     color: #ffaaaa;
   }
 
@@ -420,12 +568,8 @@ import { supabase } from '../lib/supabase';
     background: rgba(255, 85, 85, 0.2);
     border-color: rgba(255, 85, 85, 0.5);
   }
-
-  :global(.excluded-pill .remove-icon) {
-    font-weight: bold;
-    font-size: 1.1em;
-  }
   
+  /* INPUTS */
   .input-wrapper {
     position: relative;
     display: flex;
@@ -445,7 +589,7 @@ import { supabase } from '../lib/supabase';
   .input-icon, .input-prefix {
     padding-left: 1rem;
     color: var(--text-secondary);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     white-space: nowrap;
   }
   
@@ -454,9 +598,9 @@ import { supabase } from '../lib/supabase';
     background: transparent;
     border: none;
     color: var(--text-primary);
-    padding: 0.8rem 1rem;
+    padding: 0.7rem 0.9rem;
     font-family: inherit;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     outline: none;
   }
   
@@ -491,7 +635,7 @@ import { supabase } from '../lib/supabase';
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: var(--border-radius-sm);
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     transition: all 0.2s;
   }
   
@@ -511,14 +655,118 @@ import { supabase } from '../lib/supabase';
   }
   .mt-1 { margin-top: 0.25rem; }
   
+  /* SUBMIT BUTTON */
   .submit-btn {
     grid-column: span 2;
     padding: 1.2rem;
     font-size: 1.1rem;
     display: flex;
-    gap: 0.5rem;
+    justify-content: center;
+    align-items: center;
     width: 100%;
-    margin-top: 0.5rem;
+    margin-top: 1rem;
+    background-color: var(--accent-color);
+    color: #000;
+    font-weight: 600;
+    border-radius: var(--border-radius-md);
+    transition: opacity 0.2s, transform 0.1s;
+    border: none;
+    cursor: pointer;
+  }
+
+  .submit-btn:hover {
+    opacity: 0.9;
+  }
+
+  .submit-btn:active {
+    transform: scale(0.98);
+  }
+
+  /* BUDGET DUAL SLIDER */
+  .budget-section {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--border-radius-md);
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .budget-inputs {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 1.5rem;
+    max-width: 400px;
+  }
+
+  .budget-inputs .input-wrapper {
+    background: rgba(0, 0, 0, 0.3);
+  }
+
+  .range-slider {
+    position: relative;
+    width: 100%;
+    height: 30px;
+  }
+
+  .range-track {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    transform: translateY(-50%);
+  }
+
+  .range-fill {
+    position: absolute;
+    top: 50%;
+    height: 4px;
+    background: var(--accent-color);
+    border-radius: 2px;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  .range-slider input[type="range"] {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    transform: translateY(-50%);
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    pointer-events: none;
+  }
+
+  .range-slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: var(--bg-base, #1c1c1e);
+    border: 3px solid var(--accent-color);
+    border-radius: 50%;
+    pointer-events: all;
+    cursor: grab;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+  }
+
+  .range-slider input[type="range"]::-webkit-slider-thumb:active {
+    cursor: grabbing;
+  }
+
+  .slider-labels {
+    position: absolute;
+    top: 25px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
   }
   
   .hidden {
@@ -536,12 +784,14 @@ import { supabase } from '../lib/supabase';
     font-weight: 500;
   }
   
-  @media (max-width: 768px) {
-    .search-widget-container {
-      border: none;
-      box-shadow: none;
-      padding: 0;
-      background: transparent;
+  @media (max-width: 1024px) {
+    .search-widget-wrapper {
+      flex-direction: column;
+    }
+    .sidebar-content {
+      position: relative;
+      top: 0;
+      width: 100%;
     }
     .widget-form {
       grid-template-columns: 1fr;
@@ -552,25 +802,11 @@ import { supabase } from '../lib/supabase';
     .zones-grid {
       grid-template-columns: repeat(2, 1fr);
     }
-    select, input[type="text"], input[type="email"], input[type="number"], input[type="date"] {
-      padding: 0.8rem 0.5rem;
-      font-size: 0.9rem;
-    }
-    .input-icon, .input-prefix {
-      padding-left: 0.5rem;
-      font-size: 0.85rem;
-    }
-    .widget-header {
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-    }
-    .icon-container {
-      width: 48px;
-      height: 48px;
-      flex-shrink: 0;
-    }
-    .widget-header h2 {
-      font-size: 1.3rem;
+  }
+
+  @media (max-width: 768px) {
+    .card {
+      padding: 1.5rem;
     }
   }
 </style>
@@ -660,7 +896,6 @@ import { supabase } from '../lib/supabase';
       renderAirlineDropdown((e.target as HTMLInputElement).value);
     });
     
-    // Hide dropdown when clicking outside
     document.addEventListener('click', (e) => {
       if (!airlineInput.contains(e.target as Node) && !airlineDropdown.contains(e.target as Node)) {
         airlineDropdown.classList.add('hidden');
@@ -684,7 +919,6 @@ import { supabase } from '../lib/supabase';
   const countriesCounter = document.getElementById('countries-counter');
   let selectedCountries: string[] = [];
 
-  // Function to render countries based on zone
   function renderCountries(zone: string) {
     selectedCountries = [];
     if (!countriesContainer || !countriesSection || !countriesCounter) return;
@@ -692,6 +926,7 @@ import { supabase } from '../lib/supabase';
     const countries = zoneCountries[zone] || [];
     if (countries.length === 0) {
       countriesSection.classList.add('hidden');
+      updateSummary();
       return;
     }
     
@@ -705,21 +940,18 @@ import { supabase } from '../lib/supabase';
       </label>
     `).join('');
 
-    // Add click listeners to new pills
     countriesContainer.querySelectorAll('.country-pill').forEach(pill => {
       pill.addEventListener('click', function(e) {
-        e.preventDefault(); // Handle logic manually
+        e.preventDefault(); 
         const el = this as HTMLElement;
         const input = el.querySelector('input') as HTMLInputElement;
         const value = input.value;
         
         if (selectedCountries.includes(value)) {
-          // Deselect
           selectedCountries = selectedCountries.filter(c => c !== value);
           el.classList.remove('selected');
           input.checked = false;
         } else {
-          // Select (only if < 4)
           if (selectedCountries.length < 4) {
             selectedCountries.push(value);
             el.classList.add('selected');
@@ -728,8 +960,8 @@ import { supabase } from '../lib/supabase';
         }
         
         countriesCounter.innerText = `${selectedCountries.length}/4 seleccionados`;
+        updateSummary();
         
-        // Update disabled state
         countriesContainer.querySelectorAll('.country-pill').forEach(p => {
           const pEl = p as HTMLElement;
           const pVal = (p.querySelector('input') as HTMLInputElement).value;
@@ -741,6 +973,7 @@ import { supabase } from '../lib/supabase';
         });
       });
     });
+    updateSummary();
   }
 
   // Zone selection logic
@@ -753,11 +986,12 @@ import { supabase } from '../lib/supabase';
         const input = this.querySelector('input') as HTMLInputElement;
         input.checked = true;
         renderCountries(input.value);
+        updateSummary();
       }
     });
   });
 
-  // Basic pills logic (Escalas)
+  // Basic pills logic (Escalas, Pasajeros)
   document.querySelectorAll('.pill').forEach(el => {
     el.addEventListener('click', function(this: HTMLElement) {
       const parent = this.parentElement;
@@ -770,8 +1004,129 @@ import { supabase } from '../lib/supabase';
     });
   });
 
-  // Init Form (Check Auth)
+  // DUAL SLIDER LOGIC
+  const sliderMin = document.getElementById('slider-min') as HTMLInputElement;
+  const sliderMax = document.getElementById('slider-max') as HTMLInputElement;
+  const inputMin = document.getElementById('budget-min-input') as HTMLInputElement;
+  const inputMax = document.getElementById('budget-max-input') as HTMLInputElement;
+  const rangeFill = document.getElementById('range-fill');
+
+  function updateRangeFill() {
+    let minVal = parseInt(sliderMin.value);
+    let maxVal = parseInt(sliderMax.value);
+    
+    const percent1 = (minVal / parseInt(sliderMin.max)) * 100;
+    const percent2 = (maxVal / parseInt(sliderMax.max)) * 100;
+    
+    if (rangeFill) {
+      rangeFill.style.left = percent1 + '%';
+      rangeFill.style.width = (percent2 - percent1) + '%';
+    }
+  }
+
+  function handleSliderInput(e: Event) {
+    let minVal = parseInt(sliderMin.value);
+    let maxVal = parseInt(sliderMax.value);
+    
+    // Prevent crossover
+    if (minVal >= maxVal - 100) {
+      if (e.target === sliderMin) {
+        sliderMin.value = (maxVal - 100).toString();
+        minVal = parseInt(sliderMin.value);
+      } else {
+        sliderMax.value = (minVal + 100).toString();
+        maxVal = parseInt(sliderMax.value);
+      }
+    }
+    
+    inputMin.value = minVal.toString();
+    inputMax.value = maxVal.toString();
+    updateRangeFill();
+  }
+
+  function handleNumberInput(e: Event) {
+    let val = parseInt((e.target as HTMLInputElement).value) || 0;
+    if (e.target === inputMin) {
+      if (val >= parseInt(inputMax.value)) val = parseInt(inputMax.value) - 100;
+      sliderMin.value = val.toString();
+      inputMin.value = val.toString(); // enforce limits
+    } else {
+      if (val <= parseInt(inputMin.value)) val = parseInt(inputMin.value) + 100;
+      sliderMax.value = val.toString();
+      inputMax.value = val.toString();
+    }
+    updateRangeFill();
+  }
+
+  if (sliderMin && sliderMax && inputMin && inputMax) {
+    sliderMin.addEventListener('input', handleSliderInput);
+    sliderMax.addEventListener('input', handleSliderInput);
+    inputMin.addEventListener('change', handleNumberInput);
+    inputMax.addEventListener('change', handleNumberInput);
+    updateRangeFill();
+  }
+
+  // SUMMARY DYNAMIC LOGIC
   const form = document.getElementById('search-alert-form') as HTMLFormElement;
+  function updateSummary() {
+    if (!form) return;
+    const originEl = form.querySelector('select[name="origen"]') as HTMLSelectElement;
+    const idaMinEl = form.querySelector('input[name="fecha_ida_min"]') as HTMLInputElement;
+    const idaMaxEl = form.querySelector('input[name="fecha_ida_max"]') as HTMLInputElement;
+    const vueltaMinEl = form.querySelector('input[name="fecha_vuelta_min"]') as HTMLInputElement;
+    const vueltaMaxEl = form.querySelector('input[name="fecha_vuelta_max"]') as HTMLInputElement;
+    const zoneEl = form.querySelector('input[name="destino"]:checked') as HTMLInputElement;
+    
+    const sumOrigin = document.getElementById('summary-origin');
+    if (sumOrigin && originEl) sumOrigin.textContent = originEl.options[originEl.selectedIndex].text;
+    
+    const formatDate = (dStr: string) => {
+      if (!dStr) return '';
+      try {
+        // Fix timezone issue with simple split
+        const parts = dStr.split('-');
+        const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+        return new Intl.DateTimeFormat('es-AR', {day: 'numeric', month: 'short', year: 'numeric'}).format(d);
+      } catch(e) { return dStr; }
+    };
+    
+    const sumIda = document.getElementById('summary-ida');
+    if (sumIda) {
+      if (idaMinEl?.value && idaMaxEl?.value) {
+        sumIda.textContent = `${formatDate(idaMinEl.value)} - ${formatDate(idaMaxEl.value)}`;
+      } else {
+        sumIda.textContent = '-';
+      }
+    }
+    
+    const sumVuelta = document.getElementById('summary-vuelta');
+    if (sumVuelta) {
+      if (vueltaMinEl?.value && vueltaMaxEl?.value) {
+        sumVuelta.textContent = `${formatDate(vueltaMinEl.value)} - ${formatDate(vueltaMaxEl.value)}`;
+      } else {
+        sumVuelta.textContent = '-';
+      }
+    }
+    
+    const sumZone = document.getElementById('summary-zone');
+    if (sumZone && zoneEl) sumZone.textContent = zoneEl.value;
+    
+    const sumDest = document.getElementById('summary-dest');
+    if (sumDest) {
+      if (selectedCountries.length > 0) {
+        sumDest.textContent = selectedCountries.join(', ');
+      } else {
+        sumDest.textContent = 'Toda la zona';
+      }
+    }
+  }
+
+  if (form) {
+    form.addEventListener('input', updateSummary);
+    form.addEventListener('change', updateSummary);
+  }
+
+  // Init Form (Check Auth)
   const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
   const authMessage = document.getElementById('auth-message');
   const emailAuthSection = document.getElementById('email-auth-section');
@@ -801,78 +1156,84 @@ import { supabase } from '../lib/supabase';
         .eq('user_id', currentUserId)
         .single();
         
-      if (alertData) {
-        const f = document.getElementById('search-alert-form') as HTMLFormElement;
-        if (f) {
-          // Origen
-          const origen = f.querySelector('[name="origen"]') as HTMLSelectElement;
-          if (origen) origen.value = alertData.origen;
-          
-          // Fechas
-          if (alertData.fecha_ida_min) (f.querySelector('[name="fecha_ida_min"]') as HTMLInputElement).value = alertData.fecha_ida_min;
-          if (alertData.fecha_ida_max) (f.querySelector('[name="fecha_ida_max"]') as HTMLInputElement).value = alertData.fecha_ida_max;
-          if (alertData.fecha_vuelta_min) (f.querySelector('[name="fecha_vuelta_min"]') as HTMLInputElement).value = alertData.fecha_vuelta_min;
-          if (alertData.fecha_vuelta_max) (f.querySelector('[name="fecha_vuelta_max"]') as HTMLInputElement).value = alertData.fecha_vuelta_max;
-          
-          // Zona
-          const zoneInput = f.querySelector(`input[name="destino"][value="${alertData.destino}"]`) as HTMLInputElement;
-          if (zoneInput) {
-            zoneInput.checked = true;
-            document.querySelectorAll('.zone-card').forEach(c => c.classList.remove('active'));
-            zoneInput.parentElement?.classList.add('active');
-            renderCountries(alertData.destino); // Esto limpia los selectedCountries
-          }
-          
-          // Paises
-          if (alertData.paises && alertData.paises.length > 0 && !alertData.paises.includes('Cualquiera')) {
-             selectedCountries = alertData.paises;
-             const pills = document.querySelectorAll('.country-pill input');
-             pills.forEach(p => {
-               const pVal = (p as HTMLInputElement).value;
-               if (selectedCountries.includes(pVal)) {
-                 (p as HTMLInputElement).checked = true;
-                 p.parentElement?.classList.add('selected');
-               }
-             });
-             const counter = document.getElementById('countries-counter');
-             if (counter) counter.innerText = `${selectedCountries.length}/4 seleccionados`;
-          }
-          
-          // Aerolíneas excluidas
-          if (alertData.aerolineas_excluidas && alertData.aerolineas_excluidas.length > 0) {
-            excludedAirlines = alertData.aerolineas_excluidas;
-            renderExcludedPills();
-          }
-          
-          // Presupuesto
-          if (alertData.presupuesto_min) (f.querySelector('[name="presupuesto_min"]') as HTMLInputElement).value = alertData.presupuesto_min;
-          if (alertData.presupuesto_max) (f.querySelector('[name="presupuesto_max"]') as HTMLInputElement).value = alertData.presupuesto_max;
-          
-          // Escalas
-          const escalas = f.querySelector(`input[name="escalas_max"][value="${alertData.escalas_max}"]`) as HTMLInputElement;
-          if (escalas) {
-            escalas.checked = true;
-            document.querySelectorAll('.pill').forEach(c => c.classList.remove('active'));
-            escalas.parentElement?.classList.add('active');
-          }
-          
-          // Pasajeros
-          const pasajeros = f.querySelector(`input[name="pasajeros"][value="${alertData.pasajeros || 1}"]`) as HTMLInputElement;
-          if (pasajeros) {
-            pasajeros.checked = true;
-            document.querySelectorAll('input[name="pasajeros"]').forEach(inp => {
-              (inp as HTMLInputElement).parentElement?.classList.remove('active');
-            });
-            pasajeros.parentElement?.classList.add('active');
-          }
-          
-          // Boton
-          submitBtn.innerHTML = 'Actualizar Radar';
+      if (alertData && form) {
+        // Origen
+        const origen = form.querySelector('[name="origen"]') as HTMLSelectElement;
+        if (origen) origen.value = alertData.origen;
+        
+        // Fechas
+        if (alertData.fecha_ida_min) (form.querySelector('[name="fecha_ida_min"]') as HTMLInputElement).value = alertData.fecha_ida_min;
+        if (alertData.fecha_ida_max) (form.querySelector('[name="fecha_ida_max"]') as HTMLInputElement).value = alertData.fecha_ida_max;
+        if (alertData.fecha_vuelta_min) (form.querySelector('[name="fecha_vuelta_min"]') as HTMLInputElement).value = alertData.fecha_vuelta_min;
+        if (alertData.fecha_vuelta_max) (form.querySelector('[name="fecha_vuelta_max"]') as HTMLInputElement).value = alertData.fecha_vuelta_max;
+        
+        // Zona
+        const zoneInput = form.querySelector(`input[name="destino"][value="${alertData.destino}"]`) as HTMLInputElement;
+        if (zoneInput) {
+          zoneInput.checked = true;
+          document.querySelectorAll('.zone-card').forEach(c => c.classList.remove('active'));
+          zoneInput.parentElement?.classList.add('active');
+          renderCountries(alertData.destino);
         }
+        
+        // Paises
+        if (alertData.paises && alertData.paises.length > 0 && !alertData.paises.includes('Cualquiera')) {
+           selectedCountries = alertData.paises;
+           const pills = document.querySelectorAll('.country-pill input');
+           pills.forEach(p => {
+             const pVal = (p as HTMLInputElement).value;
+             if (selectedCountries.includes(pVal)) {
+               (p as HTMLInputElement).checked = true;
+               p.parentElement?.classList.add('selected');
+             }
+           });
+           const counter = document.getElementById('countries-counter');
+           if (counter) counter.innerText = `${selectedCountries.length}/4 seleccionados`;
+        }
+        
+        // Aerolíneas excluidas
+        if (alertData.aerolineas_excluidas && alertData.aerolineas_excluidas.length > 0) {
+          excludedAirlines = alertData.aerolineas_excluidas;
+          renderExcludedPills();
+        }
+        
+        // Presupuesto
+        if (alertData.presupuesto_min && inputMin && sliderMin) {
+          inputMin.value = alertData.presupuesto_min;
+          sliderMin.value = alertData.presupuesto_min;
+        }
+        if (alertData.presupuesto_max && inputMax && sliderMax) {
+          inputMax.value = alertData.presupuesto_max;
+          sliderMax.value = alertData.presupuesto_max;
+        }
+        updateRangeFill();
+        
+        // Escalas
+        const escalas = form.querySelector(`input[name="escalas_max"][value="${alertData.escalas_max}"]`) as HTMLInputElement;
+        if (escalas) {
+          escalas.checked = true;
+          document.querySelectorAll('input[name="escalas_max"]').forEach(c => c.parentElement?.classList.remove('active'));
+          escalas.parentElement?.classList.add('active');
+        }
+        
+        // Pasajeros
+        const pasajeros = form.querySelector(`input[name="pasajeros"][value="${alertData.pasajeros || 1}"]`) as HTMLInputElement;
+        if (pasajeros) {
+          pasajeros.checked = true;
+          document.querySelectorAll('input[name="pasajeros"]').forEach(inp => {
+            (inp as HTMLInputElement).parentElement?.classList.remove('active');
+          });
+          pasajeros.parentElement?.classList.add('active');
+        }
+        
+        // Boton
+        submitBtn.innerHTML = 'Actualizar Radar';
       }
     } else {
       if (emailInput) emailInput.setAttribute('required', 'true');
     }
+
+    updateSummary();
   });
 
   // Handle Form Submission
@@ -883,7 +1244,6 @@ import { supabase } from '../lib/supabase';
     
     const formData = new FormData(form);
     
-    // Fallback: If they didn't select any specific countries, put "Cualquiera" so the backend searches the whole zone
     let finalCountries = selectedCountries;
     if (finalCountries.length === 0) {
       finalCountries = ["Cualquiera"];
@@ -891,9 +1251,9 @@ import { supabase } from '../lib/supabase';
 
     const payload = {
       origen: formData.get('origen'),
-      destino: formData.get('destino'), // The Zone
-      paises: finalCountries,           // Specific targets
-      tipo_viaje: 'ida_vuelta',         // Hardcoded for now based on UI simplicity
+      destino: formData.get('destino'), 
+      paises: finalCountries,           
+      tipo_viaje: 'ida_vuelta',         
       fecha_ida_min: formData.get('fecha_ida_min') || null,
       fecha_ida_max: formData.get('fecha_ida_max') || null,
       fecha_vuelta_min: formData.get('fecha_vuelta_min') || null,
@@ -906,7 +1266,6 @@ import { supabase } from '../lib/supabase';
     };
     
     if (!currentUserId) {
-      // User is not logged in -> Send Magic Link
       const email = formData.get('email') as string;
       const { error } = await supabase.auth.signInWithOtp({
         email: email,
@@ -927,7 +1286,6 @@ import { supabase } from '../lib/supabase';
       form.classList.add('hidden');
       if(authMessage) authMessage.classList.remove('hidden');
     } else {
-      // User is logged in -> Save Alert directly
       const finalPayload = { ...payload, user_id: currentUserId, email: currentUserEmail };
       
       const { error } = await supabase
@@ -959,7 +1317,6 @@ import { supabase } from '../lib/supabase';
           localStorage.removeItem('pending_alert_save');
           
           alert('¡Tu radar ha sido activado exitosamente!');
-          // window.location.reload();
         }
       }
     });
