@@ -232,30 +232,33 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
         const elPresupuesto = document.getElementById('radar-val-presupuesto');
         if (elPresupuesto) elPresupuesto.innerText = `US$ ${alert.presupuesto_max}`;
 
-        // 2. Countdown logic (will be inserted into innerHTML later)
+        // 2. Countdown logic para actualización del scraper
         if(cdInterval) clearInterval(cdInterval);
-        const targetDate = new Date(alert.fecha_ida_min + 'T00:00:00').getTime();
         
         const updateCountdown = () => {
-          const distance = targetDate - new Date().getTime();
+          const now = new Date();
+          let target = new Date(now);
+          if (now.getHours() < 9) {
+            target.setHours(9, 0, 0, 0);
+          } else if (now.getHours() < 21) {
+            target.setHours(21, 0, 0, 0);
+          } else {
+            target.setDate(target.getDate() + 1);
+            target.setHours(9, 0, 0, 0);
+          }
+          const distance = target.getTime() - now.getTime();
+          
           const countdownEl = document.getElementById('countdown-inner');
           if (!countdownEl) return;
           
-          if (distance < 0) {
-            countdownEl.innerHTML = "<span style='font-size: 2rem; color: var(--accent-color);'>¡Llegó el día! ✈️</span>";
-            return;
-          }
-          const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-          const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const hours = Math.floor(distance / (1000 * 60 * 60));
           const mins = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
           const secs = Math.floor((distance % (1000 * 60)) / 1000);
           
-          const dEl = document.getElementById('cd-days');
           const hEl = document.getElementById('cd-hours');
           const mEl = document.getElementById('cd-minutes');
           const sEl = document.getElementById('cd-seconds');
           
-          if(dEl) dEl.innerText = days.toString().padStart(2, '0');
           if(hEl) hEl.innerText = hours.toString().padStart(2, '0');
           if(mEl) mEl.innerText = mins.toString().padStart(2, '0');
           if(sEl) sEl.innerText = secs.toString().padStart(2, '0');
@@ -297,14 +300,13 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
         html += `
           <div class="card countdown-card" style="grid-column: span 2; display: flex; flex-direction: row; justify-content: space-between; align-items: center; border-color: rgba(255,255,255,0.1);">
             <div>
-              <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem; display:flex; align-items:center; gap: 0.5rem;">🌴 Viaje a ${alert.destino} <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></h2>
-              <p style="color: var(--text-secondary); margin: 0; font-size: 0.9rem;">${formatDate(alert.fecha_ida_min)} al ${formatDate(alert.fecha_vuelta_max)}</p>
+              <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem; display:flex; align-items:center; gap: 0.5rem;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.92-10.27l-3.26 3.26"/></svg>
+                Próximo Rastreo
+              </h2>
+              <p style="color: var(--text-secondary); margin: 0; font-size: 0.9rem;">Buscando nuevas oportunidades para: ${alert.destino}</p>
             </div>
             <div id="countdown-inner" style="display: flex; justify-content: center; gap: 1rem; font-size: 1.5rem; font-weight: bold;">
-              <div style="display: flex; flex-direction: column; align-items: center;">
-                <span id="cd-days" style="font-size: 2rem; color: var(--text-primary);">00</span>
-                <span style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Días</span>
-              </div>
               <div style="display: flex; flex-direction: column; align-items: center;">
                 <span id="cd-hours" style="font-size: 2rem; color: var(--text-primary);">00</span>
                 <span style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Hs</span>
@@ -312,6 +314,10 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
               <div style="display: flex; flex-direction: column; align-items: center;">
                 <span id="cd-minutes" style="font-size: 2rem; color: var(--text-primary);">00</span>
                 <span style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Min</span>
+              </div>
+              <div style="display: flex; flex-direction: column; align-items: center;">
+                <span id="cd-seconds" style="font-size: 2rem; color: var(--text-primary);">00</span>
+                <span style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Seg</span>
               </div>
             </div>
           </div>
