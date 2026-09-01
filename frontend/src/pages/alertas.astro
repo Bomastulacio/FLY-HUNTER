@@ -71,11 +71,22 @@ import '../styles/global.css';
            if (!session) {
              window.location.href = '/login';
            } else {
-             // Configurar iniciales
-             const email = session.user.email || '';
-             const initials = email.substring(0, 2).toUpperCase() || 'US';
+             const metadata = session.user.user_metadata || {};
+             const avatarUrl = metadata.avatar_url || metadata.picture;
+             const avatarBtn = document.getElementById('avatar-btn');
              const initialsEl = document.getElementById('user-initials');
-             if (initialsEl) initialsEl.innerText = initials;
+             
+             if (avatarUrl && avatarBtn) {
+               if (initialsEl) initialsEl.style.display = 'none';
+               avatarBtn.style.backgroundImage = `url('${avatarUrl}')`;
+               avatarBtn.style.backgroundSize = 'cover';
+               avatarBtn.style.backgroundPosition = 'center';
+               avatarBtn.style.border = '1px solid rgba(255,255,255,0.2)';
+             } else {
+               const email = session.user.email || '';
+               const initials = email.substring(0, 2).toUpperCase() || 'US';
+               if (initialsEl) initialsEl.innerText = initials;
+             }
            }
         }
       });
