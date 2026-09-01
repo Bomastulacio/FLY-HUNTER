@@ -16,190 +16,209 @@ import { supabase } from '../lib/supabase';
     </div>
 
     <form id="search-alert-form" class="widget-form">
-      <!-- Fila 1 -->
-      <div class="form-group full-width">
-        <label>Origen</label>
-        <div class="input-wrapper">
-          <span class="input-icon"><i class="ph ph-airplane-takeoff"></i></span>
-          <select name="origen" required>
-            <option value="EZE,AEP" selected>Buenos Aires (EZE/AEP)</option>
-            <option value="COR">Córdoba (COR)</option>
-          </select>
-        </div>
+      <!-- WIZARD PROGRESS -->
+      <div class="wizard-progress">
+        <div class="progress-bar"><div class="progress-fill" id="wizard-progress-fill" style="width: 33%"></div></div>
+        <div class="progress-text">Paso <span id="current-step-text">1</span> de 3: <span id="current-step-title">Origen y Fechas</span></div>
       </div>
 
-      <!-- Fila 2 -->
-      <div class="form-group">
-        <label>Rango de fecha de ida</label>
-        <div class="dual-input">
+      <!-- STEP 1: Origen, Fechas, Zona -->
+      <div class="wizard-step" id="step-1">
+        <div class="form-group full-width">
+          <label>Origen</label>
           <div class="input-wrapper">
-            <span class="input-prefix">Desde</span>
-            <input type="date" name="fecha_ida_min" required />
-          </div>
-          <span class="separator">-</span>
-          <div class="input-wrapper">
-            <span class="input-prefix">Hasta</span>
-            <input type="date" name="fecha_ida_max" required />
+            <span class="input-icon"><i class="ph ph-airplane-takeoff"></i></span>
+            <select name="origen" required>
+              <option value="EZE,AEP" selected>Buenos Aires (EZE/AEP)</option>
+              <option value="COR">Córdoba (COR)</option>
+            </select>
           </div>
         </div>
-        <small class="hint"><i class="ph ph-check" style="color: var(--success-color);"></i> Flexibilidad en la ida: Buscamos combinaciones ideales.</small>
-      </div>
-      
-      <div class="form-group">
-        <label>Rango de fecha de vuelta</label>
-        <div class="dual-input">
-          <div class="input-wrapper">
-            <span class="input-prefix">Desde</span>
-            <input type="date" name="fecha_vuelta_min" required />
-          </div>
-          <span class="separator">-</span>
-          <div class="input-wrapper">
-            <span class="input-prefix">Hasta</span>
-            <input type="date" name="fecha_vuelta_max" required />
-          </div>
-        </div>
-        <small class="hint"><i class="ph ph-check" style="color: var(--success-color);"></i> Flexibilidad en la vuelta.</small>
-      </div>
 
-      <!-- Fila 3 -->
-      <div class="form-group full-width">
-        <label>¿A qué zona del mundo querés viajar?</label>
-        <div class="zones-grid" id="zones-container">
-          <label class="zone-card active">
-            <input type="radio" name="destino" value="Europa" checked>
-            <span class="zone-icon"><i class="ph ph-castle-turret"></i></span>
-            <span class="zone-name">Europa</span>
-          </label>
-          <label class="zone-card">
-            <input type="radio" name="destino" value="Norteamérica">
-            <span class="zone-icon"><i class="ph ph-buildings"></i></span>
-            <span class="zone-name">Norteamérica</span>
-          </label>
-          <label class="zone-card">
-            <input type="radio" name="destino" value="Latinoamérica">
-            <span class="zone-icon"><i class="ph ph-mountains"></i></span>
-            <span class="zone-name">Latinoamérica</span>
-          </label>
-          <label class="zone-card">
-            <input type="radio" name="destino" value="Caribe">
-            <span class="zone-icon"><i class="ph ph-palm-tree"></i></span>
-            <span class="zone-name">Caribe</span>
-          </label>
-          <label class="zone-card">
-            <input type="radio" name="destino" value="Asia">
-            <span class="zone-icon"><i class="ph ph-globe-hemisphere-east"></i></span>
-            <span class="zone-name">Asia</span>
-          </label>
-          <label class="zone-card">
-            <input type="radio" name="destino" value="Oceanía">
-            <span class="zone-icon"><i class="ph ph-compass"></i></span>
-            <span class="zone-name">Oceanía</span>
-          </label>
-          <label class="zone-card">
-            <input type="radio" name="destino" value="Cualquiera">
-            <span class="zone-icon"><i class="ph ph-globe-hemisphere-west"></i></span>
-            <span class="zone-name">Cualquier parte</span>
-          </label>
-        </div>
-      </div>
-
-      <!-- Fila 4 -->
-      <div class="form-group full-width" id="countries-section">
-        <label>Destinos específicos (hasta 4)</label>
-        <small class="hint" style="margin-top:-0.3rem; margin-bottom:0.5rem; display:block;">Elegí destinos puntuales dentro de la zona seleccionada (opcional)</small>
-        <div class="countries-grid" id="countries-container">
-          <!-- Renderizado dinámico vía JS -->
-        </div>
-        <small class="hint mt-1" id="countries-counter">0/4 seleccionados</small>
-      </div>
-
-      <!-- Fila 5: Excluir Aerolineas -->
-      <div class="form-group full-width" id="airlines-section">
-        <label>Aerolíneas a excluir (Opcional)</label>
-        <div class="input-wrapper autocomplete-wrapper">
-          <span class="input-icon"><i class="ph ph-prohibit"></i></span>
-          <input type="text" id="airline-exclude-input" placeholder="Ej. Iberia, Ryanair..." autocomplete="off" />
-          <div class="autocomplete-dropdown hidden" id="airline-dropdown">
-            <!-- Renderizado dinámico vía JS -->
+        <div class="form-group">
+          <label>Rango de fecha de ida</label>
+          <div class="dual-input">
+            <div class="input-wrapper">
+              <span class="input-prefix">Desde</span>
+              <input type="date" name="fecha_ida_min" required />
+            </div>
+            <span class="separator">-</span>
+            <div class="input-wrapper">
+              <span class="input-prefix">Hasta</span>
+              <input type="date" name="fecha_ida_max" required />
+            </div>
           </div>
-        </div>
-        <div class="excluded-airlines-grid mt-1" id="excluded-airlines-container">
-          <!-- Renderizado dinámico de pills -->
-        </div>
-      </div>
-
-      <!-- Fila 6: Escalas y Pasajeros -->
-      <div class="form-group">
-        <label>Escalas máximas</label>
-        <div class="radio-pills">
-          <label class="pill">
-            <input type="radio" name="escalas_max" value="0">
-            <i class="ph ph-prohibit"></i> 0
-          </label>
-          <label class="pill active">
-            <input type="radio" name="escalas_max" value="1" checked>
-            <i class="ph ph-airplane"></i> 1
-          </label>
-          <label class="pill">
-            <input type="radio" name="escalas_max" value="2">
-            <i class="ph ph-clock"></i> 2+
-          </label>
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Pasajeros (Para el presupuesto)</label>
-        <div class="radio-pills">
-          <label class="pill active">
-            <input type="radio" name="pasajeros" value="1" checked>
-            <i class="ph ph-user"></i> 1
-          </label>
-          <label class="pill">
-            <input type="radio" name="pasajeros" value="2">
-            <i class="ph ph-users"></i> 2
-          </label>
-        </div>
-      </div>
-
-      <!-- Fila 7: Presupuesto (Dual Slider) -->
-      <div class="form-group full-width budget-section">
-        <label>Presupuesto objetivo (USD)</label>
-        <div class="budget-inputs">
-          <div class="input-wrapper">
-            <span class="input-prefix">Mín.</span>
-            <input type="number" name="presupuesto_min" id="budget-min-input" value="800" />
-          </div>
-          <span class="separator">-</span>
-          <div class="input-wrapper">
-            <span class="input-prefix">Máx.</span>
-            <input type="number" name="presupuesto_max" id="budget-max-input" value="2400" required />
-          </div>
+          <small class="hint"><i class="ph ph-check" style="color: var(--success-color);"></i> Flexibilidad en la ida: Buscamos combinaciones ideales.</small>
         </div>
         
-        <div class="range-slider">
-          <span class="range-track"></span>
-          <span class="range-fill" id="range-fill"></span>
-          <input type="range" min="0" max="5000" value="800" id="slider-min">
-          <input type="range" min="0" max="5000" value="2400" id="slider-max">
-          <div class="slider-labels">
-            <span>0</span>
-            <span>5000+</span>
+        <div class="form-group">
+          <label>Rango de fecha de vuelta</label>
+          <div class="dual-input">
+            <div class="input-wrapper">
+              <span class="input-prefix">Desde</span>
+              <input type="date" name="fecha_vuelta_min" required />
+            </div>
+            <span class="separator">-</span>
+            <div class="input-wrapper">
+              <span class="input-prefix">Hasta</span>
+              <input type="date" name="fecha_vuelta_max" required />
+            </div>
+          </div>
+          <small class="hint"><i class="ph ph-check" style="color: var(--success-color);"></i> Flexibilidad en la vuelta.</small>
+        </div>
+
+        <div class="form-group full-width">
+          <label>¿A qué zona del mundo querés viajar?</label>
+          <div class="zones-grid" id="zones-container">
+            <label class="zone-card active">
+              <input type="radio" name="destino" value="Europa" checked>
+              <span class="zone-icon"><i class="ph ph-castle-turret"></i></span>
+              <span class="zone-name">Europa</span>
+            </label>
+            <label class="zone-card">
+              <input type="radio" name="destino" value="Norteamérica">
+              <span class="zone-icon"><i class="ph ph-buildings"></i></span>
+              <span class="zone-name">Norteamérica</span>
+            </label>
+            <label class="zone-card">
+              <input type="radio" name="destino" value="Latinoamérica">
+              <span class="zone-icon"><i class="ph ph-mountains"></i></span>
+              <span class="zone-name">Latinoamérica</span>
+            </label>
+            <label class="zone-card">
+              <input type="radio" name="destino" value="Caribe">
+              <span class="zone-icon"><i class="ph ph-palm-tree"></i></span>
+              <span class="zone-name">Caribe</span>
+            </label>
+            <label class="zone-card">
+              <input type="radio" name="destino" value="Asia">
+              <span class="zone-icon"><i class="ph ph-globe-hemisphere-east"></i></span>
+              <span class="zone-name">Asia</span>
+            </label>
+            <label class="zone-card">
+              <input type="radio" name="destino" value="Oceanía">
+              <span class="zone-icon"><i class="ph ph-compass"></i></span>
+              <span class="zone-name">Oceanía</span>
+            </label>
+            <label class="zone-card">
+              <input type="radio" name="destino" value="Cualquiera">
+              <span class="zone-icon"><i class="ph ph-globe-hemisphere-west"></i></span>
+              <span class="zone-name">Cualquier parte</span>
+            </label>
           </div>
         </div>
-      </div>
 
-      <!-- Fila 8: Auth -->
-      <div class="form-group full-width" id="email-auth-section">
-        <label>Email para recibir alertas</label>
-        <div class="input-wrapper">
-          <span class="input-icon"><i class="ph ph-envelope"></i></span>
-          <input type="email" name="email" id="user-email" placeholder="tucorreo@ejemplo.com" />
+        <div class="wizard-actions">
+          <button type="button" class="btn btn-primary btn-next" data-step="1">
+            Siguiente Paso <i class="ph ph-arrow-right" style="margin-left: 8px;"></i>
+          </button>
         </div>
       </div>
 
-      <button type="submit" id="submit-btn" class="btn btn-primary submit-btn">
-        Actualizar Radar
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="margin-left: 8px;"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-      </button>
+      <!-- STEP 2: Presupuesto y Pasajeros -->
+      <div class="wizard-step hidden" id="step-2">
+        <div class="form-group full-width budget-section">
+          <label>Presupuesto objetivo (USD)</label>
+          <div class="budget-inputs">
+            <div class="input-wrapper">
+              <span class="input-prefix">Mín.</span>
+              <input type="number" name="presupuesto_min" id="budget-min-input" value="800" />
+            </div>
+            <span class="separator">-</span>
+            <div class="input-wrapper">
+              <span class="input-prefix">Máx.</span>
+              <input type="number" name="presupuesto_max" id="budget-max-input" value="2400" required />
+            </div>
+          </div>
+          
+          <div class="range-slider">
+            <span class="range-track"></span>
+            <span class="range-fill" id="range-fill"></span>
+            <input type="range" min="0" max="5000" value="800" id="slider-min">
+            <input type="range" min="0" max="5000" value="2400" id="slider-max">
+            <div class="slider-labels">
+              <span>0</span>
+              <span>5000+</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Pasajeros (Para el presupuesto)</label>
+          <div class="radio-pills">
+            <label class="pill active">
+              <input type="radio" name="pasajeros" value="1" checked>
+              <i class="ph ph-user"></i> 1
+            </label>
+            <label class="pill">
+              <input type="radio" name="pasajeros" value="2">
+              <i class="ph ph-users"></i> 2
+            </label>
+          </div>
+        </div>
+
+        <div class="wizard-actions dual">
+          <button type="button" class="btn btn-outline btn-prev" data-step="2">
+            <i class="ph ph-arrow-left" style="margin-right: 8px;"></i> Anterior
+          </button>
+          <button type="button" class="btn btn-primary btn-next" data-step="2">
+            Opciones Avanzadas <i class="ph ph-arrow-right" style="margin-left: 8px;"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 3: Opciones Avanzadas -->
+      <div class="wizard-step hidden" id="step-3">
+        <div class="form-group full-width" id="countries-section">
+          <label>Destinos específicos (hasta 4)</label>
+          <small class="hint" style="margin-top:-0.3rem; margin-bottom:0.5rem; display:block;">Elegí destinos puntuales dentro de la zona seleccionada (opcional)</small>
+          <div class="countries-grid" id="countries-container">
+            <!-- Renderizado dinámico vía JS -->
+          </div>
+          <small class="hint mt-1" id="countries-counter">0/4 seleccionados</small>
+        </div>
+
+        <div class="form-group full-width" id="airlines-section">
+          <label>Aerolíneas a excluir (Opcional)</label>
+          <div class="input-wrapper autocomplete-wrapper">
+            <span class="input-icon"><i class="ph ph-prohibit"></i></span>
+            <input type="text" id="airline-exclude-input" placeholder="Ej. Iberia, Ryanair..." autocomplete="off" />
+            <div class="autocomplete-dropdown hidden" id="airline-dropdown">
+              <!-- Renderizado dinámico vía JS -->
+            </div>
+          </div>
+          <div class="excluded-airlines-grid mt-1" id="excluded-airlines-container">
+            <!-- Renderizado dinámico de pills -->
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Escalas máximas</label>
+          <div class="radio-pills">
+            <label class="pill">
+              <input type="radio" name="escalas_max" value="0">
+              <i class="ph ph-prohibit"></i> 0
+            </label>
+            <label class="pill active">
+              <input type="radio" name="escalas_max" value="1" checked>
+              <i class="ph ph-airplane"></i> 1
+            </label>
+            <label class="pill">
+              <input type="radio" name="escalas_max" value="2">
+              <i class="ph ph-clock"></i> 2+
+            </label>
+          </div>
+        </div>
+
+        <div class="wizard-actions dual">
+          <button type="button" class="btn btn-outline btn-prev" data-step="3">
+            <i class="ph ph-arrow-left" style="margin-right: 8px;"></i> Anterior
+          </button>
+          <button type="submit" id="submit-btn" class="btn btn-primary submit-btn">
+            Guardar Radar <i class="ph ph-check-circle" style="margin-left: 8px;"></i>
+          </button>
+        </div>
+      </div>
     </form>
 
     <div id="auth-message" class="auth-message hidden">
@@ -944,7 +963,60 @@ import { supabase } from '../lib/supabase';
 
 <script>
   import { supabase } from '../lib/supabase';
+  import { showToast } from '../utils/toast';
   
+  // WIZARD LOGIC
+  let currentStep = 1;
+  const totalSteps = 3;
+  const progressBar = document.getElementById('wizard-progress-fill');
+  const stepText = document.getElementById('current-step-text');
+  const stepTitle = document.getElementById('current-step-title');
+  const titles = ["Origen y Fechas", "Presupuesto y Pasajeros", "Opciones Avanzadas"];
+  
+  function showStep(step: number) {
+    document.querySelectorAll('.wizard-step').forEach(el => el.classList.add('hidden'));
+    document.getElementById('step-' + step)?.classList.remove('hidden');
+    
+    if (progressBar) progressBar.style.width = ((step / totalSteps) * 100) + '%';
+    if (stepText) stepText.innerText = step.toString();
+    if (stepTitle) stepTitle.innerText = titles[step - 1];
+  }
+
+  document.querySelectorAll('.btn-next').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      // Basic HTML5 validation before advancing
+      const currentStepEl = document.getElementById('step-' + currentStep);
+      const inputs = currentStepEl?.querySelectorAll('input[required], select[required]');
+      let isValid = true;
+      if (inputs) {
+        for (let i = 0; i < inputs.length; i++) {
+          const input = inputs[i] as HTMLInputElement;
+          if (!input.checkValidity()) {
+            input.reportValidity();
+            isValid = false;
+            break;
+          }
+        }
+      }
+      
+      if (isValid && currentStep < totalSteps) {
+        currentStep++;
+        showStep(currentStep);
+      }
+    });
+  });
+
+  document.querySelectorAll('.btn-prev').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (currentStep > 1) {
+        currentStep--;
+        showStep(currentStep);
+      }
+    });
+  });
+
   // TOAST LOGIC
   function showToast(message: string, type = 'success') {
     let container = document.getElementById('toast-container');

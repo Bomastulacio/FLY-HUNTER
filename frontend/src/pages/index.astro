@@ -337,23 +337,24 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
                destDeal = affordableDeals.find((d: any) => countryCodes[country].some(code => d.ida_origen_destino.includes(code)));
             }
             
-            cardsHtml += `
-              <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
-                <div class="card-header"><i class="ph ph-map-pin"></i> ${country}</div>
-                ${destDeal ? `
+            if (destDeal) {
+              cardsHtml += `
+                <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+                  <div class="card-header"><i class="ph ph-map-pin"></i> ${country}</div>
                   <div class="card-route">${destDeal.ida_origen_destino}</div>
                   <div class="card-date"><i class="ph ph-calendar-blank"></i> ${formatDate(destDeal.ida_fecha)} al ${formatDate(destDeal.vuelta_fecha)}</div>
                   <div class="card-price" style="font-size: clamp(1.4rem, 4vw, 1.8rem); margin-top: auto; margin-bottom: 0.5rem;">${formatPrice(destDeal)}</div>
                   ${destDeal.link_reserva ? `<a href="${destDeal.link_reserva}" target="_blank" class="btn btn-primary" style="width: 100%; box-sizing: border-box;">Ver Vuelo</a>` : ''}
-                ` : `
-                  <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.5; gap: 0.5rem; padding: 1rem 0;">
-                    <i class="ph ph-magnifying-glass" style="font-size: 1.5rem;"></i>
-                    <span style="font-size: 0.85rem; font-weight: 500; text-align: center;">Sin ofertas bajo US$ ${alert.presupuesto_max} aún</span>
-                    <span style="font-size: 0.75rem; text-align: center; color: var(--text-secondary);">El radar sigue buscando...</span>
-                  </div>
-                `}
-              </div>
-            `;
+                </div>
+              `;
+            } else {
+              cardsHtml += `
+                <div class="empty-pill">
+                  <i class="ph ph-magnifying-glass" style="color: var(--text-secondary);"></i> 
+                  <span>Sin ofertas para <strong>${country}</strong> bajo US$ ${alert.presupuesto_max} aún</span>
+                </div>
+              `;
+            }
           });
           
           cardsHtml += '</div>';

@@ -367,6 +367,63 @@ header p {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Wizard CSS */
+.wizard-progress {
+  margin-bottom: 2rem;
+}
+.wizard-progress .progress-bar {
+  height: 6px;
+  background: var(--card-border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+.wizard-progress .progress-fill {
+  height: 100%;
+  background: var(--accent-color);
+  border-radius: 10px;
+  transition: width 0.4s ease;
+}
+.wizard-progress .progress-text {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.wizard-progress .progress-text span {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.wizard-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--card-border);
+}
+.wizard-actions.dual {
+  justify-content: space-between;
+}
+.wizard-step {
+  animation: fadeInDown 0.4s ease-out;
+}
+.wizard-step.hidden {
+  display: none;
+}
+
+/* Empty State Pills */
+.empty-pill {
+  grid-column: span 1;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: var(--border-radius-sm);
+  padding: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
 /* 📱 Responsive Tablet */
 @media (max-width: 1024px) {
   .bento-grid {
@@ -382,8 +439,12 @@ header p {
 @media (max-width: 768px) {
   main {
     width: 100%;
-    padding: 1.5rem 1.25rem 6rem 1.25rem;
+    padding: calc(1.5rem + env(safe-area-inset-top)) 1.25rem 6rem 1.25rem;
     box-sizing: border-box;
+  }
+  
+  .empty-pill {
+    grid-column: span 2;
   }
   
   .top-nav {
