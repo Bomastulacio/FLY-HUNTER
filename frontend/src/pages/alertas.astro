@@ -26,7 +26,18 @@ import '../styles/global.css';
           <p>Configurá el Agente Estratega para que busque por ti.</p>
         </div>
         <div class="alertas-header-actions">
-          <button id="logout-btn" class="btn btn-outline logout-btn">Cerrar Sesión</button>
+          <div class="profile-menu-container">
+            <button id="avatar-btn" class="avatar-btn">
+              <span id="user-initials">US</span>
+              <span class="notification-dot"></span>
+            </button>
+            <div id="profile-dropdown" class="profile-dropdown hidden">
+              <a href="#" class="dropdown-item">Mi Cuenta</a>
+              <a href="#" class="dropdown-item">Ajustes</a>
+              <div class="dropdown-divider"></div>
+              <button id="logout-btn" class="dropdown-item danger">Cerrar Sesión</button>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -38,23 +49,44 @@ import '../styles/global.css';
     <script>
       import { supabase } from '../lib/supabase';
 
-      // Proteger ruta
+      // Proteger ruta e inicializar usuario
       window.addEventListener('DOMContentLoaded', async () => {
-        // Si venimos de un redirect de Google, hay un hash en la URL.
-        // Debemos esperar a que Supabase lo procese antes de decidir si echamos al usuario.
         if (window.location.hash.includes('access_token')) {
            supabase.auth.onAuthStateChange((event, session) => {
              if (event === 'SIGNED_IN') {
-                window.location.hash = ''; // Limpiar URL
+                window.location.hash = ''; 
              }
            });
         } else {
            const { data: { session } } = await supabase.auth.getSession();
            if (!session) {
              window.location.href = '/login';
+           } else {
+             // Configurar iniciales
+             const email = session.user.email || '';
+             const initials = email.substring(0, 2).toUpperCase() || 'US';
+             const initialsEl = document.getElementById('user-initials');
+             if (initialsEl) initialsEl.innerText = initials;
            }
         }
       });
+
+      // Lógica del Dropdown
+      const avatarBtn = document.getElementById('avatar-btn');
+      const profileDropdown = document.getElementById('profile-dropdown');
+
+      if (avatarBtn && profileDropdown) {
+        avatarBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          profileDropdown.classList.toggle('hidden');
+        });
+
+        document.addEventListener('click', (e) => {
+          if (!avatarBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
+            profileDropdown.classList.add('hidden');
+          }
+        });
+      }
 
       // Cerrar sesión
       const logoutBtn = document.getElementById('logout-btn');
@@ -89,26 +121,100 @@ import '../styles/global.css';
         font-size: 0.9rem;
         display: inline-block;
       }
-      .logout-btn {
-        border-color: rgba(255, 76, 76, 0.3);
-        color: var(--danger-color);
-        white-space: nowrap;
+      
+      /* Avatar & Dropdown Styles */
+      .profile-menu-container {
+        position: relative;
+      }
+      .avatar-btn {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: rgba(209, 255, 76, 0.2);
+        border: 2px solid var(--accent-color);
+        color: var(--accent-color);
+        font-weight: bold;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        padding: 0;
+        position: relative;
+        transition: transform 0.2s;
+      }
+      .avatar-btn:active {
+        transform: scale(0.95);
+      }
+      .notification-dot {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 12px;
+        height: 12px;
+        background-color: #55aaff;
+        border: 2px solid #000;
+        border-radius: 50%;
+      }
+      .profile-dropdown {
+        position: absolute;
+        top: calc(100% + 10px);
+        right: 0;
+        background: #1c1c1e;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        width: 200px;
+        padding: 0.5rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+      }
+      .profile-dropdown.hidden {
+        display: none;
+      }
+      .dropdown-item {
+        padding: 0.8rem 1rem;
+        color: var(--text-primary);
+        text-decoration: none;
+        font-size: 0.95rem;
+        border-radius: 8px;
+        background: transparent;
+        border: none;
+        text-align: left;
+        cursor: pointer;
+        transition: background 0.2s;
+        font-family: inherit;
+      }
+      .dropdown-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .dropdown-item.danger {
+        color: #ff5555;
+        border: 1px solid rgba(255, 85, 85, 0.2);
+        margin-top: 0.3rem;
+      }
+      .dropdown-item.danger:hover {
+        background: rgba(255, 85, 85, 0.1);
+      }
+      .dropdown-divider {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.1);
+        margin: 0.2rem 0;
       }
 
       @media (max-width: 768px) {
         .alertas-header {
-          flex-direction: column;
-          align-items: stretch;
+          flex-direction: row;
+          align-items: center;
           text-align: left;
         }
         .alertas-header-text h1 {
           font-size: 2rem;
         }
         .alertas-header-actions {
-          margin-top: 1rem;
-        }
-        .logout-btn {
-          width: 100%;
+          margin-top: 0;
         }
       }
     </style>
