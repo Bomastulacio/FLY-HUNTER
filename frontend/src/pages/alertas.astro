@@ -19,14 +19,14 @@ import '../styles/global.css';
     </div>
     
     <main>
-      <header style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <a href="/" style="color: var(--accent-color); text-decoration: none; font-size: 0.9rem; margin-bottom: 1rem; display: inline-block;">← Volver al Radar</a>
-          <h1 style="font-size: 2.5rem;">Mis Alertas</h1>
-          <p style="color: var(--text-secondary);">Configurá el Agente Estratega para que busque por ti.</p>
+      <header class="alertas-header">
+        <div class="alertas-header-text">
+          <a href="/" class="back-link">← Volver al Radar</a>
+          <h1>Mis Alertas</h1>
+          <p>Configurá el Agente Estratega para que busque por ti.</p>
         </div>
-        <div>
-          <button id="logout-btn" class="btn btn-outline" style="border-color: rgba(255,76,76,0.3); color: var(--danger-color);">Cerrar Sesión</button>
+        <div class="alertas-header-actions">
+          <button id="logout-btn" class="btn btn-outline logout-btn">Cerrar Sesión</button>
         </div>
       </header>
 
@@ -65,5 +65,52 @@ import '../styles/global.css';
         });
       }
     </script>
+
+
+    <style>
+      .alertas-header {
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1.5rem;
+      }
+      .alertas-header-text h1 {
+        font-size: 2.5rem;
+        margin: 0.5rem 0;
+      }
+      .alertas-header-text p {
+        color: var(--text-secondary);
+        margin: 0;
+      }
+      .back-link {
+        color: var(--accent-color);
+        text-decoration: none;
+        font-size: 0.9rem;
+        display: inline-block;
+      }
+      .logout-btn {
+        border-color: rgba(255, 76, 76, 0.3);
+        color: var(--danger-color);
+        white-space: nowrap;
+      }
+
+      @media (max-width: 768px) {
+        .alertas-header {
+          flex-direction: column;
+          align-items: stretch;
+          text-align: left;
+        }
+        .alertas-header-text h1 {
+          font-size: 2rem;
+        }
+        .alertas-header-actions {
+          margin-top: 1rem;
+        }
+        .logout-btn {
+          width: 100%;
+        }
+      }
+    </style>
   </body>
 </html>
