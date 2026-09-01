@@ -113,28 +113,28 @@ def filter_and_evaluate(deals: List[Dict], alerts: List[Dict] = None) -> List[Di
             continue
             
         airline = deal.get("aerolinea", "").strip().lower()
+        
+        # Si la aerolínea está excluida, ni siquiera entra a la lista de consideraciones para ese destino
         if airline and airline in excluded_airlines:
-            deal['estado_aprobacion'] = 'rechazado'
-            deal['es_oportunidad_oro'] = False
-            deal['es_anomalia'] = False
-            deal['es_tarifa_error'] = False
-            deal['hash_dedupe'] = generate_hash(deal)
-            evaluated = deal
-        else:
-            evaluated = evaluate_deal(deal, alerts)
+            continue
+            
+        evaluated = evaluate_deal(deal, alerts)
         
         if dest not in deals_by_dest:
             deals_by_dest[dest] = []
         deals_by_dest[dest].append(evaluated)
         
     for dest, d_list in deals_by_dest.items():
+        if not d_list:
+            continue
+            
         # Filtramos los que sí pasaron la prueba
         valid_deals = [d for d in d_list if d['estado_aprobacion'] != 'rechazado']
         
         if valid_deals:
             evaluated_deals.extend(valid_deals)
         else:
-            # Lógica "Mejor del Día": Si todos fueron rechazados, rescatamos el más barato
+            # Lógica "Mejor del Día": Si todos fueron rechazados (ej. por presupuesto), rescatamos el más barato
             cheapest = min(d_list, key=lambda x: x.get("precio_total_usd", 999999))
             cheapest['estado_aprobacion'] = 'aprobado'
             # Aseguramos que no dispare emails
