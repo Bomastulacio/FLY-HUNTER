@@ -347,8 +347,9 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
                   ${destDeal.link_reserva ? `<a href="${destDeal.link_reserva}" target="_blank" class="btn btn-primary" style="width: 100%; box-sizing: border-box;">Ver Vuelo</a>` : ''}
                 ` : `
                   <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.5; gap: 0.5rem; padding: 1rem 0;">
-                    <i class="ph ph-broadcast" style="font-size: 1.5rem;"></i>
-                    <span style="font-size: 0.85rem; font-weight: 500; text-align: center;">Buscando ofertas...</span>
+                    <i class="ph ph-magnifying-glass" style="font-size: 1.5rem;"></i>
+                    <span style="font-size: 0.85rem; font-weight: 500; text-align: center;">Sin ofertas bajo US$ ${alert.presupuesto_max} aún</span>
+                    <span style="font-size: 0.75rem; text-align: center; color: var(--text-secondary);">El radar sigue buscando...</span>
                   </div>
                 `}
               </div>
