@@ -76,7 +76,18 @@ def evaluate_deal(deal: Dict) -> Dict:
     deal['estado_aprobacion'] = 'rechazado'
     return deal
 
-def filter_and_evaluate(deals: List[Dict]) -> List[Dict]:
+def filter_and_evaluate(deals: List[Dict], alerts: List[Dict] = None) -> List[Dict]:
+    if alerts is None:
+        alerts = []
+        
+    # Construir un set de aerolíneas excluidas global (MVP - asumiendo single user o exclusión general)
+    excluded_airlines = set()
+    for alert in alerts:
+        excl = alert.get("aerolineas_excluidas")
+        if excl:
+            for a in excl:
+                excluded_airlines.add(a.strip().lower())
+
     evaluated_deals = []
     # Agrupamos por destino para buscar el más barato de cada uno
     deals_by_dest = {}
@@ -86,7 +97,16 @@ def filter_and_evaluate(deals: List[Dict]) -> List[Dict]:
         if not dest: 
             continue
             
-        evaluated = evaluate_deal(deal)
+        airline = deal.get("aerolinea", "").strip().lower()
+        if airline and airline in excluded_airlines:
+            deal['estado_aprobacion'] = 'rechazado'
+            deal['es_oportunidad_oro'] = False
+            deal['es_anomalia'] = False
+            deal['es_tarifa_error'] = False
+            deal['hash_dedupe'] = generate_hash(deal)
+            evaluated = deal
+        else:
+            evaluated = evaluate_deal(deal)
         
         if dest not in deals_by_dest:
             deals_by_dest[dest] = []

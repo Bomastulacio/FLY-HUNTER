@@ -51,7 +51,9 @@ def analyst_node(state: GraphState) -> GraphState:
 def critic_node(state: GraphState) -> GraphState:
     print("--- Crítico: Evaluando contra reglas de negocio ---")
     analyzed = state.get("analyzed_flights", [])
-    evaluated = filter_and_evaluate(analyzed)
+    mission = state.get("mission", {})
+    alerts = mission.get("alerts_context", [])
+    evaluated = filter_and_evaluate(analyzed, alerts)
     state["evaluated_deals"] = evaluated
     return state
 
