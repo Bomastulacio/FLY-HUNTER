@@ -4,19 +4,20 @@
   "description": "Radar autónomo de ofertas de vuelos a Europa y Asia.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#141419",
-  "theme_color": "#a8ff3e",
+  "background_color": "#09090b",
+  "theme_color": "#9fdb16",
   "icons": [
     {
-      "src": "/favicon.svg",
-      "type": "image/svg+xml",
-      "sizes": "192x192 512x512",
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
       "purpose": "any maskable"
     },
     {
-      "src": "/favicon.ico",
-      "type": "image/x-icon",
-      "sizes": "64x64 32x32 24x24 16x16"
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ]
 }
