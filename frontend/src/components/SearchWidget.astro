@@ -250,10 +250,20 @@ import { supabase } from '../lib/supabase';
       <div class="promo-content">
         <h3>Buscamos por vos</h3>
         <p>Nuestro Agente Estratega monitorea precios y te alerta cuando encuentra oportunidades increíbles.</p>
+        
+        <div class="countdown-container mt-1">
+          <span class="countdown-label">Próxima búsqueda en:</span>
+          <div class="countdown-timer" id="next-search-timer">
+            <div class="time-box"><span id="cd-hours">00</span><small>H</small></div>:
+            <div class="time-box"><span id="cd-minutes">00</span><small>M</small></div>:
+            <div class="time-box"><span id="cd-seconds">00</span><small>S</small></div>
+          </div>
+        </div>
       </div>
     </div>
   </aside>
 
+  <div id="toast-container" class="toast-container"></div>
 </div>
 
 <style>
@@ -353,6 +363,47 @@ import { supabase } from '../lib/supabase';
     font-size: 0.85rem;
     color: var(--text-secondary);
     line-height: 1.4;
+  }
+
+  /* COUNTDOWN */
+  .countdown-container {
+    margin-top: 1rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid rgba(255,255,255,0.1);
+  }
+  
+  .countdown-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    display: block;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .countdown-timer {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-primary);
+    font-weight: bold;
+    font-size: 1.2rem;
+  }
+  
+  .time-box {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 4px;
+    padding: 2px 6px;
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+  }
+  
+  .time-box small {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    font-weight: normal;
   }
 
   /* FORM STYLES */
@@ -783,6 +834,42 @@ import { supabase } from '../lib/supabase';
     text-align: center;
     font-weight: 500;
   }
+
+  /* TOAST NOTIFICATIONS */
+  .toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 9999;
+  }
+  
+  :global(.toast) {
+    background: rgba(10, 10, 12, 0.95);
+    border: 1px solid var(--accent-color);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    color: white;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transform: translateX(120%);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  
+  :global(.toast.show) {
+    transform: translateX(0);
+  }
+  
+  :global(.toast.error) {
+    border-color: #ff5555;
+  }
+  :global(.toast.error .toast-icon) { color: #ff5555; font-weight: bold; }
+  :global(.toast.success .toast-icon) { color: var(--accent-color); font-weight: bold; }
   
   @media (max-width: 1024px) {
     .search-widget-wrapper {
@@ -814,6 +901,62 @@ import { supabase } from '../lib/supabase';
 <script>
   import { supabase } from '../lib/supabase';
   
+  // TOAST LOGIC
+  function showToast(message: string, type = 'success') {
+    let container = document.getElementById('toast-container');
+    if (!container) return;
+    
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    const icon = type === 'success' ? '✓' : '✕';
+    toast.innerHTML = `<span class="toast-icon">${icon}</span><span>${message}</span>`;
+    
+    container.appendChild(toast);
+    
+    // Trigger reflow
+    void toast.offsetWidth;
+    toast.classList.add('show');
+    
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 300);
+    }, 4000);
+  }
+
+  // COUNTDOWN LOGIC
+  function updateCountdown() {
+    const now = new Date();
+    // Definimos la próxima actualización a las 09:00 o 21:00 hs (sistema de 12hs)
+    let target = new Date(now);
+    
+    if (now.getHours() < 9) {
+      target.setHours(9, 0, 0, 0);
+    } else if (now.getHours() < 21) {
+      target.setHours(21, 0, 0, 0);
+    } else {
+      target.setDate(target.getDate() + 1);
+      target.setHours(9, 0, 0, 0);
+    }
+    
+    const diff = target.getTime() - now.getTime();
+    
+    const h = Math.floor(diff / (1000 * 60 * 60));
+    const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const s = Math.floor((diff % (1000 * 60)) / 1000);
+    
+    const hEl = document.getElementById('cd-hours');
+    const mEl = document.getElementById('cd-minutes');
+    const sEl = document.getElementById('cd-seconds');
+    
+    if (hEl) hEl.innerText = h.toString().padStart(2, '0');
+    if (mEl) mEl.innerText = m.toString().padStart(2, '0');
+    if (sEl) sEl.innerText = s.toString().padStart(2, '0');
+  }
+  
+  setInterval(updateCountdown, 1000);
+  updateCountdown();
+
   // LÓGICA DE EXCLUSIÓN DE AEROLÍNEAS
   const AVAILABLE_AIRLINES = [
     "Aerolíneas Argentinas", "Air Canada", "Air Europa", "Air France", 
@@ -1275,7 +1418,7 @@ import { supabase } from '../lib/supabase';
       });
       
       if (error) {
-        alert('Error enviando enlace: ' + error.message);
+        showToast('Error enviando enlace: ' + error.message, 'error');
         submitBtn.disabled = false;
         submitBtn.innerHTML = 'Activar Radar';
         return;
@@ -1293,9 +1436,9 @@ import { supabase } from '../lib/supabase';
         .upsert(finalPayload, { onConflict: 'user_id' }); 
         
       if (error) {
-        alert('Error guardando alerta: ' + error.message);
+        showToast('Error guardando alerta: ' + error.message, 'error');
       } else {
-        alert('¡Radar activado con éxito!');
+        showToast('¡Radar actualizado con éxito!', 'success');
       }
       
       submitBtn.disabled = false;
@@ -1316,7 +1459,7 @@ import { supabase } from '../lib/supabase';
           await supabase.from('search_alerts').upsert(data, { onConflict: 'user_id' });
           localStorage.removeItem('pending_alert_save');
           
-          alert('¡Tu radar ha sido activado exitosamente!');
+          showToast('¡Tu radar ha sido activado exitosamente!', 'success');
         }
       }
     });
