@@ -12,9 +12,10 @@ import { supabase } from '../lib/supabase';
             <div class="pulse-ring"></div>
             <i class="ph ph-radar"></i>
          </div>
-         <div>
+         <div style="flex: 1;">
            <h2 style="margin:0; font-size: 1.3rem;">Tu radar está activo</h2>
            <p style="margin: 4px 0 0; color: var(--text-secondary); font-size: 0.85rem;">Buscando automáticamente oportunidades para vos.</p>
+           <p style="margin: 6px 0 0; color: var(--accent-color); font-size: 0.75rem; font-weight: 500; display: flex; align-items: center; gap: 4px;"><i class="ph ph-clock"></i> Última búsqueda: hace 2h</p>
          </div>
       </div>
 
@@ -44,11 +45,11 @@ import { supabase } from '../lib/supabase';
          </div>
 
          <div class="summary-section">
-            <div class="section-header">
-              <h3><i class="ph ph-sliders"></i> Opciones Avanzadas</h3>
-              <button type="button" class="btn btn-icon edit-step-btn" data-step="3"><i class="ph ph-pencil-simple"></i></button>
+            <div class="section-header" style="cursor: pointer;" onclick="document.getElementById('adv-options-content').classList.toggle('hidden'); document.getElementById('adv-chevron').classList.toggle('ph-caret-down'); document.getElementById('adv-chevron').classList.toggle('ph-caret-up');">
+              <h3 style="flex:1"><i class="ph ph-sliders"></i> Opciones Avanzadas <i id="adv-chevron" class="ph ph-caret-down" style="margin-left: 4px; color: var(--text-secondary); font-size: 0.9rem;"></i></h3>
+              <button type="button" class="btn btn-icon edit-step-btn" data-step="3" onclick="event.stopPropagation();"><i class="ph ph-pencil-simple"></i></button>
             </div>
-            <div class="section-content">
+            <div id="adv-options-content" class="section-content hidden">
               <div class="summary-row"><span>Destinos Específicos</span> <strong id="dash-paises">Toda la zona</strong></div>
               <div class="summary-row"><span>Escalas máx.</span> <strong id="dash-escalas">1</strong></div>
               <div class="summary-row"><span>Excluye</span> <strong id="dash-aerolineas">Ninguna</strong></div>
@@ -282,40 +283,6 @@ import { supabase } from '../lib/supabase';
   </div>
 
   <aside class="sidebar-content">
-    <div class="summary-card card">
-      <h3 class="summary-title">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--accent-color)" stroke-width="2" style="margin-right:8px"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-        Resumen de tu búsqueda
-      </h3>
-      <div class="summary-list">
-        <div class="summary-item">
-          <span class="icon"><i class="ph ph-airplane-takeoff"></i></span>
-          <span class="label">Origen</span>
-          <span class="value" id="summary-origin">Buenos Aires (EZE/AEP)</span>
-        </div>
-        <div class="summary-item">
-          <span class="icon"><i class="ph ph-calendar-blank"></i></span>
-          <span class="label">Ida</span>
-          <span class="value" id="summary-ida">-</span>
-        </div>
-        <div class="summary-item">
-          <span class="icon"><i class="ph ph-calendar-blank"></i></span>
-          <span class="label">Vuelta</span>
-          <span class="value" id="summary-vuelta">-</span>
-        </div>
-        <div class="summary-item">
-          <span class="icon"><i class="ph ph-globe-hemisphere-west"></i></span>
-          <span class="label">Zona</span>
-          <span class="value" id="summary-zone">Europa</span>
-        </div>
-        <div class="summary-item">
-          <span class="icon"><i class="ph ph-map-pin"></i></span>
-          <span class="label">Destinos</span>
-          <span class="value" id="summary-dest">Toda la zona</span>
-        </div>
-      </div>
-    </div>
-
     <div class="promo-card card">
       <div class="promo-icon"><i class="ph-fill ph-sparkle"></i></div>
       <div class="promo-content">
@@ -1443,9 +1410,14 @@ import { supabase } from '../lib/supabase';
       if (dashPaises) dashPaises.textContent = text;
     }
 
+    const formatCurrency = (val: string) => {
+      if (!val) return '';
+      return new Intl.NumberFormat('es-AR').format(Number(val));
+    };
+
     const dashPresupuesto = document.getElementById('dash-presupuesto');
     if (dashPresupuesto && budgetMinEl && budgetMaxEl) {
-      dashPresupuesto.textContent = `US$${budgetMinEl.value} - US$${budgetMaxEl.value}`;
+      dashPresupuesto.textContent = `US$${formatCurrency(budgetMinEl.value)} - US$${formatCurrency(budgetMaxEl.value)}`;
     }
 
     const dashPax = document.getElementById('dash-pasajeros');
@@ -1470,11 +1442,15 @@ import { supabase } from '../lib/supabase';
   function showDashboardView() {
     if (radarDashboard) radarDashboard.classList.remove('hidden');
     if (wizardContainer) wizardContainer.classList.add('hidden');
+    const headerP = document.querySelector('.alertas-header-text p');
+    if (headerP) headerP.textContent = 'Tu Agente Estratega está buscando por vos.';
   }
 
   function showWizardView(step: number = 1) {
     if (radarDashboard) radarDashboard.classList.add('hidden');
     if (wizardContainer) wizardContainer.classList.remove('hidden');
+    const headerP = document.querySelector('.alertas-header-text p');
+    if (headerP) headerP.textContent = 'Configurá el Agente Estratega para que busque por ti.';
     currentStep = step;
     showStep(step);
   }
