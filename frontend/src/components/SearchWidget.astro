@@ -156,6 +156,19 @@ import { supabase } from '../lib/supabase';
         </label>
       </div>
     </div>
+    <div class="form-group">
+      <label>Pasajeros (Para el presupuesto)</label>
+      <div class="radio-pills">
+        <label class="pill active">
+          <input type="radio" name="pasajeros" value="1" checked>
+          👤 1
+        </label>
+        <label class="pill">
+          <input type="radio" name="pasajeros" value="2">
+          👥 2
+        </label>
+      </div>
+    </div>
 
     <!-- Row 5: Email Auth (Solo si no está logueado) -->
     <div class="form-group full-width" id="email-auth-section">
@@ -843,6 +856,16 @@ import { supabase } from '../lib/supabase';
             escalas.parentElement?.classList.add('active');
           }
           
+          // Pasajeros
+          const pasajeros = f.querySelector(`input[name="pasajeros"][value="${alertData.pasajeros || 1}"]`) as HTMLInputElement;
+          if (pasajeros) {
+            pasajeros.checked = true;
+            document.querySelectorAll('input[name="pasajeros"]').forEach(inp => {
+              (inp as HTMLInputElement).parentElement?.classList.remove('active');
+            });
+            pasajeros.parentElement?.classList.add('active');
+          }
+          
           // Boton
           submitBtn.innerHTML = 'Actualizar Radar';
         }
@@ -876,6 +899,7 @@ import { supabase } from '../lib/supabase';
       fecha_vuelta_min: formData.get('fecha_vuelta_min') || null,
       fecha_vuelta_max: formData.get('fecha_vuelta_max') || null,
       aerolineas_excluidas: excludedAirlines,
+      pasajeros: Number(formData.get('pasajeros') || 1),
       presupuesto_min: formData.get('presupuesto_min') ? Number(formData.get('presupuesto_min')) : null,
       presupuesto_max: formData.get('presupuesto_max') ? Number(formData.get('presupuesto_max')) : null,
       escalas_max: Number(formData.get('escalas_max'))

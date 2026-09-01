@@ -76,6 +76,7 @@ create table public.search_alerts (
     fecha_vuelta_max date,
     paises text[],
     aerolineas_excluidas text[],
+    pasajeros int default 1,
     presupuesto_min numeric(10,2),
     presupuesto_max numeric(10,2),
     escalas_max int default 1,
