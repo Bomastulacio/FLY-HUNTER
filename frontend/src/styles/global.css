@@ -302,7 +302,8 @@ header p {
   overflow: hidden;
 }
 
-.profile-dropdown:hover .dropdown-content {
+.profile-dropdown:hover .dropdown-content,
+.profile-dropdown.active .dropdown-content {
   display: block;
 }
 

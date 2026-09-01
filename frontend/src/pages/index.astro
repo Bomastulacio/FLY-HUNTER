@@ -410,6 +410,20 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
             });
           }
 
+          // Lógica del Dropdown para Mobile (click toggle)
+          const profileBtn = profileDropdown?.querySelector('.profile-btn');
+          if (profileBtn && profileDropdown) {
+            profileBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              profileDropdown.classList.toggle('active');
+            });
+            document.addEventListener('click', (e) => {
+              if (!profileDropdown.contains(e.target)) {
+                profileDropdown.classList.remove('active');
+              }
+            });
+          }
+
           // Traemos sus alertas
           const { data: alertData } = await supabase
             .from('search_alerts')
