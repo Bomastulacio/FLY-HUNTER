@@ -311,16 +311,26 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
           </div>
         `;
 
-        // Si el usuario eligió "Cualquiera" o no eligió países, mostramos un mensaje genérico.
-        // Si eligió países específicos, generamos una tarjeta para cada uno de esos países.
-        const countries = (alert.paises && alert.paises.length > 0 && !alert.paises.includes('Cualquiera')) 
-            ? alert.paises 
-            : []; 
+        // Priorizamos los países que el usuario eligió explícitamente.
+        // Si no eligió ninguno (ej. seleccionó toda "Europa"), mostramos los 4 hubs principales por defecto.
+        let explicitCountries = (alert.paises && alert.paises.length > 0 && !alert.paises.includes('Cualquiera')) 
+            ? [...alert.paises] 
+            : ['España', 'Reino Unido', 'Francia', 'Alemania'];
             
-        if (countries.length > 0) {
+        let countriesToRender = [...explicitCountries];
+        
+        // ¡Magia! Agregamos dinámicamente cualquier OTRO país que tenga una oferta válida en la BD
+        Object.keys(countryCodes).forEach(country => {
+            const hasDeal = affordableDeals.some((d: any) => countryCodes[country].some(code => d.ida_origen_destino.includes(code)));
+            if (hasDeal && !countriesToRender.includes(country)) {
+                countriesToRender.push(country);
+            }
+        });
+            
+        if (countriesToRender.length > 0) {
           let cardsHtml = '<div class="europe-destinations">';
           
-          countries.forEach((country: string) => {
+          countriesToRender.forEach((country: string) => {
             let destDeal = null;
             // Busca si hay ofertas para los aeropuertos de ese país
             if (countryCodes[country]) {
