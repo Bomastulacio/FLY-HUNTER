@@ -1,4 +1,4 @@
-create extension if not exists pgcrypto;
+ï»¿create extension if not exists pgcrypto;
 
 create table public.flight_deals (
     id uuid primary key default gen_random_uuid(),
@@ -63,7 +63,7 @@ create policy "Permitir full access al service role insights"
     on public.route_insights
     using (auth.jwt() ->> 'role' = 'service_role');
 
--- Tabla de Alertas de Búsqueda (Preferencias de usuario)
+-- Tabla de Alertas de Bï¿½squeda (Preferencias de usuario)
 create table public.search_alerts (
     id uuid primary key default gen_random_uuid(),
     user_id uuid references auth.users(id) not null,
@@ -75,6 +75,7 @@ create table public.search_alerts (
     fecha_vuelta_min date,
     fecha_vuelta_max date,
     paises text[],
+    aerolineas_excluidas text[],
     presupuesto_min numeric(10,2),
     presupuesto_max numeric(10,2),
     escalas_max int default 1,
@@ -89,7 +90,7 @@ create table public.search_alerts (
 -- Habilitar RLS
 alter table public.search_alerts enable row level security;
 
--- Política para que los usuarios puedan ver y editar SUS propias alertas
+-- Polï¿½tica para que los usuarios puedan ver y editar SUS propias alertas
 create policy "Usuarios ven sus alertas"
     on public.search_alerts
     for select

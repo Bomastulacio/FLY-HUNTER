@@ -109,6 +109,21 @@ import { supabase } from '../lib/supabase';
       <small class="hint mt-1" id="countries-counter">0/4 seleccionados</small>
     </div>
 
+    <!-- Row 3.5: Aerolíneas a Excluir -->
+    <div class="form-group full-width" id="airlines-section">
+      <label>Aerolíneas a excluir (Opcional)</label>
+      <div class="input-wrapper autocomplete-wrapper">
+        <span class="input-icon">🚫</span>
+        <input type="text" id="airline-exclude-input" placeholder="Ej. Iberia, Ryanair..." autocomplete="off" />
+        <div class="autocomplete-dropdown hidden" id="airline-dropdown">
+          <!-- Renderizado dinámico vía JS -->
+        </div>
+      </div>
+      <div class="excluded-airlines-grid mt-1" id="excluded-airlines-container">
+        <!-- Renderizado dinámico de pills -->
+      </div>
+    </div>
+
     <!-- Row 4: Presupuesto y Escalas -->
     <div class="form-group" style="grid-column: span 2;">
       <label>Presupuesto total (USD)</label>
@@ -326,6 +341,77 @@ import { supabase } from '../lib/supabase';
     opacity: 0.3;
     cursor: not-allowed;
   }
+
+  /* AUTOCOMPLETE AIRLINES */
+  .autocomplete-wrapper {
+    position: relative;
+    overflow: visible;
+  }
+
+  .autocomplete-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 0.5rem;
+    background: var(--bg-base, #1c1c1e);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius-sm);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+
+  .autocomplete-item {
+    padding: 0.8rem 1rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background 0.2s;
+  }
+
+  .autocomplete-item:last-child {
+    border-bottom: none;
+  }
+
+  .autocomplete-item:hover {
+    background: rgba(209, 255, 76, 0.1);
+    color: var(--accent-color);
+  }
+
+  .excluded-airlines-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+
+  :global(.excluded-pill) {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.5rem;
+    padding: 0.4rem 0.8rem;
+    background: rgba(255, 85, 85, 0.1);
+    border: 1px solid rgba(255, 85, 85, 0.3);
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+    user-select: none;
+    color: #ffaaaa;
+  }
+
+  :global(.excluded-pill:hover) {
+    background: rgba(255, 85, 85, 0.2);
+    border-color: rgba(255, 85, 85, 0.5);
+  }
+
+  :global(.excluded-pill .remove-icon) {
+    font-weight: bold;
+    font-size: 1.1em;
+  }
   
   .input-wrapper {
     position: relative;
@@ -479,6 +565,92 @@ import { supabase } from '../lib/supabase';
 <script>
   import { supabase } from '../lib/supabase';
   
+  // LÓGICA DE EXCLUSIÓN DE AEROLÍNEAS
+  const AVAILABLE_AIRLINES = [
+    "Aerolíneas Argentinas", "Air Canada", "Air Europa", "Air France", 
+    "American Airlines", "Avianca", "British Airways", "Copa Airlines", 
+    "Delta Air Lines", "EasyJet", "Emirates", "Flybondi", "GOL", "Iberia", 
+    "JetSMART", "KLM", "LATAM Airlines", "Lufthansa", "Qatar Airways", 
+    "Ryanair", "Sky Airline", "Turkish Airlines", "United Airlines", "Vueling"
+  ];
+  
+  const airlineInput = document.getElementById('airline-exclude-input') as HTMLInputElement;
+  const airlineDropdown = document.getElementById('airline-dropdown');
+  const excludedAirlinesContainer = document.getElementById('excluded-airlines-container');
+  let excludedAirlines: string[] = [];
+
+  function renderAirlineDropdown(filterText: string = '') {
+    if (!airlineDropdown) return;
+    
+    const filtered = AVAILABLE_AIRLINES.filter(a => 
+      a.toLowerCase().includes(filterText.toLowerCase()) && 
+      !excludedAirlines.includes(a)
+    );
+    
+    if (filtered.length === 0) {
+      airlineDropdown.innerHTML = '<div class="autocomplete-item" style="color:var(--text-secondary);pointer-events:none;">No se encontraron resultados</div>';
+    } else {
+      airlineDropdown.innerHTML = filtered.map(a => 
+        `<div class="autocomplete-item" data-value="${a}">${a}</div>`
+      ).join('');
+      
+      airlineDropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+          const val = (e.target as HTMLElement).getAttribute('data-value');
+          if (val) addExcludedAirline(val);
+          if (airlineInput) airlineInput.value = '';
+          airlineDropdown.classList.add('hidden');
+        });
+      });
+    }
+  }
+
+  function addExcludedAirline(airline: string) {
+    if (!excludedAirlines.includes(airline)) {
+      excludedAirlines.push(airline);
+      renderExcludedPills();
+    }
+  }
+
+  function renderExcludedPills() {
+    if (!excludedAirlinesContainer) return;
+    
+    excludedAirlinesContainer.innerHTML = excludedAirlines.map(a => `
+      <div class="excluded-pill" data-value="${a}">
+        <span>${a}</span>
+        <span class="remove-icon">×</span>
+      </div>
+    `).join('');
+    
+    excludedAirlinesContainer.querySelectorAll('.excluded-pill').forEach(pill => {
+      pill.addEventListener('click', (e) => {
+        const val = (e.currentTarget as HTMLElement).getAttribute('data-value');
+        if (val) {
+          excludedAirlines = excludedAirlines.filter(a => a !== val);
+          renderExcludedPills();
+        }
+      });
+    });
+  }
+
+  if (airlineInput && airlineDropdown) {
+    airlineInput.addEventListener('focus', () => {
+      renderAirlineDropdown(airlineInput.value);
+      airlineDropdown.classList.remove('hidden');
+    });
+    
+    airlineInput.addEventListener('input', (e) => {
+      renderAirlineDropdown((e.target as HTMLInputElement).value);
+    });
+    
+    // Hide dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!airlineInput.contains(e.target as Node) && !airlineDropdown.contains(e.target as Node)) {
+        airlineDropdown.classList.add('hidden');
+      }
+    });
+  }
+
   // MAPEO DE DESTINOS DINÁMICO
   const zoneCountries: Record<string, string[]> = {
     "Europa": ["España", "Francia", "Italia", "Reino Unido", "Alemania", "Portugal", "Países Bajos", "Suiza", "Grecia", "París"],
@@ -649,6 +821,12 @@ import { supabase } from '../lib/supabase';
              if (counter) counter.innerText = `${selectedCountries.length}/4 seleccionados`;
           }
           
+          // Aerolíneas excluidas
+          if (alertData.aerolineas_excluidas && alertData.aerolineas_excluidas.length > 0) {
+            excludedAirlines = alertData.aerolineas_excluidas;
+            renderExcludedPills();
+          }
+          
           // Presupuesto
           if (alertData.presupuesto_min) (f.querySelector('[name="presupuesto_min"]') as HTMLInputElement).value = alertData.presupuesto_min;
           if (alertData.presupuesto_max) (f.querySelector('[name="presupuesto_max"]') as HTMLInputElement).value = alertData.presupuesto_max;
@@ -693,6 +871,7 @@ import { supabase } from '../lib/supabase';
       fecha_ida_max: formData.get('fecha_ida_max') || null,
       fecha_vuelta_min: formData.get('fecha_vuelta_min') || null,
       fecha_vuelta_max: formData.get('fecha_vuelta_max') || null,
+      aerolineas_excluidas: excludedAirlines,
       presupuesto_min: formData.get('presupuesto_min') ? Number(formData.get('presupuesto_min')) : null,
       presupuesto_max: formData.get('presupuesto_max') ? Number(formData.get('presupuesto_max')) : null,
       escalas_max: Number(formData.get('escalas_max'))
