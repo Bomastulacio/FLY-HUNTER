@@ -299,6 +299,24 @@ import { supabase } from '../lib/supabase';
         </div>
       </div>
     </div>
+    
+    <div class="activity-log-card card" style="margin-top: 0; padding: 1.8rem; background: rgba(255,255,255,0.02);">
+      <h3 style="font-size: 0.9rem; color: var(--text-secondary); margin-top:0; margin-bottom: 1.2rem; text-transform: uppercase; letter-spacing: 1px; display:flex; align-items:center; gap:0.5rem;"><i class="ph ph-list-dashes"></i> Bitácora del Agente</h3>
+      <ul style="list-style: none; padding: 0; margin: 0; font-size: 0.85rem; color: var(--text-primary); display: flex; flex-direction: column; gap: 1.2rem;">
+        <li style="display: flex; gap: 0.8rem; align-items: flex-start;">
+          <i class="ph-fill ph-check-circle" style="color: var(--success-color); font-size: 1.2rem; margin-top: 2px;"></i>
+          <div><strong>Aprobación pendiente</strong><br><span style="color: var(--text-secondary); font-size: 0.75rem;">Anomalía en EZE-NRT detectada hace 14h.</span></div>
+        </li>
+        <li style="display: flex; gap: 0.8rem; align-items: flex-start;">
+          <i class="ph-fill ph-x-circle" style="color: var(--danger-color); font-size: 1.2rem; margin-top: 2px;"></i>
+          <div><strong>Oportunidad descartada</strong><br><span style="color: var(--text-secondary); font-size: 0.75rem;">EZE-MAD por US$ 600 tenía 3 escalas.</span></div>
+        </li>
+        <li style="display: flex; gap: 0.8rem; align-items: flex-start;">
+          <i class="ph-fill ph-clock" style="color: var(--accent-color); font-size: 1.2rem; margin-top: 2px;"></i>
+          <div><strong>Buscando en Asia...</strong><br><span style="color: var(--text-secondary); font-size: 0.75rem;">Esperando próxima ventana de API.</span></div>
+        </li>
+      </ul>
+    </div>
   </aside>
 
   <div id="toast-container" class="toast-container"></div>
@@ -316,13 +334,13 @@ import { supabase } from '../lib/supabase';
   }
   
   .main-content {
-    flex: 2;
-    min-width: 0; /* Prevents flex blowout */
+    flex: 1.6;
+    min-width: 0;
     box-sizing: border-box;
   }
 
   .sidebar-content {
-    flex: 1;
+    flex: 1.1;
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
@@ -482,9 +500,36 @@ import { supabase } from '../lib/supabase';
   }
   
   .widget-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  
+  .wizard-step {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem 1.5rem;
+    gap: 1.5rem 2rem;
+  }
+  
+  .wizard-actions {
+    grid-column: span 2;
+  }
+  
+  .radar-summary-card {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-top: 2rem;
+    align-items: flex-start;
+  }
+  
+  @media (max-width: 900px) {
+    .wizard-step, .radar-summary-card {
+      grid-template-columns: 1fr;
+    }
+    .search-widget-wrapper {
+      flex-direction: column;
+    }
   }
   
   .form-group {
