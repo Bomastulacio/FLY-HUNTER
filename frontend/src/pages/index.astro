@@ -115,6 +115,10 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
           <label>Escalas máximas</label>
           <div class="radar-field-value" id="radar-val-escalas">--</div>
         </div>
+        <div class="radar-field">
+          <label>Excluye</label>
+          <div class="radar-field-value" id="radar-val-aerolinea">Ninguna</div>
+        </div>
         <div class="radar-field" style="flex-direction: row; align-items: center; justify-content: space-between;">
           <div style="display: flex; flex-direction: column; gap: 0.3rem;">
             <label>Presupuesto</label>
@@ -225,6 +229,15 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
         if (elEscalas) elEscalas.innerText = `Máx. ${alert.escalas_max}`;
         const elPresupuesto = document.getElementById('radar-val-presupuesto');
         if (elPresupuesto) elPresupuesto.innerText = `US$ ${alert.presupuesto_max}`;
+        
+        const elAerolinea = document.getElementById('radar-val-aerolinea');
+        if (elAerolinea) {
+          if (alert.aerolineas_excluidas && alert.aerolineas_excluidas.length > 0) {
+            elAerolinea.innerText = Array.isArray(alert.aerolineas_excluidas) ? alert.aerolineas_excluidas.join(', ') : alert.aerolineas_excluidas;
+          } else {
+            elAerolinea.innerText = "Ninguna";
+          }
+        }
 
         // 2. Countdown logic para actualización del scraper
         if(cdInterval) clearInterval(cdInterval);

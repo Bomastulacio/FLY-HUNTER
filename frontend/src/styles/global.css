@@ -328,12 +328,12 @@ header p {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: var(--border-radius-md);
-  padding: 2rem;
+  padding: 1.5rem 1rem;
   margin-bottom: 3rem;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2rem 1rem;
-  align-items: stretch;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 1rem;
+  align-items: center;
   backdrop-filter: blur(10px);
 }
 
@@ -345,13 +345,34 @@ header p {
   border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Remover borde derecho en el 3er elemento de cada fila */
-.radar-field:nth-of-type(3n) {
+.radar-field:last-of-type {
   border-right: none;
 }
 
-.radar-field:last-of-type {
-  border-right: none;
+@media (max-width: 1024px) {
+  .radar-config-panel {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem 1rem;
+  }
+  .radar-field:nth-of-type(3n) {
+    border-right: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .radar-config-panel {
+    grid-template-columns: 1fr;
+  }
+  .radar-field {
+    border-right: none;
+    padding: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 1rem;
+  }
+  .radar-field:last-of-type {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
 }
 
 .radar-field label {
