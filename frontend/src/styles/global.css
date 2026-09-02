@@ -7,8 +7,8 @@
   --accent-color: #d1ff4c;
   --accent-glow: rgba(209, 255, 76, 0.2);
   --card-bg: rgba(255, 255, 255, 0.03);
-  --card-border: rgba(255, 255, 255, 0.06);
-  --card-hover-border: rgba(255, 255, 255, 0.15);
+  --card-border: rgba(255, 255, 255, 0.15);
+  --card-hover-border: rgba(255, 255, 255, 0.25);
   --danger-color: #ff4c4c;
   --success-color: #1ed760;
   --border-radius-lg: 24px;
@@ -30,7 +30,7 @@ h1, h2, h3, h4, .card-price {
 }
 
 main {
-  max-width: 2400px;
+  max-width: 1400px;
   width: 96%;
   margin: 0 auto;
   padding: 2.5rem 0;
@@ -328,21 +328,26 @@ header p {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: var(--border-radius-md);
-  padding: 1.5rem;
+  padding: 2rem;
   margin-bottom: 3rem;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem 1rem;
+  align-items: stretch;
   backdrop-filter: blur(10px);
 }
 
 .radar-field {
-  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
   padding: 0 1rem;
   border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Remover borde derecho en el 3er elemento de cada fila */
+.radar-field:nth-of-type(3n) {
+  border-right: none;
 }
 
 .radar-field:last-of-type {
@@ -410,18 +415,22 @@ header p {
   display: none;
 }
 
-/* Empty State Pills */
-.empty-pill {
+/* Empty State Card */
+.empty-card {
   grid-column: span 1;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px dashed rgba(255, 255, 255, 0.1);
-  border-radius: var(--border-radius-sm);
-  padding: 0.8rem;
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: var(--border-radius-lg);
+  padding: 1.5rem;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  gap: 1.5rem;
   color: var(--text-secondary);
-  font-size: 0.8rem;
+  font-size: 0.95rem;
+  text-align: center;
+  min-height: 250px;
 }
 
 /* 📱 Responsive Tablet */

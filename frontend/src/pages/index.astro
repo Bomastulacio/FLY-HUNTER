@@ -75,7 +75,8 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
           Flight Hunter
         </a>
         <div class="top-nav-actions" id="desktop-user-actions">
-          <a href="/login" id="nav-login-btn" class="btn btn-outline" style="display: none; padding: 0.4rem 1rem;"><i class="ph ph-key" style="margin-right: 0.5rem;"></i> Ingresar</a>
+          <a href="/alertas" class="btn btn-outline" style="padding: 0.4rem 1rem; border: none; margin-top: 0; background: rgba(255,255,255,0.05); margin-right: 0.5rem;"><i class="ph ph-sliders" style="margin-right: 0.5rem;"></i> Mis Alertas</a>
+          <a href="/login" id="nav-login-btn" class="btn btn-outline" style="display: none; padding: 0.4rem 1rem; margin-top: 0;"><i class="ph ph-key" style="margin-right: 0.5rem;"></i> Ingresar</a>
           
           <div id="user-profile-dropdown" class="profile-dropdown" style="display: none;">
             <div class="profile-btn">
@@ -375,9 +376,12 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
               `;
             } else {
               cardsHtml += `
-                <div class="empty-pill">
-                  <i class="ph ph-magnifying-glass" style="color: var(--text-secondary);"></i> 
-                  <span>Sin ofertas para <strong>${country}</strong> bajo US$ ${alert.presupuesto_max} aún</span>
+                <div class="empty-card">
+                  <i class="ph ph-airplane" style="font-size: 2.5rem; color: rgba(255, 255, 255, 0.1);"></i>
+                  <div style="display: flex; flex-direction: column; gap: 0.5rem; padding: 0 1rem;">
+                    <strong style="color: var(--text-primary); font-size: 1.15rem;">${country}</strong>
+                    <span>Buscando ofertas<br>por debajo de US$ ${alert.presupuesto_max}...</span>
+                  </div>
                 </div>
               `;
             }
