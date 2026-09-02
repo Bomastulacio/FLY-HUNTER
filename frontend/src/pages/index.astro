@@ -115,12 +115,15 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
           <label>Escalas máximas</label>
           <div class="radar-field-value" id="radar-val-escalas">--</div>
         </div>
-        <div class="radar-field">
-          <label>Presupuesto</label>
-          <div class="radar-field-value" id="radar-val-presupuesto">--</div>
+        <div class="radar-field" style="flex-direction: row; align-items: center; justify-content: space-between;">
+          <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+            <label>Presupuesto</label>
+            <div class="radar-field-value" id="radar-val-presupuesto">--</div>
+          </div>
+          <a href="/alertas" class="btn btn-icon" style="color: var(--text-secondary); padding: 0.5rem; transition: opacity 0.2s; border: none; background: transparent;" title="Editar Radar" onmouseover="this.style.opacity=1; this.style.color='var(--text-primary)'" onmouseout="this.style.opacity=0.7; this.style.color='var(--text-secondary)'">
+            <i class="ph ph-pencil-simple" style="font-size: 1.2rem;"></i>
+          </a>
         </div>
-        <a href="/alertas" class="btn btn-primary" style="padding: 0.8rem 2rem; margin: 0;">Editar Radar</a>
-      </div>
 
       <!-- CONTENEDOR DINÁMICO DEL RADAR -->
       <div id="dynamic-dashboard" style="display: none;">
