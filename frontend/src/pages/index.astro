@@ -20,6 +20,7 @@ const routeInsights = insightsData || [];
 // Procesar datos para enviarlos completos al cliente
 const allDeals = deals || [];
 const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' || d.es_oportunidad_oro);
+const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' && d.es_anomalia);
 ---
 
 <html lang="es">
@@ -139,8 +140,8 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
 
 
     <!-- Pasar datos del servidor al cliente -->
-    <script is:inline define:vars={{ approvedDeals }}>
-      window.__SERVER_DATA__ = { approvedDeals };
+    <script is:inline define:vars={{ approvedDeals, pendingDeals }}>
+      window.__SERVER_DATA__ = { approvedDeals, pendingDeals };
     </script>
 
     <script>
@@ -267,6 +268,31 @@ const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' ||
         
         // 1. Tarjeta Principal (El Vuelo Absoluto más barato que cumpla las reglas, de cualquier destino)
         // AL RENDERIZARLA PRIMERO Y CON SPAN 2 / ROW SPAN 2, QUEDA A LA IZQUIERDA.
+        const pendingDeals = window.__SERVER_DATA__.pendingDeals || [];
+        if (pendingDeals && pendingDeals.length > 0) {
+          const pDeal = pendingDeals[0];
+          html += `
+            <div class="card" style="grid-column: 1 / -1; border: 1px solid var(--accent-color); background: rgba(159, 219, 22, 0.05); padding: 1.5rem;">
+              <div class="card-header" style="font-size: 1.2rem;"><i class="ph-fill ph-warning" style="color: var(--accent-color); margin-right: 6px;"></i> Atención: Vuelo Anómalo Extremadamente Barato</div>
+              <p style="margin: 0.5rem 0 1.5rem 0; color: var(--text-secondary); font-size: 1rem;">
+                Encontramos una ganga por <strong>${formatPrice(pDeal)}</strong> que rompe levemente tus reglas. ¿Te sirve?
+              </p>
+              
+              <div style="display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap;">
+                <div>
+                  <div class="card-route" style="font-size: 1.1rem;">${pDeal.ida_origen_destino} <i class="ph ph-airplane-tilt" style="opacity: 0.5; margin: 0 4px;"></i> ${pDeal.vuelta_origen_destino}</div>
+                  <div class="card-date" style="margin-bottom:0;"><i class="ph ph-calendar-blank"></i> ${formatDate(pDeal.ida_fecha)} al ${formatDate(pDeal.vuelta_fecha)}</div>
+                </div>
+                <div style="flex: 1;"></div>
+                <div style="display: flex; gap: 0.75rem;">
+                  <button class="btn btn-primary" onclick="alert('Se enviará webhook a GitHub para APROBAR.')" style="margin:0; padding: 0.6rem 1.2rem; font-size: 1rem;"><i class="ph ph-check" style="margin-right: 4px;"></i> Aprobar</button>
+                  <button class="btn btn-outline" onclick="alert('Vuelo descartado.')" style="margin:0; padding: 0.6rem 1.2rem; font-size: 1rem;"><i class="ph ph-x" style="margin-right: 4px;"></i> No Aprobar</button>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
         const mainDeal = affordableDeals.length > 0 ? affordableDeals[0] : null;
         
         html += `
