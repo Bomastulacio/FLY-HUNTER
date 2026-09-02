@@ -682,29 +682,52 @@ header p {
 
 .radar-pulse-icon {
   position: relative;
-  width: 52px;
-  height: 52px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
-  background: rgba(30, 215, 96, 0.15);
+  background: rgba(30, 215, 96, 0.05);
+  border: 1px solid rgba(30, 215, 96, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--success-color);
-  font-size: 1.6rem;
+  font-size: 1.4rem;
   flex-shrink: 0;
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(30, 215, 96, 0.1), inset 0 0 10px rgba(30, 215, 96, 0.05);
 }
 
-.radar-pulse-icon .pulse-ring {
+/* Efecto de barrido (radar sweep) muy minimalista y premium */
+.radar-pulse-icon::before {
+  content: '';
   position: absolute;
-  top: 0; left: 0; width: 100%; height: 100%;
+  top: 50%;
+  left: 50%;
+  width: 150%;
+  height: 150%;
+  background: conic-gradient(from 0deg, transparent 70%, rgba(30, 215, 96, 0.3) 100%);
+  transform-origin: 0 0;
+  animation: radarSweep 2.5s linear infinite;
   border-radius: 50%;
-  border: 2px solid var(--success-color);
-  animation: radarPulse 2s infinite ease-out;
+  pointer-events: none;
 }
 
-@keyframes radarPulse {
-  0% { transform: scale(1); opacity: 0.8; }
-  100% { transform: scale(2.2); opacity: 0; }
+/* Ocultar el ícono interior de phosphors si queremos que sea puro abstracto, 
+   o mantenerlo por encima del barrido */
+.radar-pulse-icon i {
+  position: relative;
+  z-index: 2;
+  text-shadow: 0 0 8px rgba(30, 215, 96, 0.5);
+}
+
+/* Reemplazamos el pulso expansivo para que no rompa el layout */
+.radar-pulse-icon .pulse-ring {
+  display: none;
+}
+
+@keyframes radarSweep {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
 .radar-summary-card {
