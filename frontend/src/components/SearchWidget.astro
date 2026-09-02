@@ -313,7 +313,7 @@ import { supabase } from '../lib/supabase';
         </li>
         <li style="display: flex; gap: 0.8rem; align-items: flex-start;">
           <i class="ph-fill ph-clock" style="color: var(--accent-color); font-size: 1.2rem; margin-top: 2px;"></i>
-          <div><strong>Buscando en Asia...</strong><br><span style="color: var(--text-secondary); font-size: 0.75rem;">Esperando próxima ventana de API.</span></div>
+          <div><strong>Analizando posibles rutas...</strong><br><span style="color: var(--text-secondary); font-size: 0.75rem;">Calculando combinaciones de fechas.</span></div>
         </li>
       </ul>
     </div>
@@ -516,15 +516,14 @@ import { supabase } from '../lib/supabase';
   }
   
   .radar-summary-card {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    display: flex;
+    flex-direction: column;
     gap: 1.5rem;
     margin-top: 2rem;
-    align-items: flex-start;
   }
   
   @media (max-width: 900px) {
-    .wizard-step, .radar-summary-card {
+    .wizard-step {
       grid-template-columns: 1fr;
     }
     .search-widget-wrapper {
