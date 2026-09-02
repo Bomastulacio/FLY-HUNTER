@@ -59,7 +59,7 @@ import { supabase } from '../lib/supabase';
     </div>
 
     <!-- WIZARD VIEW (Shown if creating or editing) -->
-    <div id="wizard-view-container">
+    <div id="wizard-view-container" class="hidden">
       <div class="widget-header">
         <div style="flex-shrink: 0;">
           <img src="/favicon.svg" alt="FlyHunter" width="56" height="56" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(159, 219, 22, 0.2);" />
@@ -1611,9 +1611,12 @@ import { supabase } from '../lib/supabase';
         submitBtn.innerHTML = 'Actualizar Radar';
         
         showDashboardView();
+      } else {
+        showWizardView(1);
       }
     } else {
       if (emailInput) emailInput.setAttribute('required', 'true');
+      showWizardView(1);
     }
 
     updateSummary();
