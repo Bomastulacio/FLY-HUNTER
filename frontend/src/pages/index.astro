@@ -68,23 +68,28 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
     </div>
     
     <main>
-      <!-- Top Navigation (Desktop) -->
+      <!-- Top Navigation -->
       <nav class="top-nav">
         <a href="/" class="top-nav-logo">
           <img src="/favicon.svg" alt="Fly Hunter Logo" width="32" height="32" style="border-radius: 8px;" />
-          Flight Hunter
+          <span class="nav-logo-text">Flight Hunter</span>
         </a>
         <div class="top-nav-actions" id="desktop-user-actions">
-          <a href="/alertas" class="btn btn-outline" style="padding: 0.4rem 1rem; border: none; margin-top: 0; background: rgba(255,255,255,0.05); margin-right: 0.5rem;"><i class="ph ph-sliders" style="margin-right: 0.5rem;"></i> Mis Alertas</a>
+          <a href="/alertas" class="btn btn-outline nav-alertas-btn" title="Mis Alertas">
+            <i class="ph ph-sliders"></i>
+            <span class="nav-alertas-text">Mis Alertas</span>
+          </a>
           <a href="/login" id="nav-login-btn" class="btn btn-outline" style="display: none; padding: 0.4rem 1rem; margin-top: 0;"><i class="ph ph-key" style="margin-right: 0.5rem;"></i> Ingresar</a>
           
           <div id="user-profile-dropdown" class="profile-dropdown" style="display: none;">
-            <div class="profile-btn">
-              <span id="user-email-display">usuario</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
-            </div>
+            <button class="profile-btn" aria-label="Cuenta de usuario">
+              <span class="avatar-badge" id="user-avatar-badge">U</span>
+              <span class="user-email-label" id="user-email-display">usuario</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
             <div class="dropdown-content">
-              <div style="padding: 0.5rem 1rem; color: var(--text-secondary); font-size: 0.8rem; text-align: center;">Opciones</div>
+              <div id="dropdown-user-info" class="dropdown-user-header">usuario</div>
+              <a href="/alertas"><i class="ph ph-sliders" style="margin-right: 0.5rem;"></i> Mis Alertas</a>
               <div class="dropdown-divider"></div>
               <a href="#" id="btn-logout" class="danger"><i class="ph ph-sign-out" style="margin-right: 0.5rem;"></i> Cerrar Sesión</a>
             </div>
@@ -92,42 +97,22 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
         </div>
       </nav>
 
-      <!-- Hero & Radar Config -->
+      <!-- Hero -->
       <header id="main-hero">
         <h1>Encontramos las mejores tarifas desde Buenos Aires.</h1>
         <p id="hero-subtitle">Configura tu radar para empezar a recibir alertas.</p>
       </header>
 
-      <div id="radar-config-container" class="radar-config-panel" style="display: none;">
-        <div class="radar-field">
-          <label>Origen</label>
-          <div class="radar-field-value">Buenos Aires (EZE)</div>
+      <!-- Radar Config Strip (Collapsed summary) -->
+      <div id="radar-summary-strip" class="radar-summary-strip" style="display: none;">
+        <div class="summary-info">
+          <i class="ph ph-funnel-simple summary-icon"></i>
+          <span id="radar-summary-text" class="summary-text">Cargando radar...</span>
         </div>
-        <div class="radar-field">
-          <label>Destino</label>
-          <div class="radar-field-value" id="radar-val-destino">Europa</div>
-        </div>
-        <div class="radar-field">
-          <label>Fechas de viaje</label>
-          <div class="radar-field-value" id="radar-val-fechas">--</div>
-        </div>
-        <div class="radar-field">
-          <label>Escalas máximas</label>
-          <div class="radar-field-value" id="radar-val-escalas">--</div>
-        </div>
-        <div class="radar-field">
-          <label>Excluye</label>
-          <div class="radar-field-value" id="radar-val-aerolinea">Ninguna</div>
-        </div>
-        <div class="radar-field" style="flex-direction: row; align-items: center; justify-content: space-between;">
-          <div style="display: flex; flex-direction: column; gap: 0.3rem;">
-            <label>Presupuesto</label>
-            <div class="radar-field-value" id="radar-val-presupuesto">--</div>
-          </div>
-          <a href="/alertas" class="btn btn-icon" style="color: var(--text-secondary); padding: 0.5rem; transition: opacity 0.2s; border: none; background: transparent;" title="Editar Radar" onmouseover="this.style.opacity=1; this.style.color='var(--text-primary)'" onmouseout="this.style.opacity=0.7; this.style.color='var(--text-secondary)'">
-            <i class="ph ph-pencil-simple" style="font-size: 1.2rem;"></i>
-          </a>
-        </div>
+        <a href="/alertas" class="btn btn-outline edit-radar-btn" title="Editar preferencias">
+          <i class="ph ph-pencil-simple"></i>
+          <span class="edit-btn-text">Editar</span>
+        </a>
       </div>
 
       <!-- CONTENEDOR DINÁMICO DEL RADAR -->
@@ -214,29 +199,34 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
         const dash = document.getElementById('dynamic-dashboard');
         if(dash) dash.style.display = 'block';
         
-        // Setup Radar Config Panel
-        const configPanel = document.getElementById('radar-config-container');
-        if (configPanel) configPanel.style.display = 'flex';
+        const summaryStrip = document.getElementById('radar-summary-strip');
+        if (summaryStrip) summaryStrip.style.display = 'flex';
         
         const mainHero = document.getElementById('main-hero');
-        if (mainHero) mainHero.style.display = 'none'; // Hide entirely if logged in
+        if (mainHero) mainHero.style.display = 'none';
 
-        const elDest = document.getElementById('radar-val-destino');
-        if (elDest) elDest.innerText = alert.destino;
-        const elFechas = document.getElementById('radar-val-fechas');
-        if (elFechas) elFechas.innerText = `${formatDate(alert.fecha_ida_min)} - ${formatDate(alert.fecha_vuelta_max)}`;
-        const elEscalas = document.getElementById('radar-val-escalas');
-        if (elEscalas) elEscalas.innerText = `Máx. ${alert.escalas_max}`;
-        const elPresupuesto = document.getElementById('radar-val-presupuesto');
-        if (elPresupuesto) elPresupuesto.innerText = `US$ ${alert.presupuesto_max}`;
-        
-        const elAerolinea = document.getElementById('radar-val-aerolinea');
-        if (elAerolinea) {
-          if (alert.aerolineas_excluidas && alert.aerolineas_excluidas.length > 0) {
-            elAerolinea.innerText = Array.isArray(alert.aerolineas_excluidas) ? alert.aerolineas_excluidas.join(', ') : alert.aerolineas_excluidas;
-          } else {
-            elAerolinea.innerText = "Ninguna";
-          }
+        const summaryTextEl = document.getElementById('radar-summary-text');
+        if (summaryTextEl) {
+          const orig = "Buenos Aires (EZE)";
+          const dest = alert.destino || "Europa";
+          const fechas = (alert.fecha_ida_min && alert.fecha_vuelta_max)
+            ? `${formatDate(alert.fecha_ida_min)} - ${formatDate(alert.fecha_vuelta_max)}`
+            : "";
+          const escalas = `máx ${alert.escalas_max} esc.`;
+          const excl = (alert.aerolineas_excluidas && alert.aerolineas_excluidas.length > 0 && alert.aerolineas_excluidas !== "Ninguna")
+            ? `sin ${Array.isArray(alert.aerolineas_excluidas) ? alert.aerolineas_excluidas.join(', ') : alert.aerolineas_excluidas}`
+            : "";
+          const presup = `US$ ${alert.presupuesto_max}`;
+          
+          const parts = [
+            `<strong>${orig} → ${dest}</strong>`,
+            fechas,
+            escalas,
+            excl,
+            `<strong>${presup}</strong>`
+          ].filter(Boolean);
+          
+          summaryTextEl.innerHTML = parts.join(' · ');
         }
 
         // 2. Countdown logic para actualización del scraper
@@ -255,20 +245,14 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
           }
           const distance = target.getTime() - now.getTime();
           
-          const countdownEl = document.getElementById('countdown-inner');
-          if (!countdownEl) return;
+          const timerVal = document.getElementById('compact-cd-val');
+          if (!timerVal) return;
           
           const hours = Math.floor(distance / (1000 * 60 * 60));
           const mins = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
           const secs = Math.floor((distance % (1000 * 60)) / 1000);
           
-          const hEl = document.getElementById('cd-hours');
-          const mEl = document.getElementById('cd-minutes');
-          const sEl = document.getElementById('cd-seconds');
-          
-          if(hEl) hEl.innerText = hours.toString().padStart(2, '0');
-          if(mEl) mEl.innerText = mins.toString().padStart(2, '0');
-          if(sEl) sEl.innerText = secs.toString().padStart(2, '0');
+          timerVal.innerText = `${hours.toString().padStart(2, '0')}h ${mins.toString().padStart(2, '0')}m ${secs.toString().padStart(2, '0')}s`;
         };
         cdInterval = setInterval(updateCountdown, 1000);
 
@@ -277,6 +261,20 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
         if (!grid) return;
         
         let html = '';
+
+        // Status bar del próximo rastreo
+        html += `
+          <div class="countdown-strip">
+            <div class="countdown-strip-left">
+              <span class="live-dot"></span>
+              <span class="countdown-strip-label">Próximo rastreo para <strong>${alert.destino}</strong>:</span>
+            </div>
+            <div class="countdown-strip-timer">
+              <i class="ph ph-clock"></i>
+              <span id="compact-cd-val">Calculando...</span>
+            </div>
+          </div>
+        `;
         
         // Filtramos TODOS los vuelos para que solo queden los que cumplen con el presupuesto y escalas
         const affordableDeals = allDeals.filter((d: any) => 
@@ -284,8 +282,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
           d.cantidad_escalas <= alert.escalas_max
         );
         
-        // 1. Tarjeta Principal (El Vuelo Absoluto más barato que cumpla las reglas, de cualquier destino)
-        // AL RENDERIZARLA PRIMERO Y CON SPAN 2 / ROW SPAN 2, QUEDA A LA IZQUIERDA.
+        // Tarjeta de Atención (Vuelo Anómalo)
         const pendingDeals = window.__SERVER_DATA__.pendingDeals || [];
         if (pendingDeals && pendingDeals.length > 0) {
           const pDeal = pendingDeals[0];
@@ -311,59 +308,61 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
           `;
         }
 
+        // 1. Tarjeta Principal (Vuelo más barato)
         const mainDeal = affordableDeals.length > 0 ? affordableDeals[0] : null;
+        let mainDealCountry = '';
+        if (mainDeal) {
+          for (const [cName, codes] of Object.entries(countryCodes)) {
+            if (codes.some(code => mainDeal.ida_origen_destino.includes(code))) {
+              mainDealCountry = cName;
+              break;
+            }
+          }
+        }
         
         html += `
           <div class="card main-deal">
-            <div class="card-header"><i class="ph-fill ph-fire" style="color: #ffaa00; margin-right: 4px;"></i> Vuelo Más Barato (Tu Presupuesto)</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+              <div class="card-header" style="margin-bottom: 0;">
+                <i class="ph-fill ph-fire" style="color: #ffaa00; margin-right: 4px;"></i> Vuelo Más Barato (Tu Presupuesto)
+              </div>
+              ${mainDealCountry ? `<span class="card-country-tag"><i class="ph ph-map-pin"></i> ${mainDealCountry}</span>` : ''}
+            </div>
             ${mainDeal ? `
               <div class="card-route">${mainDeal.ida_origen_destino} <i class="ph ph-airplane-tilt" style="opacity: 0.5; margin: 0 4px;"></i> ${mainDeal.vuelta_origen_destino}</div>
               <div class="card-date"><i class="ph ph-calendar-blank"></i> ${formatDate(mainDeal.ida_fecha)} al ${formatDate(mainDeal.vuelta_fecha)}</div>
               <div style="color: var(--text-secondary); margin-top: 0.5rem; font-weight: 500;">${mainDeal.aerolinea} • ${mainDeal.cantidad_escalas} escalas</div>
               <div class="card-price">${formatPrice(mainDeal)}</div>
-              ${mainDeal.link_reserva ? `<a href="${mainDeal.link_reserva}" target="_blank" class="btn btn-primary" style="align-self: flex-start; margin-top: 1.5rem;">Reserva en Google Flights</a>` : ''}
+              ${mainDeal.link_reserva ? `
+                <a href="${mainDeal.link_reserva}" target="_blank" class="btn btn-primary" style="align-self: flex-start; margin-top: 1.5rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                  <span>Reserva en Google Flights</span>
+                  <i class="ph ph-arrow-square-out"></i>
+                </a>
+              ` : ''}
             ` : `
               <div style="margin: auto; color: var(--text-secondary); font-weight: 500;">No hay vuelos dentro de tu presupuesto y reglas.</div>
             `}
           </div>
         `;
-        
-        // 2. Countdown block (Ocupa la parte superior derecha)
+
+        // Encabezado de sección para explorar otros destinos
         html += `
-          <div class="card countdown-card" style="grid-column: span 2; display: flex; flex-direction: row; justify-content: space-between; align-items: center; border-color: rgba(255,255,255,0.1);">
-            <div>
-              <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem; display:flex; align-items:center; gap: 0.5rem;">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.92-10.27l-3.26 3.26"/></svg>
-                Próximo Rastreo
-              </h2>
-              <p style="color: var(--text-secondary); margin: 0; font-size: 0.9rem;">Buscando nuevas oportunidades para: ${alert.destino}</p>
+          <div class="destinations-section-header">
+            <div class="section-title">
+              <i class="ph ph-compass" style="color: var(--accent-color);"></i>
+              <h3>Explorando otros destinos en ${alert.destino}</h3>
             </div>
-            <div id="countdown-inner" style="display: flex; justify-content: center; gap: 1rem; font-size: 1.5rem; font-weight: bold;">
-              <div style="display: flex; flex-direction: column; align-items: center;">
-                <span id="cd-hours" style="font-size: 2rem; color: var(--text-primary);">00</span>
-                <span style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Hs</span>
-              </div>
-              <div style="display: flex; flex-direction: column; align-items: center;">
-                <span id="cd-minutes" style="font-size: 2rem; color: var(--text-primary);">00</span>
-                <span style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Min</span>
-              </div>
-              <div style="display: flex; flex-direction: column; align-items: center;">
-                <span id="cd-seconds" style="font-size: 2rem; color: var(--text-primary);">00</span>
-                <span style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Seg</span>
-              </div>
-            </div>
+            <p class="section-subtitle">Estado del rastreo y mejores tarifas por país según tus preferencias</p>
           </div>
         `;
 
-        // Priorizamos los países que el usuario eligió explícitamente.
-        // Si no eligió ninguno (ej. seleccionó toda "Europa"), mostramos los 4 hubs principales por defecto.
+        // Priorizamos los países que el usuario eligió explícitamente
         let explicitCountries = (alert.paises && alert.paises.length > 0 && !alert.paises.includes('Cualquiera')) 
             ? [...alert.paises] 
             : ['España', 'Reino Unido', 'Francia', 'Alemania'];
             
         let countriesToRender = [...explicitCountries];
         
-        // ¡Magia! Agregamos dinámicamente cualquier OTRO país que tenga una oferta válida en la BD
         Object.keys(countryCodes).forEach(country => {
             const hasDeal = affordableDeals.some((d: any) => countryCodes[country].some(code => d.ida_origen_destino.includes(code)));
             if (hasDeal && !countriesToRender.includes(country)) {
@@ -376,22 +375,32 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
           
           countriesToRender.forEach((country: string) => {
             let destDeal = null;
-            // Busca si hay ofertas para los aeropuertos de ese país
             if (countryCodes[country]) {
                destDeal = affordableDeals.find((d: any) => countryCodes[country].some(code => d.ida_origen_destino.includes(code)));
             }
             
-            if (destDeal) {
+            // Fusión de redundancia: si este país ya es exactamente el vuelo destacado arriba, no lo duplicamos
+            const isDuplicateOfMain = mainDeal && destDeal && (
+              destDeal.id === mainDeal.id || 
+              (destDeal.ida_origen_destino === mainDeal.ida_origen_destino && destDeal.ida_fecha === mainDeal.ida_fecha && destDeal.precio_total_usd === mainDeal.precio_total_usd)
+            );
+
+            if (destDeal && !isDuplicateOfMain) {
               cardsHtml += `
                 <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
                   <div class="card-header"><i class="ph ph-map-pin"></i> ${country}</div>
                   <div class="card-route">${destDeal.ida_origen_destino}</div>
                   <div class="card-date"><i class="ph ph-calendar-blank"></i> ${formatDate(destDeal.ida_fecha)} al ${formatDate(destDeal.vuelta_fecha)}</div>
                   <div class="card-price" style="font-size: clamp(1.4rem, 4vw, 1.8rem); margin-top: auto; margin-bottom: 0.5rem;">${formatPrice(destDeal)}</div>
-                  ${destDeal.link_reserva ? `<a href="${destDeal.link_reserva}" target="_blank" class="btn btn-primary" style="width: 100%; box-sizing: border-box;">Ver Vuelo</a>` : ''}
+                  ${destDeal.link_reserva ? `
+                    <a href="${destDeal.link_reserva}" target="_blank" class="btn btn-outline" style="width: 100%; box-sizing: border-box; margin-top: 0.5rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                      <span>Ver Oferta</span>
+                      <i class="ph ph-arrow-square-out"></i>
+                    </a>
+                  ` : ''}
                 </div>
               `;
-            } else {
+            } else if (!isDuplicateOfMain) {
               cardsHtml += `
                 <div class="empty-card">
                   <i class="ph ph-airplane" style="font-size: 2.5rem; color: rgba(255, 255, 255, 0.1);"></i>
@@ -409,7 +418,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
         }
 
         grid.innerHTML = html;
-        updateCountdown(); // Call immediately to avoid initial flash
+        updateCountdown();
       };
 
       const initDashboard = async () => {
@@ -441,11 +450,17 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
           if (profileDropdown) profileDropdown.style.display = 'inline-block';
           
           const emailDisplay = document.getElementById('user-email-display');
-          if (emailDisplay) emailDisplay.innerText = session.user.email?.split('@')[0] || 'Usuario';
+          const username = session.user.email?.split('@')[0] || 'Usuario';
+          if (emailDisplay) emailDisplay.innerText = username;
 
-          const mobileProfile = document.getElementById('mobile-nav-profile');
-          if (mobileProfile) {
-            mobileProfile.href = "/alertas"; // En mobile, cuenta los lleva a config por ahora
+          const avatarBadge = document.getElementById('user-avatar-badge');
+          if (avatarBadge && session.user.email) {
+            avatarBadge.innerText = session.user.email.charAt(0).toUpperCase();
+          }
+
+          const dropdownUserInfo = document.getElementById('dropdown-user-info');
+          if (dropdownUserInfo && session.user.email) {
+            dropdownUserInfo.innerText = session.user.email;
           }
 
           // Escuchar logout
