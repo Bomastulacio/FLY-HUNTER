@@ -479,10 +479,28 @@ header p {
   
   .top-nav {
     margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .top-nav-logo {
+    white-space: nowrap;
+    font-size: 1.3rem;
   }
 
   .top-nav-actions {
     display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  #user-email-display {
+    max-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    vertical-align: middle;
   }
 
   .bottom-nav {
