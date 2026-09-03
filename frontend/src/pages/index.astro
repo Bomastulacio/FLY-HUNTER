@@ -529,8 +529,20 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
           if (emailDisplay) emailDisplay.innerText = username;
 
           const avatarBadge = document.getElementById('user-avatar-badge');
-          if (avatarBadge && session.user.email) {
-            avatarBadge.innerText = session.user.email.charAt(0).toUpperCase();
+          if (avatarBadge && session.user) {
+            const metadata = session.user.user_metadata || {};
+            const avatarUrl = metadata.avatar_url || metadata.picture;
+            
+            if (avatarUrl) {
+              avatarBadge.innerText = ''; // Quitar inicial
+              avatarBadge.style.backgroundImage = `url('${avatarUrl}')`;
+              avatarBadge.style.backgroundSize = 'cover';
+              avatarBadge.style.backgroundPosition = 'center';
+              avatarBadge.style.color = 'transparent'; // Por si acaso
+              avatarBadge.style.border = '1px solid rgba(255,255,255,0.2)';
+            } else if (session.user.email) {
+              avatarBadge.innerText = session.user.email.charAt(0).toUpperCase();
+            }
           }
 
           const dropdownUserInfo = document.getElementById('dropdown-user-info');

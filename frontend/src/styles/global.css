@@ -394,7 +394,12 @@ header p {
   overflow: hidden;
 }
 
-.profile-dropdown:hover .dropdown-content,
+@media (hover: hover) {
+  .profile-dropdown:hover .dropdown-content {
+    display: block;
+  }
+}
+
 .profile-dropdown.active .dropdown-content {
   display: block;
 }
