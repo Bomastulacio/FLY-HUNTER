@@ -445,17 +445,13 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
           html += `
             <div class="card searching-radar-card" style="grid-column: 1 / -1;">
               <div class="searching-card-header">
-                <div class="searching-header-left">
-                  <div class="radar-scan-circle">
-                    <i class="ph ph-radar"></i>
-                  </div>
-                  <div>
-                    <h3 class="searching-header-title">Sin vuelos bajo tu presupuesto aún</h3>
-                    <p class="searching-header-desc">
-                      Actualmente no encontramos tarifas menores a <strong>US$ ${alert.presupuesto_max}</strong> para estos destinos. Nuestro radar sigue monitoreando activamente nuevas oportunidades:
-                    </p>
-                  </div>
+                <div class="radar-scan-circle">
+                  <i class="ph ph-broadcast"></i>
                 </div>
+                <h3 class="searching-header-title">Sin vuelos bajo tu presupuesto aún</h3>
+                <p class="searching-header-desc">
+                  Actualmente no encontramos tarifas menores a <strong>US$ ${alert.presupuesto_max}</strong> para estos destinos. Nuestro radar sigue monitoreando activamente nuevas oportunidades:
+                </p>
               </div>
 
               <div class="searching-destinations-grid">
@@ -463,19 +459,15 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
                   const flag = countryFlags[country] || '📍';
                   return `
                     <div class="searching-country-item">
-                      <div class="searching-country-left">
+                      <div class="searching-country-main">
                         <span class="searching-flag">${flag}</span>
-                        <div class="searching-country-texts">
-                          <strong class="searching-country-name">${country}</strong>
-                          <span class="searching-country-note">Tarifas actuales superan US$ ${alert.presupuesto_max}</span>
-                        </div>
+                        <strong class="searching-country-name">${country}</strong>
                       </div>
-                      <div class="searching-country-right">
-                        <span class="searching-status-badge">
-                          <span class="pulse-mini-dot"></span>
-                          <span>Buscando</span>
-                        </span>
-                      </div>
+                      <span class="searching-country-note">Tarifas actuales superan US$ ${alert.presupuesto_max}</span>
+                      <span class="searching-status-badge">
+                        <span class="pulse-mini-dot"></span>
+                        <span>Buscando</span>
+                      </span>
                     </div>
                   `;
                 }).join('')}
