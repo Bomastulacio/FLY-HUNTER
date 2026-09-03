@@ -337,22 +337,28 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
         // Helper para construir el único botón de reserva hacia la plataforma ganadora
         const getDealButton = (deal: any, isPrimary = true) => {
           if (!deal) return '';
-          const passengers = alert?.pasajeros || 2;
+          const passengers = Number(alert?.pasajeros) || 2;
           const isDespegar = deal.fuente === 'despegar';
           const label = isDespegar ? 'Ver en Despegar' : 'Ver en Google Flights';
 
-          let url = deal.link_reserva || '';
-          if (!isDespegar) {
-            // Si el link de Google Flights es genérico, armar query forzando los N pasajeros
-            if (!url || url === 'https://google.com/flights' || url === 'https://www.google.com/travel/flights') {
-              const routeParts = (deal.ida_origen_destino || 'EZE-BCN').split('-');
-              const origin = (routeParts[0] || 'EZE').trim().toUpperCase();
-              const dest = (routeParts[1] || 'BCN').trim().toUpperCase();
-              if (deal.ida_fecha && deal.vuelta_fecha) {
-                url = `https://www.google.com/travel/flights?q=Flights%20to%20${dest}%20from%20${origin}%20on%20${deal.ida_fecha}%20through%20${deal.vuelta_fecha}%20for%20${passengers}%20adults&curr=USD`;
-              } else {
-                url = 'https://www.google.com/travel/flights?curr=USD';
-              }
+          let url = '';
+          if (isDespegar) {
+            url = deal.link_reserva || 'https://www.despegar.com.ar/vuelos/';
+          } else {
+            // Para Google Flights: SIEMPRE generamos la URL con la cantidad exacta de adultos para evitar links viejos de 1 persona
+            const routeParts = (deal.ida_origen_destino || 'EZE-BCN').split('-');
+            const origin = (routeParts[0] || 'EZE').trim().toUpperCase();
+            const dest = (routeParts[1] || 'BCN').trim().toUpperCase();
+            const depDate = deal.ida_fecha;
+            const retDate = deal.vuelta_fecha;
+
+            if (depDate && retDate) {
+              const passengerText = passengers === 1 ? '1 adult' : `${passengers} adults`;
+              url = `https://www.google.com/travel/flights?q=Flights%20to%20${dest}%20from%20${origin}%20on%20${depDate}%20through%20${retDate}%20for%20${encodeURIComponent(passengerText)}&curr=USD&hl=es`;
+            } else if (deal.link_reserva) {
+              url = deal.link_reserva;
+            } else {
+              url = 'https://www.google.com/travel/flights?curr=USD&hl=es';
             }
           }
 
