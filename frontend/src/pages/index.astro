@@ -55,16 +55,6 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
         <div class="circle c4"></div>
       </div>
       <div class="horizon-line"></div>
-      
-      <div class="floating-elements">
-        <div class="plane plane-1">
-          <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="1.5"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.2-1.1.6L3 8l6.5 4.5L6 16l-3.2-1.3c-.4-.1-.8.2-1 .6L1 17l4.5 2.5L8 24l1.7-.8c.4-.2.7-.6.6-1L9 19l3.5-3.5 8.2 6.5c.4.2.8 0 .6-.5z"/></svg>
-        </div>
-        <div class="plane plane-2">
-          <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="1.5"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.2-1.1.6L3 8l6.5 4.5L6 16l-3.2-1.3c-.4-.1-.8.2-1 .6L1 17l4.5 2.5L8 24l1.7-.8c.4-.2.7-.6.6-1L9 19l3.5-3.5 8.2 6.5c.4.2.8 0 .6-.5z"/></svg>
-        </div>
-        <div class="cube cube-1"></div>
-      </div>
     </div>
     
     <main>
@@ -75,7 +65,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
           <span class="nav-logo-text">Flight Hunter</span>
         </a>
         <div class="top-nav-actions" id="desktop-user-actions">
-          <a href="/alertas" class="btn btn-outline nav-alertas-btn" title="Mis Alertas">
+          <a href="/alertas" class="btn btn-outline nav-alertas-btn desktop-only" title="Mis Alertas" aria-label="Mis Alertas">
             <i class="ph ph-sliders"></i>
             <span class="nav-alertas-text">Mis Alertas</span>
           </a>
@@ -103,17 +93,16 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
         <p id="hero-subtitle">Configura tu radar para empezar a recibir alertas.</p>
       </header>
 
-      <!-- Radar Config Strip (Collapsed summary) -->
-      <div id="radar-summary-strip" class="radar-summary-strip" style="display: none;">
+      <!-- Radar Config Pill (Single tap target to edit preferences) -->
+      <a href="/alertas" id="radar-summary-strip" class="radar-summary-pill" style="display: none;" title="Toca para editar preferencias de radar" aria-label="Editar preferencias de radar">
         <div class="summary-info">
-          <i class="ph ph-funnel-simple summary-icon"></i>
+          <i class="ph ph-sliders-horizontal summary-icon"></i>
           <span id="radar-summary-text" class="summary-text">Cargando radar...</span>
         </div>
-        <a href="/alertas" class="btn btn-outline edit-radar-btn" title="Editar preferencias">
+        <span class="edit-pill-indicator">
           <i class="ph ph-pencil-simple"></i>
-          <span class="edit-btn-text">Editar</span>
-        </a>
-      </div>
+        </span>
+      </a>
 
       <!-- CONTENEDOR DINÁMICO DEL RADAR -->
       <div id="dynamic-dashboard" style="display: none;">
@@ -191,6 +180,42 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
         "Nueva Zelanda": ["AKL"],
       };
 
+      const countryFlags: Record<string, string> = {
+        "España": "🇪🇸",
+        "Francia": "🇫🇷",
+        "Italia": "🇮🇹",
+        "Reino Unido": "🇬🇧",
+        "Alemania": "🇩🇪",
+        "Portugal": "🇵🇹",
+        "Países Bajos": "🇳🇱",
+        "Suiza": "🇨🇭",
+        "Grecia": "🇬🇷",
+        "París": "🇫🇷",
+        "Estados Unidos": "🇺🇸",
+        "Canadá": "🇨🇦",
+        "México": "🇲🇽",
+        "Miami": "🇺🇸",
+        "Nueva York": "🇺🇸",
+        "Brasil": "🇧🇷",
+        "Chile": "🇨🇱",
+        "Colombia": "🇨🇴",
+        "Perú": "🇵🇪",
+        "Uruguay": "🇺🇾",
+        "Río de Janeiro": "🇧🇷",
+        "República Dominicana": "🇩🇴",
+        "Cancún": "🇲🇽",
+        "Cuba": "🇨🇺",
+        "Costa Rica": "🇨🇷",
+        "Puerto Rico": "🇵🇷",
+        "Japón": "🇯🇵",
+        "Tokio": "🇯🇵",
+        "Tailandia": "🇹🇭",
+        "Corea del Sur": "🇰🇷",
+        "Emiratos Árabes": "🇦🇪",
+        "Australia": "🇦🇺",
+        "Nueva Zelanda": "🇳🇿"
+      };
+
       // @ts-ignore
       const allDeals = window.__SERVER_DATA__.approvedDeals || [];
       let cdInterval: any;
@@ -207,7 +232,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
 
         const summaryTextEl = document.getElementById('radar-summary-text');
         if (summaryTextEl) {
-          const orig = "Buenos Aires (EZE)";
+          const orig = "EZE";
           const dest = alert.destino || "Europa";
           const fechas = (alert.fecha_ida_min && alert.fecha_vuelta_max)
             ? `${formatDate(alert.fecha_ida_min)} - ${formatDate(alert.fecha_vuelta_max)}`
@@ -345,16 +370,9 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
           </div>
         `;
 
-        // Encabezado de sección para explorar otros destinos
-        html += `
-          <div class="destinations-section-header">
-            <div class="section-title">
-              <i class="ph ph-compass" style="color: var(--accent-color);"></i>
-              <h3>Explorando otros destinos en ${alert.destino}</h3>
-            </div>
-            <p class="section-subtitle">Estado del rastreo y mejores tarifas por país según tus preferencias</p>
-          </div>
-        `;
+        // Lista compacta de otros destinos en una sola card (Spec #5)
+        let countriesWithDeals: any[] = [];
+        let countriesSearching: any[] = [];
 
         // Priorizamos los países que el usuario eligió explícitamente
         let explicitCountries = (alert.paises && alert.paises.length > 0 && !alert.paises.includes('Cualquiera')) 
@@ -369,52 +387,106 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
                 countriesToRender.push(country);
             }
         });
-            
-        if (countriesToRender.length > 0) {
-          let cardsHtml = '<div class="europe-destinations">';
-          
-          countriesToRender.forEach((country: string) => {
-            let destDeal = null;
-            if (countryCodes[country]) {
-               destDeal = affordableDeals.find((d: any) => countryCodes[country].some(code => d.ida_origen_destino.includes(code)));
-            }
-            
-            // Fusión de redundancia: si este país ya es exactamente el vuelo destacado arriba, no lo duplicamos
-            const isDuplicateOfMain = mainDeal && destDeal && (
-              destDeal.id === mainDeal.id || 
-              (destDeal.ida_origen_destino === mainDeal.ida_origen_destino && destDeal.ida_fecha === mainDeal.ida_fecha && destDeal.precio_total_usd === mainDeal.precio_total_usd)
-            );
 
-            if (destDeal && !isDuplicateOfMain) {
-              cardsHtml += `
-                <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
-                  <div class="card-header"><i class="ph ph-map-pin"></i> ${country}</div>
-                  <div class="card-route">${destDeal.ida_origen_destino}</div>
-                  <div class="card-date"><i class="ph ph-calendar-blank"></i> ${formatDate(destDeal.ida_fecha)} al ${formatDate(destDeal.vuelta_fecha)}</div>
-                  <div class="card-price" style="font-size: clamp(1.4rem, 4vw, 1.8rem); margin-top: auto; margin-bottom: 0.5rem;">${formatPrice(destDeal)}</div>
-                  ${destDeal.link_reserva ? `
-                    <a href="${destDeal.link_reserva}" target="_blank" class="btn btn-outline" style="width: 100%; box-sizing: border-box; margin-top: 0.5rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
-                      <span>Ver Oferta</span>
+        countriesToRender.forEach((country: string) => {
+          let destDeal = null;
+          if (countryCodes[country]) {
+            destDeal = affordableDeals.find((d: any) => countryCodes[country].some(code => d.ida_origen_destino.includes(code)));
+          }
+
+          const isDuplicateOfMain = mainDeal && destDeal && (
+            destDeal.id === mainDeal.id || 
+            (destDeal.ida_origen_destino === mainDeal.ida_origen_destino && destDeal.ida_fecha === mainDeal.ida_fecha && destDeal.precio_total_usd === mainDeal.precio_total_usd)
+          );
+
+          if (isDuplicateOfMain) {
+            return;
+          }
+
+          if (destDeal) {
+            countriesWithDeals.push({ country, deal: destDeal });
+          } else {
+            countriesSearching.push({ country });
+          }
+        });
+
+        countriesWithDeals.sort((a, b) => a.deal.precio_total_usd - b.deal.precio_total_usd);
+
+        if (countriesWithDeals.length > 0 || countriesSearching.length > 0) {
+          html += `
+            <div class="card destinations-list-card" style="grid-column: 1 / -1;">
+              <div class="dest-list-header">
+                <div class="dest-list-title">
+                  <i class="ph ph-compass"></i>
+                  <h3>Otros destinos en ${alert.destino}</h3>
+                </div>
+                <span class="dest-list-badge">${countriesWithDeals.length + countriesSearching.length} destinos</span>
+              </div>
+              <div class="dest-rows-container">
+          `;
+
+          // 1. Países con ofertas encontradas (arriba)
+          countriesWithDeals.forEach(({ country, deal }) => {
+            const flag = countryFlags[country] || '✈️';
+            html += `
+              <div class="dest-compact-row has-deal">
+                <div class="dest-row-left">
+                  <span class="dest-row-flag">${flag}</span>
+                  <div class="dest-row-details">
+                    <div class="dest-row-main">
+                      <strong>${country}</strong>
+                      <span class="dest-row-route">${deal.ida_origen_destino}</span>
+                    </div>
+                    <div class="dest-row-sub">
+                      <span>${formatDate(deal.ida_fecha)} al ${formatDate(deal.vuelta_fecha)}</span>
+                      <span>•</span>
+                      <span>${deal.aerolinea}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="dest-row-right">
+                  <span class="dest-row-price">${formatPrice(deal)}</span>
+                  ${deal.link_reserva ? `
+                    <a href="${deal.link_reserva}" target="_blank" class="btn btn-outline dest-row-action" title="Ver Vuelo" aria-label="Ver vuelo a ${country}">
+                      <span>Ver Vuelo</span>
                       <i class="ph ph-arrow-square-out"></i>
                     </a>
                   ` : ''}
                 </div>
-              `;
-            } else if (!isDuplicateOfMain) {
-              cardsHtml += `
-                <div class="empty-card">
-                  <i class="ph ph-airplane" style="font-size: 2.5rem; color: rgba(255, 255, 255, 0.1);"></i>
-                  <div style="display: flex; flex-direction: column; gap: 0.5rem; padding: 0 1rem;">
-                    <strong style="color: var(--text-primary); font-size: 1.15rem;">${country}</strong>
-                    <span>Buscando ofertas<br>por debajo de US$ ${alert.presupuesto_max}...</span>
+              </div>
+            `;
+          });
+
+          // 2. Países en búsqueda activa (abajo)
+          countriesSearching.forEach(({ country }) => {
+            const flag = countryFlags[country] || '📍';
+            html += `
+              <div class="dest-compact-row is-searching">
+                <div class="dest-row-left">
+                  <span class="dest-row-flag">${flag}</span>
+                  <div class="dest-row-details">
+                    <div class="dest-row-main">
+                      <strong>${country}</strong>
+                    </div>
+                    <div class="dest-row-sub searching-subtext">
+                      Buscando tarifas < US$ ${alert.presupuesto_max}...
+                    </div>
                   </div>
                 </div>
-              `;
-            }
+                <div class="dest-row-right">
+                  <span class="dest-status-pill">
+                    <span class="pulse-mini-dot"></span>
+                    Rastreo activo
+                  </span>
+                </div>
+              </div>
+            `;
           });
-          
-          cardsHtml += '</div>';
-          html += cardsHtml;
+
+          html += `
+              </div>
+            </div>
+          `;
         }
 
         grid.innerHTML = html;
