@@ -106,6 +106,18 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
 
       <!-- CONTENEDOR DINÁMICO DEL RADAR -->
       <div id="dynamic-dashboard" style="display: none;">
+        <!-- Status bar del próximo rastreo (delgada, fuera del bento-grid) -->
+        <div id="countdown-strip-container" class="countdown-strip">
+          <div class="countdown-strip-left">
+            <span class="live-dot"></span>
+            <span class="countdown-strip-label">Próximo rastreo para <strong id="cd-target-dest">Europa</strong>:</span>
+          </div>
+          <div class="countdown-strip-timer">
+            <i class="ph ph-clock"></i>
+            <span id="compact-cd-val">Calculando...</span>
+          </div>
+        </div>
+
         <div class="bento-grid" id="destinations-grid">
            <!-- Renderizado por JS -->
         </div>
@@ -287,20 +299,9 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
         
         let html = '';
 
-        // Status bar del próximo rastreo
-        html += `
-          <div class="countdown-strip">
-            <div class="countdown-strip-left">
-              <span class="live-dot"></span>
-              <span class="countdown-strip-label">Próximo rastreo para <strong>${alert.destino}</strong>:</span>
-            </div>
-            <div class="countdown-strip-timer">
-              <i class="ph ph-clock"></i>
-              <span id="compact-cd-val">Calculando...</span>
-            </div>
-          </div>
-        `;
-        
+        const cdDest = document.getElementById('cd-target-dest');
+        if (cdDest) cdDest.innerText = alert.destino;
+
         // Filtramos TODOS los vuelos para que solo queden los que cumplen con el presupuesto y escalas
         const affordableDeals = allDeals.filter((d: any) => 
           d.precio_total_usd <= alert.presupuesto_max && 
@@ -370,7 +371,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
           </div>
         `;
 
-        // Lista compacta de otros destinos en una sola card (Spec #5)
+        // Otros destinos: separar los que tienen oferta de los que siguen buscando
         let countriesWithDeals: any[] = [];
         let countriesSearching: any[] = [];
 
@@ -412,78 +413,72 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
 
         countriesWithDeals.sort((a, b) => a.deal.precio_total_usd - b.deal.precio_total_usd);
 
-        if (countriesWithDeals.length > 0 || countriesSearching.length > 0) {
-          html += `
-            <div class="card destinations-list-card" style="grid-column: 1 / -1;">
-              <div class="dest-list-header">
-                <div class="dest-list-title">
-                  <i class="ph ph-compass"></i>
-                  <h3>Otros destinos en ${alert.destino}</h3>
-                </div>
-                <span class="dest-list-badge">${countriesWithDeals.length + countriesSearching.length} destinos</span>
-              </div>
-              <div class="dest-rows-container">
-          `;
-
-          // 1. Países con ofertas encontradas (arriba)
+        // 1. Países con ofertas encontradas (como cards completas anteriores)
+        if (countriesWithDeals.length > 0) {
           countriesWithDeals.forEach(({ country, deal }) => {
-            const flag = countryFlags[country] || '✈️';
-            html += `
-              <div class="dest-compact-row has-deal">
-                <div class="dest-row-left">
-                  <span class="dest-row-flag">${flag}</span>
-                  <div class="dest-row-details">
-                    <div class="dest-row-main">
-                      <strong>${country}</strong>
-                      <span class="dest-row-route">${deal.ida_origen_destino}</span>
-                    </div>
-                    <div class="dest-row-sub">
-                      <span>${formatDate(deal.ida_fecha)} al ${formatDate(deal.vuelta_fecha)}</span>
-                      <span>•</span>
-                      <span>${deal.aerolinea}</span>
-                    </div>
-                  </div>
-                </div>
-                <div class="dest-row-right">
-                  <span class="dest-row-price">${formatPrice(deal)}</span>
-                  ${deal.link_reserva ? `
-                    <a href="${deal.link_reserva}" target="_blank" class="btn btn-outline dest-row-action" title="Ver Vuelo" aria-label="Ver vuelo a ${country}">
-                      <span>Ver Vuelo</span>
-                      <i class="ph ph-arrow-square-out"></i>
-                    </a>
-                  ` : ''}
-                </div>
-              </div>
-            `;
-          });
-
-          // 2. Países en búsqueda activa (abajo)
-          countriesSearching.forEach(({ country }) => {
             const flag = countryFlags[country] || '📍';
             html += `
-              <div class="dest-compact-row is-searching">
-                <div class="dest-row-left">
-                  <span class="dest-row-flag">${flag}</span>
-                  <div class="dest-row-details">
-                    <div class="dest-row-main">
-                      <strong>${country}</strong>
-                    </div>
-                    <div class="dest-row-sub searching-subtext">
-                      Buscando tarifas < US$ ${alert.presupuesto_max}...
-                    </div>
+              <div class="card destination-flight-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                  <div class="card-header" style="margin-bottom: 0;">
+                    <span style="font-size: 1.25rem; margin-right: 0.4rem;">${flag}</span> ${country}
                   </div>
+                  <span class="card-country-tag"><i class="ph ph-check-circle" style="color: var(--accent-color);"></i> Oferta</span>
                 </div>
-                <div class="dest-row-right">
-                  <span class="dest-status-pill">
-                    <span class="pulse-mini-dot"></span>
-                    Rastreo activo
-                  </span>
-                </div>
+                <div class="card-route">${deal.ida_origen_destino} <i class="ph ph-airplane-tilt" style="opacity: 0.5; margin: 0 4px;"></i> ${deal.vuelta_origen_destino || ''}</div>
+                <div class="card-date"><i class="ph ph-calendar-blank"></i> ${formatDate(deal.ida_fecha)} al ${formatDate(deal.vuelta_fecha)}</div>
+                <div style="color: var(--text-secondary); margin-top: 0.5rem; font-weight: 500; font-size: 0.9rem;">${deal.aerolinea} • ${deal.cantidad_escalas} escalas</div>
+                <div class="card-price">${formatPrice(deal)}</div>
+                ${deal.link_reserva ? `
+                  <a href="${deal.link_reserva}" target="_blank" class="btn btn-outline" style="align-self: flex-start; margin-top: 1.5rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                    <span>Ver Vuelo</span>
+                    <i class="ph ph-arrow-square-out"></i>
+                  </a>
+                ` : ''}
               </div>
             `;
           });
+        }
 
+        // 2. Países en búsqueda activa (explicando claramente que aún no hay vuelos bajo presupuesto)
+        if (countriesSearching.length > 0) {
           html += `
+            <div class="card searching-radar-card" style="grid-column: 1 / -1;">
+              <div class="searching-card-header">
+                <div class="searching-header-left">
+                  <div class="radar-scan-circle">
+                    <i class="ph ph-radar"></i>
+                  </div>
+                  <div>
+                    <h3 class="searching-header-title">Sin vuelos bajo tu presupuesto aún</h3>
+                    <p class="searching-header-desc">
+                      Actualmente no encontramos tarifas menores a <strong>US$ ${alert.presupuesto_max}</strong> para estos destinos. Nuestro radar sigue monitoreando activamente nuevas oportunidades:
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="searching-destinations-grid">
+                ${countriesSearching.map(({ country }) => {
+                  const flag = countryFlags[country] || '📍';
+                  return `
+                    <div class="searching-country-item">
+                      <div class="searching-country-left">
+                        <span class="searching-flag">${flag}</span>
+                        <div class="searching-country-texts">
+                          <strong class="searching-country-name">${country}</strong>
+                          <span class="searching-country-note">Tarifas actuales superan US$ ${alert.presupuesto_max}</span>
+                        </div>
+                      </div>
+                      <div class="searching-country-right">
+                        <span class="searching-status-badge">
+                          <span class="pulse-mini-dot"></span>
+                          <span>Buscando</span>
+                        </span>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
               </div>
             </div>
           `;

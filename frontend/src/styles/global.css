@@ -452,16 +452,17 @@ header p {
 
 /* Compact Next Scan Strip */
 .countdown-strip {
-  grid-column: 1 / -1;
   background: linear-gradient(90deg, rgba(209, 255, 76, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
   border: 1px solid rgba(209, 255, 76, 0.15);
   border-radius: var(--border-radius-sm);
-  padding: 0.65rem 1.25rem;
+  padding: 0.65rem 1.15rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 0.88rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1.25rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .countdown-strip-left {
@@ -499,156 +500,135 @@ header p {
   font-size: 0.95rem;
 }
 
-/* Compact Destinations List Card (Spec #5) */
-.destinations-list-card {
-  padding: 1.25rem 1.25rem 0.5rem 1.25rem;
-  border-radius: var(--border-radius-lg);
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-}
-
-.dest-list-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.75rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.dest-list-title {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  color: var(--text-primary);
-}
-
-.dest-list-title i {
-  color: var(--accent-color);
-  font-size: 1.25rem;
-}
-
-.dest-list-title h3 {
-  margin: 0;
-  font-size: 1.15rem;
-  color: var(--text-primary);
-}
-
-.dest-list-badge {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.05);
-  padding: 0.25rem 0.65rem;
-  border-radius: 100px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.dest-rows-container {
+/* Destination Flight Card (Cards completas para ofertas encontradas) */
+.destination-flight-card {
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+  min-height: 220px;
 }
 
-.dest-compact-row {
+/* Searching Radar Card (Explicación clara de países sin ofertas bajo presupuesto) */
+.searching-radar-card {
+  padding: 1.5rem;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-lg);
+  grid-column: 1 / -1;
+  box-sizing: border-box;
+}
+
+.searching-card-header {
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.searching-header-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.radar-scan-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(209, 255, 76, 0.08);
+  border: 1px solid rgba(209, 255, 76, 0.2);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 0;
-  min-height: 58px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  box-sizing: border-box;
+  justify-content: center;
+  color: var(--accent-color);
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.searching-header-title {
+  margin: 0 0 0.4rem 0;
+  font-size: 1.15rem;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.searching-header-desc {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.searching-header-desc strong {
+  color: var(--text-primary);
+}
+
+.searching-destinations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 0.75rem;
 }
 
-.dest-compact-row:last-child {
-  border-bottom: none;
+.searching-country-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--border-radius-md);
+  gap: 0.75rem;
+  box-sizing: border-box;
 }
 
-.dest-row-left {
+.searching-country-left {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   min-width: 0;
-  flex: 1;
 }
 
-.dest-row-flag {
-  font-size: 1.35rem;
+.searching-flag {
+  font-size: 1.5rem;
   line-height: 1;
   flex-shrink: 0;
 }
 
-.dest-row-details {
+.searching-country-texts {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
   min-width: 0;
 }
 
-.dest-row-main {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.95rem;
+.searching-country-name {
   color: var(--text-primary);
+  font-size: 0.95rem;
 }
 
-.dest-row-route {
+.searching-country-note {
   font-size: 0.8rem;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.dest-row-sub {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.82rem;
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.dest-row-sub.searching-subtext {
-  color: var(--text-secondary);
-  font-size: 0.82rem;
-}
-
-.dest-row-right {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+.searching-country-right {
   flex-shrink: 0;
 }
 
-.dest-row-price {
-  font-size: 1.15rem;
-  font-weight: 800;
-  color: var(--accent-color);
-  font-family: 'Plus Jakarta Sans', sans-serif;
-}
-
-.dest-row-action {
-  margin: 0 !important;
-  padding: 0.4rem 0.85rem !important;
-  font-size: 0.82rem !important;
-  min-height: 38px;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  border-radius: 100px;
-}
-
-.dest-status-pill {
+.searching-status-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.78rem;
-  color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.75rem;
+  color: var(--accent-color);
+  background: rgba(209, 255, 76, 0.06);
+  border: 1px solid rgba(209, 255, 76, 0.18);
   padding: 0.3rem 0.65rem;
   border-radius: 100px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .pulse-mini-dot {
@@ -895,36 +875,45 @@ header p {
     font-size: 1.1rem;
   }
 
+  .bento-grid {
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto !important;
+    gap: 1rem;
+  }
+
   .countdown-strip {
     flex-direction: row;
     justify-content: space-between;
-    padding: 0.55rem 0.85rem;
-    font-size: 0.8rem;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.82rem;
+    margin-bottom: 1rem;
   }
 
   .countdown-strip-timer {
     font-size: 0.85rem;
   }
 
-  .destinations-list-card {
-    padding: 1rem 1rem 0.25rem 1rem;
+  .searching-radar-card {
+    padding: 1.15rem;
   }
 
-  .dest-compact-row {
-    padding: 0.6rem 0;
-    min-height: 52px;
+  .searching-header-left {
+    gap: 0.75rem;
   }
 
-  .dest-row-main {
-    font-size: 0.88rem;
+  .radar-scan-circle {
+    width: 38px;
+    height: 38px;
+    font-size: 1.2rem;
   }
 
-  .dest-row-sub {
-    font-size: 0.78rem;
+  .searching-destinations-grid {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
   }
 
-  .dest-row-price {
-    font-size: 1.05rem;
+  .searching-country-item {
+    padding: 0.75rem 0.85rem;
   }
 
   .bottom-nav {
@@ -992,6 +981,7 @@ header p {
   }
 
   .main-deal, 
+  .destination-flight-card,
   .lufthansa-card, 
   .asia-section {
     grid-column: span 1;
