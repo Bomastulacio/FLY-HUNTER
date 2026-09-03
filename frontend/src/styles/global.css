@@ -279,6 +279,42 @@ header p {
   border-color: rgba(255, 255, 255, 0.2);
 }
 
+/* Deal Actions (Google Flights + Despegar) */
+.deal-actions-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1.5rem;
+  align-items: center;
+}
+
+.deal-action-btn {
+  margin-top: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 0.6rem 1.15rem;
+  border-radius: var(--border-radius-sm);
+  text-decoration: none;
+  transition: all var(--transition-smooth);
+}
+
+.despegar-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-primary);
+}
+
+.despegar-btn:hover {
+  background: rgba(235, 0, 41, 0.15);
+  border-color: rgba(235, 0, 41, 0.45);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(235, 0, 41, 0.2);
+}
+
 /* Navigation Bars */
 .top-nav {
   display: flex;
@@ -1044,6 +1080,18 @@ header p {
   
   .card {
     padding: 1.25rem;
+  }
+
+  .deal-actions-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .deal-action-btn {
+    width: 100%;
+    text-align: center;
   }
 
   .radar-circles {

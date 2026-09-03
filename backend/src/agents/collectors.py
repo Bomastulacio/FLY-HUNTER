@@ -10,13 +10,13 @@ flight_cache = diskcache.Cache(cache_dir)
 SERPAPI_KEY = os.environ.get("SERPAPI_KEY", "")
 
 @flight_cache.memoize(expire=43200) # Expira en 12 horas
-def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str) -> List[Dict]:
+def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str, adults: int = 2) -> List[Dict]:
     """Busca vuelos usando SerpApi (Google Flights)"""
     if not SERPAPI_KEY:
         print("Warning: SERPAPI_KEY no encontrada. Omitiendo búsqueda.")
         return []
         
-    print(f"Buscando en SerpApi: {origin} -> {dest} ({dep_date} al {ret_date})")
+    print(f"Buscando en SerpApi: {origin} -> {dest} ({dep_date} al {ret_date}) para {adults} adultos")
     url = "https://serpapi.com/search.json"
     params = {
         "engine": "google_flights",
@@ -24,6 +24,7 @@ def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str) 
         "arrival_id": dest,
         "outbound_date": dep_date,
         "return_date": ret_date,
+        "adults": adults,
         "currency": "USD",
         "type": "1", # Ida y vuelta
         "api_key": SERPAPI_KEY
@@ -56,8 +57,8 @@ def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str) 
             layovers = flight.get("layovers", [])
             stops = len(layovers) if layovers else max(0, len(flight.get("flights", [])) - 1)
             
-            # Precio base (1 pasajero) y lo multiplicamos por 2 para el presupuesto de pareja
-            precio_usd = flight.get("price", 0) * 2
+            # Precio total devuelto por Google Flights para los pasajeros configurados
+            precio_usd = flight.get("price", 0)
             
             parsed_flights.append({
                 "ida_fecha": dep_date,
