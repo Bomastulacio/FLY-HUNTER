@@ -13,3 +13,16 @@ Este archivo sirve como memoria a largo plazo para los agentes de IA que trabaje
 - **La Solución:** 
   1. Hay que asegurarse de que el SQL para crear `search_alerts` esté ejecutado en Supabase.
   2. A nivel código, se agregó un **bloque de fallback** en `strategist.py` para que, si falla la lectura de alertas o está vacía, el bot busque por defecto vuelos a Europa en lugar de quedarse sin hacer nada.
+
+## 3. Preselección de Pasajeros en Enlaces de Google Flights
+- **Contexto:** Las alertas del usuario configuran un número exacto de pasajeros (ej. 2 adultos). Si se almacena en la base de datos una URL con el parámetro protobuf `tfs` generado para 1 pasajero por SerpApi, el usuario al hacer clic en la web es redirigido a una búsqueda para 1 sola persona.
+- **La Solución:** En el frontend (`index.astro`), la URL hacia Google Flights **siempre debe construirse dinámicamente** utilizando la consulta en lenguaje natural con la cantidad exacta de adultos del radar:
+  `https://www.google.com/travel/flights?q=Flights to ${dest} from ${origin} on ${depDate} through ${retDate} for ${passengers} adults&curr=USD&hl=es`.
+  Esto garantiza que Google Flights se abra siempre con los 2 pasajeros preseleccionados en el navegador del usuario.
+
+## 4. Limitaciones de Deep-Links y Bot Protection en OTAs (Despegar)
+- **Contexto:** Despegar cuenta con protección estricta contra bots (DataDome / Cloudflare) y no admite enlaces directos en frío a URLs de resultados (`/vuelos/results/roundtrip/...`), devolviendo pantallas de error ("¡Recalculando! El GPS perdió la señal").
+- **La Solución:** 
+  1. No exponer enlaces directos calculados a mano hacia Despegar en la UI.
+  2. La auditoría y comparación de tarifas de Despegar debe realizarla el agente de Playwright en segundo plano (simulando navegación completa o usando sesión activa).
+  3. El frontend debe mostrar **únicamente el botón hacia la opción ganadora** que ya fue validada con un enlace funcional.
