@@ -348,11 +348,17 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
         
         html += `
           <div class="card main-deal">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
-              <div class="card-header" style="margin-bottom: 0;">
-                <i class="ph-fill ph-fire" style="color: #ffaa00; margin-right: 4px;"></i> Vuelo Más Barato (Tu Presupuesto)
+            <div class="main-deal-header">
+              <div class="main-deal-tag">
+                <i class="ph-fill ph-fire"></i>
+                <span>Vuelo más barato</span>
               </div>
-              ${mainDealCountry ? `<span class="card-country-tag"><i class="ph ph-map-pin"></i> ${mainDealCountry}</span>` : ''}
+              ${mainDealCountry ? `
+                <div class="main-deal-country">
+                  <span class="country-flag">${countryFlags[mainDealCountry] || '📍'}</span>
+                  <span>${mainDealCountry}</span>
+                </div>
+              ` : ''}
             </div>
             ${mainDeal ? `
               <div class="card-route">${mainDeal.ida_origen_destino} <i class="ph ph-airplane-tilt" style="opacity: 0.5; margin: 0 4px;"></i> ${mainDeal.vuelta_origen_destino}</div>
@@ -419,11 +425,15 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
             const flag = countryFlags[country] || '📍';
             html += `
               <div class="card destination-flight-card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
-                  <div class="card-header" style="margin-bottom: 0;">
-                    <span style="font-size: 1.25rem; margin-right: 0.4rem;">${flag}</span> ${country}
+                <div class="main-deal-header">
+                  <div class="main-deal-country">
+                    <span class="country-flag">${flag}</span>
+                    <span>${country}</span>
                   </div>
-                  <span class="card-country-tag"><i class="ph ph-check-circle" style="color: var(--accent-color);"></i> Oferta</span>
+                  <div class="main-deal-tag" style="color: var(--accent-color); background: rgba(209, 255, 76, 0.08); border-color: rgba(209, 255, 76, 0.25);">
+                    <i class="ph ph-check-circle"></i>
+                    <span>Oferta</span>
+                  </div>
                 </div>
                 <div class="card-route">${deal.ida_origen_destino} <i class="ph ph-airplane-tilt" style="opacity: 0.5; margin: 0 4px;"></i> ${deal.vuelta_origen_destino || ''}</div>
                 <div class="card-date"><i class="ph ph-calendar-blank"></i> ${formatDate(deal.ida_fecha)} al ${formatDate(deal.vuelta_fecha)}</div>
@@ -442,16 +452,22 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
 
         // 2. Países en búsqueda activa (explicando claramente que aún no hay vuelos bajo presupuesto)
         if (countriesSearching.length > 0) {
+          const searchingTitle = mainDealCountry 
+            ? `Rastreando el resto de ${alert.destino}` 
+            : `Rastreando destinos en ${alert.destino}`;
+            
+          const searchingDesc = mainDealCountry
+            ? `Además de la oferta encontrada para <strong>${mainDealCountry}</strong>, tu radar continúa buscando tarifas menores a <strong>US$ ${alert.presupuesto_max}</strong> en:`
+            : `Actualmente no encontramos tarifas menores a <strong>US$ ${alert.presupuesto_max}</strong> para tus fechas. El radar sigue monitoreando activamente:`;
+
           html += `
             <div class="card searching-radar-card" style="grid-column: 1 / -1;">
               <div class="searching-card-header">
                 <div class="radar-scan-circle">
                   <i class="ph ph-broadcast"></i>
                 </div>
-                <h3 class="searching-header-title">Sin vuelos bajo tu presupuesto aún</h3>
-                <p class="searching-header-desc">
-                  Actualmente no encontramos tarifas menores a <strong>US$ ${alert.presupuesto_max}</strong> para estos destinos. Nuestro radar sigue monitoreando activamente nuevas oportunidades:
-                </p>
+                <h3 class="searching-header-title">${searchingTitle}</h3>
+                <p class="searching-header-desc">${searchingDesc}</p>
               </div>
 
               <div class="searching-destinations-grid">

@@ -161,6 +161,45 @@ header p {
   box-shadow: 0 12px 40px rgba(209, 255, 76, 0.1);
 }
 
+.main-deal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.main-deal-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #ffb020;
+  background: rgba(255, 176, 32, 0.1);
+  border: 1px solid rgba(255, 176, 32, 0.28);
+  padding: 0.35rem 0.8rem;
+  border-radius: 100px;
+  white-space: nowrap;
+}
+
+.main-deal-country {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0.35rem 0.8rem;
+  border-radius: 100px;
+  white-space: nowrap;
+}
+
 .europe-destinations {
   grid-column: span 2;
   display: grid;
