@@ -334,35 +334,35 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
           `;
         }
 
-        // Helper para construir enlaces directos a Google Flights y Despegar con la cantidad exacta de pasajeros
-        const getFlightUrls = (deal: any) => {
-          if (!deal) return { googleUrl: '#', despegarUrl: '#' };
+        // Helper para construir el único botón de reserva hacia la plataforma ganadora
+        const getDealButton = (deal: any, isPrimary = true) => {
+          if (!deal) return '';
           const passengers = alert?.pasajeros || 2;
-          const routeParts = (deal.ida_origen_destino || 'EZE-BCN').split('-');
-          const origin = (routeParts[0] || 'EZE').trim().toUpperCase();
-          const dest = (routeParts[1] || 'BCN').trim().toUpperCase();
-          const depDate = deal.ida_fecha;
-          const retDate = deal.vuelta_fecha;
+          const isDespegar = deal.fuente === 'despegar';
+          const label = isDespegar ? 'Ver en Despegar' : 'Ver en Google Flights';
 
-          // Google Flights: si hay link de reserva de SerpApi válido, lo usamos; si no, construimos query directa que fija los pasajeros
-          let googleUrl = deal.link_reserva || '';
-          if (!googleUrl || googleUrl === 'https://google.com/flights' || googleUrl === 'https://www.google.com/travel/flights') {
-            if (depDate && retDate) {
-              googleUrl = `https://www.google.com/travel/flights?q=Flights%20to%20${dest}%20from%20${origin}%20on%20${depDate}%20through%20${retDate}%20for%20${passengers}%20adults&curr=USD`;
-            } else {
-              googleUrl = 'https://www.google.com/travel/flights?curr=USD';
+          let url = deal.link_reserva || '';
+          if (!isDespegar) {
+            // Si el link de Google Flights es genérico, armar query forzando los N pasajeros
+            if (!url || url === 'https://google.com/flights' || url === 'https://www.google.com/travel/flights') {
+              const routeParts = (deal.ida_origen_destino || 'EZE-BCN').split('-');
+              const origin = (routeParts[0] || 'EZE').trim().toUpperCase();
+              const dest = (routeParts[1] || 'BCN').trim().toUpperCase();
+              if (deal.ida_fecha && deal.vuelta_fecha) {
+                url = `https://www.google.com/travel/flights?q=Flights%20to%20${dest}%20from%20${origin}%20on%20${deal.ida_fecha}%20through%20${deal.vuelta_fecha}%20for%20${passengers}%20adults&curr=USD`;
+              } else {
+                url = 'https://www.google.com/travel/flights?curr=USD';
+              }
             }
           }
 
-          // Despegar: link directo para los mismos pasajeros y fechas
-          let despegarUrl = '';
-          if (depDate && retDate) {
-            despegarUrl = `https://www.despegar.com.ar/vuelos/results/roundtrip/${origin}/${dest}/${depDate}/${retDate}/${passengers}/0/0`;
-          } else {
-            despegarUrl = `https://www.despegar.com.ar/vuelos/${origin.toLowerCase()}/${dest.toLowerCase()}`;
-          }
-
-          return { googleUrl, despegarUrl };
+          const btnClass = isPrimary ? 'btn btn-primary' : 'btn btn-outline';
+          return `
+            <a href="${url}" target="_blank" class="${btnClass}" style="align-self: flex-start; margin-top: 1.5rem; display: inline-flex; align-items: center; gap: 0.5rem;" title="${label} (${passengers} personas)">
+              <span>${label}</span>
+              <i class="ph ph-arrow-square-out"></i>
+            </a>
+          `;
         };
 
         // 1. Tarjeta Principal (Vuelo más barato)
@@ -391,25 +391,13 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
                 </div>
               ` : ''}
             </div>
-            ${mainDeal ? (() => {
-              const urls = getFlightUrls(mainDeal);
-              return `
-                <div class="card-route">${mainDeal.ida_origen_destino} <i class="ph ph-airplane-tilt" style="opacity: 0.5; margin: 0 4px;"></i> ${mainDeal.vuelta_origen_destino}</div>
-                <div class="card-date"><i class="ph ph-calendar-blank"></i> ${formatDate(mainDeal.ida_fecha)} al ${formatDate(mainDeal.vuelta_fecha)}</div>
-                <div style="color: var(--text-secondary); margin-top: 0.5rem; font-weight: 500;">${mainDeal.aerolinea} • ${mainDeal.cantidad_escalas} escalas</div>
-                <div class="card-price">${formatPrice(mainDeal)}</div>
-                <div class="deal-actions-group">
-                  <a href="${urls.googleUrl}" target="_blank" class="btn btn-primary deal-action-btn" title="Ver en Google Flights (${alert.pasajeros || 2} personas)">
-                    <span>Ver en Google Flights</span>
-                    <i class="ph ph-arrow-square-out"></i>
-                  </a>
-                  <a href="${urls.despegarUrl}" target="_blank" class="btn btn-outline deal-action-btn despegar-btn" title="Ver en Despegar (${alert.pasajeros || 2} personas)">
-                    <span>Ver en Despegar</span>
-                    <i class="ph ph-arrow-square-out"></i>
-                  </a>
-                </div>
-              `;
-            })() : `
+            ${mainDeal ? `
+              <div class="card-route">${mainDeal.ida_origen_destino} <i class="ph ph-airplane-tilt" style="opacity: 0.5; margin: 0 4px;"></i> ${mainDeal.vuelta_origen_destino}</div>
+              <div class="card-date"><i class="ph ph-calendar-blank"></i> ${formatDate(mainDeal.ida_fecha)} al ${formatDate(mainDeal.vuelta_fecha)}</div>
+              <div style="color: var(--text-secondary); margin-top: 0.5rem; font-weight: 500;">${mainDeal.aerolinea} • ${mainDeal.cantidad_escalas} escalas</div>
+              <div class="card-price">${formatPrice(mainDeal)}</div>
+              ${getDealButton(mainDeal, true)}
+            ` : `
               <div style="margin: auto; color: var(--text-secondary); font-weight: 500;">No hay vuelos dentro de tu presupuesto y reglas.</div>
             `}
           </div>
@@ -477,16 +465,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
                 <div class="card-date"><i class="ph ph-calendar-blank"></i> ${formatDate(deal.ida_fecha)} al ${formatDate(deal.vuelta_fecha)}</div>
                 <div style="color: var(--text-secondary); margin-top: 0.5rem; font-weight: 500; font-size: 0.9rem;">${deal.aerolinea} • ${deal.cantidad_escalas} escalas</div>
                 <div class="card-price">${formatPrice(deal)}</div>
-                <div class="deal-actions-group">
-                  <a href="${urls.googleUrl}" target="_blank" class="btn btn-outline deal-action-btn" title="Ver en Google Flights (${alert.pasajeros || 2} personas)">
-                    <span>Ver en Google Flights</span>
-                    <i class="ph ph-arrow-square-out"></i>
-                  </a>
-                  <a href="${urls.despegarUrl}" target="_blank" class="btn btn-outline deal-action-btn despegar-btn" title="Ver en Despegar (${alert.pasajeros || 2} personas)">
-                    <span>Ver en Despegar</span>
-                    <i class="ph ph-arrow-square-out"></i>
-                  </a>
-                </div>
+                ${getDealButton(deal, false)}
               </div>
             `;
           });

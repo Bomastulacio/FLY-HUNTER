@@ -1,0 +1,26 @@
+{
+  "name": "flight-hunter-agent",
+  "version": "1.0.0",
+  "description": "Agent-in-the-loop with Playwright and Google Gemini for Flight Hunter",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "hunt": "tsx src/index.ts",
+    "test:google": "tsx src/index.ts --test-google",
+    "test:despegar": "tsx src/index.ts --test-despegar",
+    "test:agent": "tsx src/index.ts --test-all"
+  },
+  "dependencies": {
+    "@google/genai": "latest",
+    "@supabase/supabase-js": "^2.49.1",
+    "dotenv": "^16.4.7",
+    "playwright": "^1.50.1",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.5",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  }
+}
