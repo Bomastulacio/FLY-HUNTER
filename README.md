@@ -16,44 +16,9 @@ A diferencia de los buscadores comerciales tradicionales, cuenta con un **Doble 
 
 ## 🏗 Arquitectura del Sistema (Dual-Engine)
 
-```mermaid
-graph TD
-    Trigger([🕒 GitHub Actions Cron<br/>09:00 y 21:00 UTC]) --> Engine1
-    
-    subgraph Motor 1: Autonomous Browser Hunter (TypeScript / Playwright)
-        Engine1[🤖 Agent in the Loop] -->|Lee Alertas| DB1[(Supabase)]
-        Engine1 -->|Playwright Stealth| GF[🌐 Google Flights]
-        Engine1 -->|Bypass / Deep-Link| DP[🛒 Despegar]
-        GF & DP --> Evaluator[🧠 Agente Gemini Flash<br/>Comparador y Veredicto]
-        Evaluator -->|Upsert Vuelos Frescos| DB2[(Supabase: flight_deals)]
-    end
-    
-    Engine1 -->|workflow_run| Engine2
-    
-    subgraph Motor 2: LangGraph Cyclic State Machine (Python)
-        Engine2[🧠 Estratega] --> PickAlert[🎯 Selector de Alertas en Cola]
-        PickAlert --> Supervisor[📡 Recolector Híbrido]
-        
-        Supervisor -->|1. Intenta Caché Supabase $0| Cache{¿Hay datos de Playwright?}
-        Cache -->|Sí: Preserva Cuota| Clean[🧹 Sanitizer & Pandas Analyst]
-        Cache -->|No: Fallback| Serp[🌐 SerpApi Google Flights]
-        Serp --> Clean
-        
-        Clean --> Critic[⚖️ Agente Crítico LLM<br/>Gemini Flash / Reglas]
-        
-        %% Loop 1: Refinamiento
-        Critic -->|needs_refinement && iter < 2| Refine[🔄 Refine Search Node<br/>Ajusta Fechas +/- 1-2 días]
-        Refine --> Supervisor
-        
-        %% Persistencia & Notificaciones
-        Critic -->|Aprobado o Max Iter| Persist[💾 Persistencia & Resend]
-        
-        %% Loop 2: Multi-Alerta
-        Persist -->|Quedan alertas en cola| PickAlert
-        Persist -->|Cola vacía| DS[📈 Data Scientist<br/>ML Tendencias & Feriados]
-        DS --> EndFlow([🏁 Fin del Ciclo])
-    end
-```
+<p align="center">
+  <img src="./diagrama_agentes.png" alt="Arquitectura de Agentes Fly Hunter" width="750" />
+</p>
 
 ---
 

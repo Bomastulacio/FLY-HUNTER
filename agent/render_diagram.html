@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Fly Hunter Architecture</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #FFFFFF;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px 20px;
+    }
+    .canvas {
+      width: 820px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 22px;
+    }
+    .trigger-pill {
+      background: #EBE4FF;
+      border: 1.5px solid #845EF7;
+      border-radius: 30px;
+      padding: 10px 28px;
+      text-align: center;
+      font-size: 15px;
+      font-weight: 600;
+      color: #3B1C8C;
+      box-shadow: 0 2px 6px rgba(132, 94, 247, 0.15);
+    }
+    .arrow-down {
+      width: 2px;
+      height: 22px;
+      background: #495057;
+      position: relative;
+    }
+    .arrow-down::after {
+      content: '';
+      position: absolute;
+      bottom: -6px;
+      left: -5px;
+      width: 0; 
+      height: 0; 
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 8px solid #495057;
+    }
+    .section-box {
+      width: 100%;
+      background: #FCFDF0;
+      border: 1.5px solid #E9EFC0;
+      border-radius: 12px;
+      padding: 18px;
+      position: relative;
+    }
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #748A25;
+      text-align: center;
+      margin-bottom: 14px;
+    }
+    .cards-row {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      position: relative;
+    }
+    .card {
+      background: #F3F0FF;
+      border: 1.5px solid #D0BFFF;
+      border-radius: 10px;
+      padding: 14px 18px;
+      text-align: center;
+      flex: 1;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    }
+    .card.blue {
+      background: #E7F5FF;
+      border-color: #A5D8FF;
+    }
+    .card.green {
+      background: #EBFBEE;
+      border-color: #B2F2BB;
+    }
+    .card.amber {
+      background: #FFF9DB;
+      border-color: #FFE066;
+    }
+    .card.primary {
+      background: #EDF2FF;
+      border-color: #BAC8FF;
+      flex: none;
+      width: 380px;
+      margin: 0 auto;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #212529;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .card-desc {
+      font-size: 12.5px;
+      color: #495057;
+      line-height: 1.35;
+    }
+    .diamond-box {
+      width: 320px;
+      margin: 0 auto;
+      background: #FFF4E6;
+      border: 2px solid #FF922B;
+      border-radius: 10px;
+      padding: 14px 16px;
+      text-align: center;
+      box-shadow: 0 3px 8px rgba(255, 146, 43, 0.15);
+    }
+    .diamond-box .title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #D9480F;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .loop-badge {
+      display: inline-block;
+      margin-top: 6px;
+      background: #FFE8CC;
+      color: #D9480F;
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px dashed #FFA94D;
+    }
+    .db-box {
+      width: 260px;
+      margin: 0 auto;
+      background: #E6FCF5;
+      border: 2px solid #38D9A9;
+      border-radius: 10px;
+      padding: 12px 16px;
+      text-align: center;
+      font-size: 15px;
+      font-weight: 700;
+      color: #087F5B;
+      box-shadow: 0 2px 6px rgba(56, 217, 169, 0.2);
+    }
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 12px;
+      margin-top: 6px;
+    }
+    .badge-purple { background: #E5DBFF; color: #5F3DC4; }
+    .badge-blue { background: #D0EBFF; color: #1864AB; }
+    .badge-green { background: #D3F9D8; color: #2B8A3E; }
+  </style>
+</head>
+<body>
+  <div class="canvas">
+    
+    <!-- Trigger -->
+    <div class="trigger-pill">
+      🕒 GitHub Actions (Cron 09:00 & 21:00 UTC + Dispatch)
+    </div>
+
+    <div class="arrow-down"></div>
+
+    <!-- Motor 1 -->
+    <div class="section-box" style="background: #F8F9FA; border-color: #DEE2E6;">
+      <div class="section-title" style="color: #495057;">MOTOR 1: BROWSER HUNTER AUTÓNOMO (TypeScript / Playwright Stealth)</div>
+      <div class="cards-row">
+        <div class="card blue">
+          <div class="card-title">🌐 Google Flights</div>
+          <div class="card-desc">Navegación real headless a costo <b>$0</b>. Monitorea ventanas de 14-16 días.</div>
+          <span class="badge badge-blue">Playwright Stealth</span>
+        </div>
+        <div class="card green">
+          <div class="card-title">🛒 Despegar</div>
+          <div class="card-desc">Deep links pre-filtrados y tarifas oficiales en USD sin captchas.</div>
+          <span class="badge badge-green">Costo $0</span>
+        </div>
+        <div class="card">
+          <div class="card-title">🧠 Gemini Flash</div>
+          <div class="card-desc">Compara ambas fuentes, elige la opción ganadora y redacta veredicto.</div>
+          <span class="badge badge-purple">Batching 1 Call</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-down"></div>
+
+    <!-- Base de Datos -->
+    <div class="db-box">
+      🗄️ Supabase PostgreSQL<br>
+      <span style="font-size: 12px; font-weight: 500; color: #099268;">Deduplicación por Hash MD5 & Persistencia</span>
+    </div>
+
+    <div class="arrow-down"></div>
+
+    <!-- Motor 2 -->
+    <div class="section-box">
+      <div class="section-title">MOTOR 2: LANGGRAPH STATE MACHINE (Python - Grafo Cíclico)</div>
+      
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <!-- Estratega & Supervisor -->
+        <div class="card primary">
+          <div class="card-title">📡 Recolector Híbrido & Supervisor</div>
+          <div class="card-desc">
+            1º Reutiliza vuelos de Playwright en Supabase a <b>$0</b>.<br>
+            2º Fallback infalible a SerpApi cuidando cuota (<b>250 búsquedas/mes</b>).
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: center;"><div class="arrow-down"></div></div>
+
+        <!-- Analista Pandas -->
+        <div class="card primary" style="background: #F8F0FC; border-color: #E599F7;">
+          <div class="card-title" style="color: #862E9C;">📊 Agente Analista (Pandas)</div>
+          <div class="card-desc">
+            Normaliza rutas, calcula precio dinámico por pasajero y cotiza a <b>Dólar Tarjeta</b> (DolarAPI).
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: center;"><div class="arrow-down"></div></div>
+
+        <!-- Crítico LLM y Loop -->
+        <div class="diamond-box">
+          <div class="title">🧐 Agente Crítico LLM & Reglas</div>
+          <div class="card-desc">
+            Evalúa presupuestos, escalas y fechas con Gemini Flash.
+          </div>
+          <div class="loop-badge">
+            🔄 Loop de Auto-Corrección: Si supera presupuesto, refina fechas (+/- 1-2 días) y reintenta
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-down"></div>
+
+    <!-- Acciones Finales -->
+    <div class="section-box" style="background: #FFF9DB; border-color: #FFE066;">
+      <div class="section-title" style="color: #F08C00;">ACCIONES FINALES & NOTIFICACIONES</div>
+      <div class="cards-row">
+        <div class="card green" style="background: #EBFBEE;">
+          <div class="card-title">⭐ Oportunidad de Oro</div>
+          <div class="card-desc">&gt;30% bajo presupuesto o &lt;$1500 USD.<br><b>📧 Email Inmediato (Resend)</b></div>
+        </div>
+        <div class="card blue" style="background: #E7F5FF;">
+          <div class="card-title">✅ Aprobado Estándar</div>
+          <div class="card-desc">Dentro del presupuesto configurado.<br><b>💻 Radar Web en Astro</b></div>
+        </div>
+        <div class="card amber" style="background: #FFF3BF;">
+          <div class="card-title">⚠️ Anomalía / Glitch</div>
+          <div class="card-desc">Tarifa error (&lt;$400) o fechas rotas.<br><b>📧 Alerta de Revisión Manual</b></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
