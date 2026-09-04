@@ -40,11 +40,15 @@ A diferencia de los buscadores comerciales tradicionales, cuenta con un **Doble 
 
 ## 🛡️ Control de Cuotas y Rate Limits
 
-| Servicio | Límite de Cuenta | Estrategia de Consumo |
+| Servicio | Límite de Cuenta | Estrategia de Consumo & Auditoría Automática |
 | :--- | :--- | :--- |
-| **SerpApi** | **250 búsquedas / mes** (renueva el **23 de cada mes**). | Escudo primario en Playwright ($0). SerpApi reservado para fallback y muestreo estadístico. |
+| **SerpApi** | **250 búsquedas / mes** (renueva el **23 de cada mes**). | **Auditoría sin costo (`/account.json`):** El sistema consulta el balance de cuenta oficial (gratuito) antes de cada búsqueda. Si restan $\le 2$ créditos, **bloquea SerpApi hasta el 23 de septiembre** y opera 100% a costo $0 con Playwright. Al renovarse el cupo, desbloquea y contabiliza las 250 búsquedas en cada corrida. |
 | **Gemini AI Studio** | **20 RPD** (Requests por día), **5 RPM** (Free Tier). | **Batching obligatorio:** Se envían los vuelos en lote por alerta (1 call). Consumo real: 4 a 8 calls/día. Anti-crash a reglas heurísticas en caso de HTTP 429. |
 | **Antigravity** | **100 RPD**, **60 RPM**. | Entorno de agentes de alta frecuencia. |
+
+### 🔒 Comportamiento del Auditor de Cuota de SerpApi:
+* **Hasta el 23 de Septiembre:** Dado que la cuota actual está consumida, el guardián detecta automáticamente el estado y bloquea cualquier llamada a SerpApi, delegando el 100% de la recolección en Playwright (Google Flights y Despegar) a **costo $0**.
+* **A partir del 23 de Septiembre:** Al restablecerse las **250 búsquedas mensuales**, el endpoint `/account.json` reportará `total_searches_left = 250`. El sistema detectará la renovación de inmediato y activará el muestreo híbrido y fallback inteligente de manera gradual y controlada.
 
 ---
 
