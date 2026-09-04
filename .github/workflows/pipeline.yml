@@ -2,7 +2,12 @@ name: flight-hunter-pipeline
 
 on:
   schedule:
-    - cron: '0 */6 * * *'
+    # Sincronizado con el radar web (15 min después del agente a las 09:15 y 21:15 UTC)
+    - cron: '15 9,21 * * *'
+  workflow_run:
+    workflows: ["flight-hunter-agent"]
+    types:
+      - completed
   repository_dispatch:
     types: [resume-after-approval]
   workflow_dispatch: {}
@@ -10,6 +15,7 @@ on:
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
