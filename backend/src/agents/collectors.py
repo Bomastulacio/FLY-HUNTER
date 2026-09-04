@@ -9,14 +9,47 @@ flight_cache = diskcache.Cache(cache_dir)
 
 SERPAPI_KEY = os.environ.get("SERPAPI_KEY", "")
 
+def check_serpapi_quota() -> Dict[str, Any]:
+    """
+    Consulta el estado oficial de la cuenta en SerpApi (endpoint gratuito /account.json que no consume créditos).
+    Verifica automáticamente los créditos restantes y detecta el restablecimiento de cuota el día 23 de septiembre.
+    """
+    if not SERPAPI_KEY:
+        return {"available": False, "searches_left": 0, "reason": "Sin SERPAPI_KEY"}
+        
+    try:
+        url = "https://serpapi.com/account.json"
+        res = requests.get(url, params={"api_key": SERPAPI_KEY}, timeout=10)
+        if res.status_code == 200:
+            data = res.json()
+            left = data.get("total_searches_left", data.get("plan_searches_left", 0))
+            renew_date = data.get("renew_on", "23 de septiembre")
+            
+            if left <= 2:
+                print(f"[SerpApi Guard] 🛑 Cuota casi agotada ({left} búsquedas restantes). Bloqueado hasta el 23 de septiembre. Preservando para que no se gaste.")
+                return {"available": False, "searches_left": left, "renew_on": renew_date}
+            else:
+                print(f"[SerpApi Monitor] 🟢 ¡Cuota operativa! {left} de 250 búsquedas disponibles (Próxima renovación: {renew_date}).")
+                return {"available": True, "searches_left": left, "renew_on": renew_date}
+    except Exception as e:
+        print(f"[SerpApi Monitor] Nota: No se pudo auditar cuota ({e}).")
+        
+    return {"available": False, "searches_left": 0, "reason": "Error al consultar estado"}
+
 @flight_cache.memoize(expire=43200) # Expira en 12 horas
 def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str, adults: int = 1) -> List[Dict]:
-    """Busca vuelos usando SerpApi (Google Flights)"""
+    """Busca vuelos usando SerpApi (Google Flights) si hay cuota habilitada"""
     if not SERPAPI_KEY:
         print("Warning: SERPAPI_KEY no encontrada. Omitiendo búsqueda.")
         return []
         
-    print(f"Buscando en SerpApi: {origin} -> {dest} ({dep_date} al {ret_date}) para {adults} adultos")
+    # Verificar cuota en vivo antes de disparar la búsqueda paga
+    quota = check_serpapi_quota()
+    if not quota.get("available", False):
+        print(f"[SerpApi Guard] 🛡️ Búsqueda omitida para cuidar cuota. Conmutando a modo $0 con Playwright.")
+        return []
+        
+    print(f"Buscando en SerpApi: {origin} -> {dest} ({dep_date} al {ret_date}) para {adults} adultos [Restantes: {quota.get('searches_left')}]")
     url = "https://serpapi.com/search.json"
     params = {
         "engine": "google_flights",

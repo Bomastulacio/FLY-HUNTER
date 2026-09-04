@@ -158,6 +158,23 @@ async function fetchSerpApiFallback(params: FlightSearchParams): Promise<Scraped
   const apiKey = process.env.SERPAPI_KEY;
   if (!apiKey) return [];
   try {
+    // 1. Auditar cuota disponible sin costo de crédito
+    try {
+      const accRes = await fetch(`https://serpapi.com/account.json?api_key=${apiKey}`);
+      if (accRes.ok) {
+        const accData = await accRes.json() as any;
+        const left = accData.total_searches_left ?? accData.plan_searches_left ?? 0;
+        if (left <= 2) {
+          console.log(`[Skill: Google Flights] 🛑 Cuota SerpApi casi agotada (${left} búsquedas restantes). Bloqueado hasta el 23 de septiembre. Omitiendo llamada.`);
+          return [];
+        } else {
+          console.log(`[Skill: Google Flights] 🟢 SerpApi con cuota activa: ${left} de 250 créditos.`);
+        }
+      }
+    } catch {
+      // Ignorar error de chequeo y continuar seguro
+    }
+
     const queryUrl = new URL('https://serpapi.com/search.json');
     queryUrl.searchParams.set('engine', 'google_flights');
     queryUrl.searchParams.set('departure_id', params.origin);
