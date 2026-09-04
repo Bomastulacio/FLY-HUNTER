@@ -129,12 +129,79 @@ export async function searchGoogleFlights(
       if (results.length >= 5) break;
     }
 
-    console.log(`[Skill: Google Flights] ✅ Se extrajeron ${results.length} opciones válidas.`);
-    return results;
+    if (results.length > 0) {
+      console.log(`[Skill: Google Flights] ✅ Se extrajeron ${results.length} opciones válidas vía Playwright.`);
+      return results;
+    }
+
+
+    // Fallback a SerpApi si Playwright no detectó tarjetas
+    if (process.env.SERPAPI_KEY) {
+      console.log(`[Skill: Google Flights] 🛡️ Playwright no detectó opciones. Activando fallback de respaldo con SerpApi...`);
+      return await fetchSerpApiFallback(params);
+    }
+
+    return [];
   } catch (error) {
-    console.error(`[Skill: Google Flights] ❌ Error durante el scraping:`, error);
+    console.error(`[Skill: Google Flights] ❌ Error durante el scraping de Playwright:`, error);
+    if (process.env.SERPAPI_KEY) {
+      console.log(`[Skill: Google Flights] 🛡️ Activando fallback de respaldo con SerpApi...`);
+      return await fetchSerpApiFallback(params);
+    }
     return [];
   } finally {
     await browser.close();
   }
 }
+
+async function fetchSerpApiFallback(params: FlightSearchParams): Promise<ScrapedFlightOption[]> {
+  const apiKey = process.env.SERPAPI_KEY;
+  if (!apiKey) return [];
+  try {
+    const queryUrl = new URL('https://serpapi.com/search.json');
+    queryUrl.searchParams.set('engine', 'google_flights');
+    queryUrl.searchParams.set('departure_id', params.origin);
+    queryUrl.searchParams.set('arrival_id', params.destination);
+    queryUrl.searchParams.set('outbound_date', params.departureDate);
+    queryUrl.searchParams.set('return_date', params.returnDate);
+    queryUrl.searchParams.set('adults', String(params.passengers));
+    queryUrl.searchParams.set('currency', 'USD');
+    queryUrl.searchParams.set('type', '1');
+    queryUrl.searchParams.set('api_key', apiKey);
+
+    const res = await fetch(queryUrl.toString());
+    if (!res.ok) return [];
+    const data = await res.json() as any;
+    const raw = [...(data.best_flights || []), ...(data.other_flights || [])];
+    const results: ScrapedFlightOption[] = [];
+
+    for (const item of raw.slice(0, 5)) {
+      const firstLeg = item.flights?.[0];
+      const airline = firstLeg?.airline || 'Varios';
+      const stops = (item.layovers?.length) ?? Math.max(0, (item.flights?.length || 1) - 1);
+      const priceUSD = Number(item.price || 0);
+
+      if (priceUSD > 0) {
+        results.push({
+          source: 'google_flights',
+          airline,
+          route: `${params.origin} - ${params.destination}`,
+          departureDate: params.departureDate,
+          returnDate: params.returnDate,
+          stops,
+          durationText: `${item.total_duration || 0} min`,
+          priceTotalUSD: priceUSD,
+          priceRawText: `US$ ${priceUSD}`,
+          bookingUrl: data.search_metadata?.google_flights_url || `https://www.google.com/travel/flights`,
+          collectedAt: new Date().toISOString()
+        });
+      }
+    }
+    console.log(`[Skill: Google Flights] 🛡️ SerpApi devolvió ${results.length} opciones válidas de respaldo.`);
+    return results;
+  } catch (err) {
+    console.warn(`[Skill: Google Flights] Falló llamada de fallback a SerpApi:`, err);
+    return [];
+  }
+}
+

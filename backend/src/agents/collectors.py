@@ -86,8 +86,45 @@ def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str, 
 
 def collect_dynamic_flights(mission: Dict) -> List[Dict]:
     """
-    Recolector Genérico: Ejecuta las búsquedas dinámicas definidas por el Estratega.
+    Recolector Híbrido Inteligente:
+    1. Primero revisa si ya existen vuelos frescos guardados por el Agente Playwright en Supabase (últimas 12 horas).
+       Si existen, los reutiliza a costo $0 y preserva al 100% la cuota de SerpApi (250 búsquedas/mes).
+    2. Si no hay vuelos frescos en Supabase, realiza la recolección estratégica con SerpApi (fallback infalible).
     """
+    # 1. Intentar reutilizar vuelos frescos del Agente Playwright (Costo $0)
+    try:
+        from ..services.db import get_recent_flight_deals
+        recent_deals = get_recent_flight_deals(days=1)
+        if recent_deals and len(recent_deals) > 0:
+            print(f"[Recolector Híbrido] ⚡ Se detectaron {len(recent_deals)} vuelos frescos guardados por el Agente Playwright en Supabase.")
+            print(f"[Recolector Híbrido] 🛡️ Cuota de SerpApi preservada intacta (250 créditos/mes).")
+            
+            raw_flights = []
+            for d in recent_deals:
+                pax = int(d.get("pasajeros", 2) or 2)
+                precio_total = float(d.get("precio_total_usd", 0) or 0)
+                raw_flights.append({
+                    "ida_fecha": d.get("ida_fecha"),
+                    "vuelta_fecha": d.get("vuelta_fecha"),
+                    "ida_origen_destino": d.get("ida_origen_destino"),
+                    "vuelta_origen_destino": d.get("vuelta_origen_destino"),
+                    "precio_original": precio_total,
+                    "moneda_original": "USD",
+                    "precio_total_usd": precio_total,
+                    "pasajeros": pax,
+                    "precio_por_pasajero_usd": round(precio_total / pax, 2) if pax > 0 else precio_total,
+                    "aerolinea": d.get("aerolinea", "Aerolínea"),
+                    "cantidad_escalas": int(d.get("cantidad_escalas", 0) or 0),
+                    "duracion_total_minutos": int(d.get("duracion_total_minutos", 720) or 720),
+                    "link_reserva": d.get("link_reserva", ""),
+                    "fuente": d.get("fuente", "agent_playwright")
+                })
+            return raw_flights
+    except Exception as e:
+        print(f"[Recolector Híbrido] Nota: No se pudo leer Supabase ({e}). Procediendo con SerpApi.")
+
+    # 2. Fallback: Búsqueda dinámica con SerpApi
+    print("[Recolector Híbrido] 🌐 Consultando SerpApi como motor de búsqueda...")
     results = []
     searches = mission.get("searches", [])
     
@@ -107,3 +144,4 @@ def collect_dynamic_flights(mission: Dict) -> List[Dict]:
             results.extend(flights)
             
     return results
+
