@@ -26,3 +26,10 @@ Este archivo sirve como memoria a largo plazo para los agentes de IA que trabaje
   1. No exponer enlaces directos calculados a mano hacia Despegar en la UI.
   2. La auditoría y comparación de tarifas de Despegar debe realizarla el agente de Playwright en segundo plano (simulando navegación completa o usando sesión activa).
   3. El frontend debe mostrar **únicamente el botón hacia la opción ganadora** que ya fue validada con un enlace funcional.
+
+## 5. Cuota Real de SerpApi y Fecha de Renovación
+- **Cuota Mensual:** La cuenta de SerpApi del usuario cuenta con **250 búsquedas por mes** (NUNCA asumir 100).
+- **Ciclo de Renovación:** La cuota se renueva automáticamente el **día 23 de cada mes** (ej. 23 de septiembre).
+- **Estrategia de Optimización:**
+  1. Playwright (scalpeo directo a $0) actúa como motor primario y escudo de cuota diario para preservar los 250 créditos.
+  2. SerpApi actúa como red de seguridad (fallback) infalible en caso de fallo o para sampling estadístico en Python.
