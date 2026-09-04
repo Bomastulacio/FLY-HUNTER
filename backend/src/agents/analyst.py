@@ -15,8 +15,8 @@ def fetch_dolar_tarjeta() -> float:
 
 def consolidate_and_analyze(flights_data: List[Dict]) -> List[Dict]:
     """
-    Analista: consolida los JSON de los recolectores, calcula precio total para 2 pasajeros,
-    y normaliza rutas usando Pandas.
+    Analista: consolida los JSON de los recolectores, calcula precio total y unitario 
+    por pasajero de manera dinámica, normaliza rutas y calcula conversión a ARS usando Pandas.
     """
     if not flights_data:
         return []
@@ -27,21 +27,26 @@ def consolidate_and_analyze(flights_data: List[Dict]) -> List[Dict]:
     if 'aerolinea' in df.columns:
         df['aerolinea'] = df['aerolinea'].str.title()
     
-    # Calcular precio para 2 pasajeros (si la data original era por pax)
-    # Asumimos que la API de fli trae el precio base por pasajero o total. 
-    # El prompt pide calcular el precio total para 2 pasajeros.
-    # Si flight.price ya era para 2 (porque buscamos pax=2), lo dejamos igual,
-    # pero como fli usualmente busca sin definir pax o da precio por adulto,
-    # multiplicamos por 2 para asegurar.
-    # Ajustar esto según el payload real de la librería.
+    # Asegurar pasajeros dinámicos (mínimo 1 pax)
+    if 'pasajeros' not in df.columns:
+        df['pasajeros'] = 1
+    else:
+        df['pasajeros'] = df['pasajeros'].fillna(1).astype(int)
+        df['pasajeros'] = df['pasajeros'].apply(lambda x: max(1, int(x)))
+    
+    # Calcular y asegurar precio unitario y total
     if 'precio_total_usd' in df.columns:
-        # collectors.py ya lo multiplicó por 2, así que lo dejamos intacto.
-        pass
+        if 'precio_por_pasajero_usd' not in df.columns or df['precio_por_pasajero_usd'].isnull().all():
+            df['precio_por_pasajero_usd'] = (df['precio_total_usd'] / df['pasajeros']).round(2)
+        else:
+            df['precio_por_pasajero_usd'] = df['precio_por_pasajero_usd'].fillna(
+                df['precio_total_usd'] / df['pasajeros']
+            ).round(2)
         
     # Inteligencia Cambiaria
     dolar_tarjeta = fetch_dolar_tarjeta()
     if dolar_tarjeta > 0 and 'precio_total_usd' in df.columns:
-        df['precio_ars_tarjeta'] = df['precio_total_usd'] * dolar_tarjeta
+        df['precio_ars_tarjeta'] = (df['precio_total_usd'] * dolar_tarjeta).round(2)
     else:
         df['precio_ars_tarjeta'] = None
     

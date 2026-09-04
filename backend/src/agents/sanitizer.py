@@ -1,7 +1,8 @@
 from typing import List, Dict
 
-EUROPE_DESTINATIONS = ["MAD", "CDG", "LHR", "BER"]
-ASIA_DESTINATIONS = ["NRT", "KIX"]
+EUROPE_DESTINATIONS = ["MAD", "CDG", "LHR", "BER", "FCO", "AMS", "LIS", "ZRH", "ATH"]
+ASIA_DESTINATIONS = ["NRT", "HND", "KIX", "ICN", "BKK", "SIN", "DXB"]
+OCEANIA_DESTINATIONS = ["SYD", "MEL", "AKL"]
 
 def sanitize_flights(raw_flights: List[Dict]) -> List[Dict]:
     """
@@ -20,19 +21,20 @@ def sanitize_flights(raw_flights: List[Dict]) -> List[Dict]:
         if precio <= 0:
             continue
             
-        # 2. Regla Crítica de agents.md: Tolerancia Cero en escalas > 1
+        # 2. Regla Crítica: Tolerancia Cero en escalas > 1
         if escalas > 1:
             continue
             
         # 3. Regla: Duración lógica según región
-        # Obtenemos el destino (ej. de "EZE-MAD" sacamos "MAD")
         dest = ida_od.split("-")[1] if "-" in ida_od else ""
         
-        if dest in ASIA_DESTINATIONS:
+        if dest in OCEANIA_DESTINATIONS:
+            max_duracion = 3000 # 50 horas
+        elif dest in ASIA_DESTINATIONS:
             max_duracion = 2400 # 40 horas
         else:
-            # Por defecto (Europa u otros)
-            max_duracion = 1440 # 24 horas
+            # Europa, América, Caribe u otros (32 horas)
+            max_duracion = 1920 # 32 horas
             
         if duracion > max_duracion:
             continue

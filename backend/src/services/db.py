@@ -34,6 +34,8 @@ class FlightDeal(BaseModel):
     hash_dedupe: str
     created_at: Optional[str] = None
 
+    model_config = {"extra": "ignore"}
+
 def upsert_deals(deals: List[FlightDeal]) -> None:
     if not deals:
         return

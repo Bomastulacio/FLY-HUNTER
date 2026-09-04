@@ -61,3 +61,24 @@ export async function saveFlightDeal(
     return null;
   }
 }
+
+export async function getActiveSearchAlerts(): Promise<any[]> {
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from('search_alerts')
+      .select('*')
+      .eq('activo', true)
+      .order('creado_en', { ascending: false })
+      .limit(5);
+
+    if (error) {
+      console.warn(`[DB] ⚠️ No se pudieron consultar alertas de Supabase:`, error.message);
+      return [];
+    }
+    return data || [];
+  } catch (err) {
+    console.warn(`[DB] ⚠️ Error consultando alertas en Supabase:`, err);
+    return [];
+  }
+}

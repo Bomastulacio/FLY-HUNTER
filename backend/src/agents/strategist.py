@@ -86,9 +86,10 @@ def define_daily_mission() -> Dict[str, Any]:
     print("--- ESTRATEGA: Analizando alertas de usuarios ---")
     alerts = get_active_search_alerts()
     
-    # Defaults in case of missing dates (for fallback MVP)
-    default_dep = "2027-04-17"
-    default_ret = "2027-04-26"
+    # Defaults dinámicos a futuro en caso de que no haya fechas definidas (+60 y +75 días)
+    today = datetime.date.today()
+    default_dep = (today + datetime.timedelta(days=60)).strftime("%Y-%m-%d")
+    default_ret = (today + datetime.timedelta(days=75)).strftime("%Y-%m-%d")
     
     if not alerts:
         print("No hay alertas activas o hubo un error. Usando misión de fallback por defecto (Europa).")
@@ -98,7 +99,8 @@ def define_daily_mission() -> Dict[str, Any]:
                 "destino": "Europa",
                 "paises": ["España", "Francia", "Reino Unido", "Alemania"],
                 "fecha_ida_min": default_dep,
-                "fecha_vuelta_min": default_ret
+                "fecha_vuelta_min": default_ret,
+                "pasajeros": 2
             }
         ]
         
@@ -108,6 +110,7 @@ def define_daily_mission() -> Dict[str, Any]:
         # Obtener origen (Si es EZE,AEP tomamos EZE como primario para Google Flights)
         origen_raw = alert.get("origen", "EZE")
         origen = "EZE" if "EZE" in origen_raw else origen_raw
+        pasajeros = int(alert.get("pasajeros", 1) or 1)
         
         # Mapeo de Destino principal o Países
         paises_interes = alert.get("paises", [])
@@ -143,15 +146,24 @@ def define_daily_mission() -> Dict[str, Any]:
         else:
             targets.update(GEO_MAP.get(destino_principal, [destino_principal]))
             
-        # Añadir al set de búsquedas (De-duplicación)
+        # Añadir al set de búsquedas (De-duplicación conservando cantidad de pasajeros)
         for t in targets:
             for d_date in dep_dates:
                 for r_date in ret_dates:
                     if r_date > d_date: # Solo viajes lógicos donde la vuelta es después de la ida
-                        unique_searches.add((origen, t, d_date.strftime("%Y-%m-%d"), r_date.strftime("%Y-%m-%d")))
+                        unique_searches.add((origen, t, d_date.strftime("%Y-%m-%d"), r_date.strftime("%Y-%m-%d"), pasajeros))
             
     # Convertir a lista de diccionarios
-    all_searches = [{"origin": s[0], "dest": s[1], "dep_date": s[2], "ret_date": s[3]} for s in unique_searches]
+    all_searches = [
+        {
+            "origin": s[0],
+            "dest": s[1],
+            "dep_date": s[2],
+            "ret_date": s[3],
+            "passengers": s[4]
+        } 
+        for s in unique_searches
+    ]
     
     # LÓGICA DE CUOTA: 250 búsquedas al mes.
     # Asumiendo que el cron corre 2 veces al día = 60 ejecuciones al mes.
@@ -161,7 +173,6 @@ def define_daily_mission() -> Dict[str, Any]:
     # Ordenamiento por proximidad de fecha (opcional). Por ahora, seleccionamos aleatoriamente 
     # o de manera determinística basada en el día para asegurar cobertura.
     import random
-    # Para ser determinísticos con el día y rotar, podríamos usar el día del año como semilla
     now = datetime.datetime.now()
     seed = now.timetuple().tm_yday + now.hour
     random.seed(seed)
@@ -170,7 +181,7 @@ def define_daily_mission() -> Dict[str, Any]:
     
     print(f"--- ESTRATEGA: De {len(all_searches)} búsquedas únicas, se ejecutarán {len(selected_searches)} para cuidar cuota API ---")
     for s in selected_searches:
-        print(f"  -> {s['origin']} a {s['dest']} ({s['dep_date']} / {s['ret_date']})")
+        print(f"  -> {s['origin']} a {s['dest']} ({s['dep_date']} / {s['ret_date']}) [{s['passengers']} pax]")
         
     return {
         "use_mock": False,

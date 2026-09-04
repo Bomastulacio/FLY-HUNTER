@@ -10,7 +10,7 @@ flight_cache = diskcache.Cache(cache_dir)
 SERPAPI_KEY = os.environ.get("SERPAPI_KEY", "")
 
 @flight_cache.memoize(expire=43200) # Expira en 12 horas
-def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str, adults: int = 2) -> List[Dict]:
+def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str, adults: int = 1) -> List[Dict]:
     """Busca vuelos usando SerpApi (Google Flights)"""
     if not SERPAPI_KEY:
         print("Warning: SERPAPI_KEY no encontrada. Omitiendo búsqueda.")
@@ -48,6 +48,7 @@ def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str, 
         search_link = data.get("search_metadata", {}).get("google_flights_url", "https://google.com/travel/flights")
         
         parsed_flights = []
+        pax = max(1, adults)
         for flight in raw_flights:
             # Obtener aerolinea del primer tramo
             airlines = [leg.get("airline", "Desconocida") for leg in flight.get("flights", [])]
@@ -59,6 +60,7 @@ def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str, 
             
             # Precio total devuelto por Google Flights para los pasajeros configurados
             precio_usd = flight.get("price", 0)
+            precio_unitario = round(precio_usd / pax, 2) if precio_usd else 0.0
             
             parsed_flights.append({
                 "ida_fecha": dep_date,
@@ -68,6 +70,8 @@ def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str, 
                 "precio_original": precio_usd,
                 "moneda_original": "USD",
                 "precio_total_usd": precio_usd,
+                "pasajeros": pax,
+                "precio_por_pasajero_usd": precio_unitario,
                 "aerolinea": airline,
                 "cantidad_escalas": stops,
                 "duracion_total_minutos": flight.get("total_duration", 0),
@@ -96,9 +100,10 @@ def collect_dynamic_flights(mission: Dict) -> List[Dict]:
         dest = search.get("dest")
         dep_date = search.get("dep_date")
         ret_date = search.get("ret_date")
+        adults = int(search.get("passengers", 1) or 1)
         
         if all([origin, dest, dep_date, ret_date]):
-            flights = fetch_serpapi_flights(origin, dest, dep_date, ret_date)
+            flights = fetch_serpapi_flights(origin, dest, dep_date, ret_date, adults=adults)
             results.extend(flights)
             
     return results

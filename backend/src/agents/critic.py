@@ -1,13 +1,8 @@
 import hashlib
 from typing import List, Dict
 
-BUDGET_MIN = 1700
-BUDGET_MAX = 2400
-CRITICAL_THRESHOLD = 1700
-GLITCH_THRESHOLD = 900
-
-VALID_DEPARTURE_DATES = ["2027-04-17", "2027-04-18", "2027-04-19"]
-VALID_RETURN_DATES = ["2027-04-26", "2027-04-27", "2027-04-28", "2027-04-29", "2027-04-30", "2027-05-01", "2027-05-02"]
+GLITCH_THRESHOLD_PER_PAX = 400.0  # Tarifa error si es menor a USD 400 por pasajero (ida y vuelta)
+DEFAULT_MAX_BUDGET_PER_PAX = 1200.0
 
 def generate_hash(deal: Dict) -> str:
     # hash_dedupe text unique -- md5(ida_fecha || ida_od || vuelta_fecha || vuelta_od || aerolinea || round(precio))
@@ -23,15 +18,23 @@ def generate_hash(deal: Dict) -> str:
 
 def evaluate_deal(deal: Dict, alerts: List[Dict]) -> Dict:
     """
-    Agente Crítico: evalúa la oferta de manera dinámica contra los presupuestos del usuario.
+    Agente Crítico: evalúa la oferta de manera dinámica contra las alertas reales
+    del usuario (presupuesto por pasajero, fechas y límites de escalas).
     """
-    precio_total = deal.get("precio_total_usd", 0) # El recolector trae el precio x2 por defecto
-    precio_por_pasajero = precio_total / 2.0
+    pasajeros_deal = max(1, int(deal.get("pasajeros", 1) or 1))
+    precio_total = float(deal.get("precio_total_usd", 0) or 0)
+    
+    # Calcular precio unitario por pasajero
+    if deal.get("precio_por_pasajero_usd"):
+        precio_por_pasajero = float(deal["precio_por_pasajero_usd"])
+    else:
+        precio_por_pasajero = round(precio_total / pasajeros_deal, 2)
+        
     ida_fecha = deal.get("ida_fecha", "")
     vuelta_fecha = deal.get("vuelta_fecha", "")
     escalas = deal.get("cantidad_escalas", 0)
     
-    # Generar Hash
+    # Generar Hash y campos por defecto
     deal['hash_dedupe'] = generate_hash(deal)
     deal['es_oportunidad_oro'] = False
     deal['es_anomalia'] = False
@@ -39,44 +42,62 @@ def evaluate_deal(deal: Dict, alerts: List[Dict]) -> Dict:
     deal['estado_aprobacion'] = 'no_aplica'
     deal['notificado'] = False
     
-    # Regla 0: Filtro estricto de escalas (rechazo inmediato)
-    if escalas > 1:
-        deal['estado_aprobacion'] = 'rechazado'
-        return deal
-        
-    # Regla 0.5: Tarifa Error (Glitch Fare)
-    if precio_por_pasajero < (GLITCH_THRESHOLD / 2.0):
+    # Regla 0: Tarifa Error (Glitch Fare detectada)
+    if 0 < precio_por_pasajero < GLITCH_THRESHOLD_PER_PAX:
         deal['es_tarifa_error'] = True
         deal['estado_aprobacion'] = 'aprobado'
         return deal
 
-    # Evaluar contra TODAS las alertas (MVP: si cumple para al menos una, se aprueba/notifica)
+    # Evaluar contra las alertas activas del usuario
     is_golden = False
     is_approved = False
     
     if not alerts:
-        # Fallback a constantes si no hay alertas activas
-        if precio_total < (BUDGET_MAX - 200) or precio_total < CRITICAL_THRESHOLD:
-            is_golden = True
-        if precio_total <= BUDGET_MAX:
-            is_approved = True
+        # Fallback a umbrales generales por pasajero si no hay alertas configuradas
+        if escalas <= 1:
+            if precio_por_pasajero <= (DEFAULT_MAX_BUDGET_PER_PAX * 0.70):
+                is_golden = True
+            elif precio_por_pasajero <= DEFAULT_MAX_BUDGET_PER_PAX:
+                is_approved = True
     else:
         for alert in alerts:
-            pasajeros = alert.get("pasajeros", 1)
-            presupuesto_max = alert.get("presupuesto_max", 2400)
+            # 1. Validar escalas permitidas para esta alerta
+            escalas_max = alert.get("escalas_max", 1)
+            if escalas > escalas_max:
+                continue
+                
+            # 2. Validar rango de fechas de la alerta
+            dep_min = alert.get("fecha_ida_min")
+            dep_max = alert.get("fecha_ida_max") or dep_min
+            ret_min = alert.get("fecha_vuelta_min")
+            ret_max = alert.get("fecha_vuelta_max") or ret_min
             
-            # Calcular cuánto le saldría al usuario según su grupo
-            precio_usuario = precio_por_pasajero * pasajeros
+            fecha_ok = True
+            if dep_min and dep_max:
+                fecha_ok = fecha_ok and (dep_min <= ida_fecha <= dep_max)
+            if ret_min and ret_max:
+                fecha_ok = fecha_ok and (ret_min <= vuelta_fecha <= ret_max)
+                
+            if not fecha_ok:
+                continue
+                
+            # 3. Validar presupuesto según la cantidad de pasajeros de la alerta
+            pasajeros_alerta = max(1, int(alert.get("pasajeros", 1) or 1))
+            presupuesto_max = float(alert.get("presupuesto_max", 2400) or 2400)
             
-            # Regla 1: Oportunidad de Oro (30% más barato que el presupuesto máximo)
-            if precio_usuario <= (presupuesto_max * 0.70):
+            # Costo total que pagaría el usuario para su grupo
+            costo_para_alerta = precio_por_pasajero * pasajeros_alerta
+            
+            # Oportunidad de Oro: 30% más barata que el presupuesto
+            if costo_para_alerta <= (presupuesto_max * 0.70):
                 is_golden = True
                 is_approved = True
+                break
                 
-            # Validaciones normales
-            fecha_ok = (ida_fecha in VALID_DEPARTURE_DATES) and (vuelta_fecha in VALID_RETURN_DATES)
-            if fecha_ok and (precio_usuario <= presupuesto_max):
+            # Aprobado normal si está dentro de presupuesto
+            if costo_para_alerta <= presupuesto_max:
                 is_approved = True
+                break
                 
     if is_golden:
         deal['es_oportunidad_oro'] = True
@@ -87,7 +108,7 @@ def evaluate_deal(deal: Dict, alerts: List[Dict]) -> Dict:
         deal['estado_aprobacion'] = 'aprobado'
         return deal
         
-    # Si llega acá, se rechaza
+    # Si no cumplió presupuesto ni fechas de ninguna alerta, queda rechazado
     deal['estado_aprobacion'] = 'rechazado'
     return deal
 
