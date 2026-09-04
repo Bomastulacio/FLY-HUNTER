@@ -1,7 +1,9 @@
-# Entornos
+# Entornos y Secretos
 .env
 .env.*
 !.env.example
+mcp_config.json
+**/mcp_config.json
 
 # Python
 __pycache__/
