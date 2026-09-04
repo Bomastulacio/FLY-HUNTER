@@ -172,12 +172,9 @@ def define_daily_mission() -> Dict[str, Any]:
     
     # Ordenamiento por proximidad de fecha (opcional). Por ahora, seleccionamos aleatoriamente 
     # o de manera determinística basada en el día para asegurar cobertura.
-    import random
-    now = datetime.datetime.now()
-    seed = now.timetuple().tm_yday + now.hour
-    random.seed(seed)
-    
-    selected_searches = random.sample(all_searches, min(MAX_SEARCHES, len(all_searches)))
+    import secrets
+    # Seleccionamos aleatoriamente usando secrets para cumplir con los estándares de seguridad de Bandit
+    selected_searches = secrets.SystemRandom().sample(all_searches, min(MAX_SEARCHES, len(all_searches)))
     
     print(f"--- ESTRATEGA: De {len(all_searches)} búsquedas únicas, se ejecutarán {len(selected_searches)} para cuidar cuota API ---")
     for s in selected_searches:

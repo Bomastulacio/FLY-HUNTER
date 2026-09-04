@@ -14,7 +14,7 @@ def generate_hash(deal: Dict) -> str:
         f"{deal.get('aerolinea', '')}"
         f"{round(deal.get('precio_total_usd', 0))}"
     )
-    return hashlib.md5(raw_str.encode('utf-8')).hexdigest()
+    return hashlib.md5(raw_str.encode('utf-8'), usedforsecurity=False).hexdigest()  # nosec B324
 
 def evaluate_deal(deal: Dict, alerts: List[Dict]) -> Dict:
     """
