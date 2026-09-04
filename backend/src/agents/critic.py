@@ -206,6 +206,18 @@ def evaluate_with_llm_critic(
     presupuesto = float(alert.get("presupuesto_max", 2400) or 2400)
     escalas_max = int(alert.get("escalas_max", 1) or 1)
     
+    sample_deals = [
+        {
+            'aerolinea': d.get('aerolinea'),
+            'precio_usd': d.get('precio_total_usd'),
+            'escalas': d.get('cantidad_escalas'),
+            'ida': d.get('ida_fecha'),
+            'vuelta': d.get('vuelta_fecha')
+        }
+        for d in deals[:6]
+    ]
+    deals_json = json.dumps(sample_deals, indent=2)
+
     prompt = f"""
     Eres el Agente Crítico de Inteligencia de 'Fly Hunter' en un Grafo Cíclico de Búsqueda de Vuelos.
     
@@ -220,7 +232,7 @@ def evaluate_with_llm_critic(
     - Iteración Actual del Grafo: {iteration + 1} de {max_iterations}
     
     VUELOS RECOLECTADOS ({len(deals)} opciones):
-    {json.dumps([{{'aerolinea': d.get('aerolinea'), 'precio_usd': d.get('precio_total_usd'), 'escalas': d.get('cantidad_escalas'), 'ida': d.get('ida_fecha'), 'vuelta': d.get('vuelta_fecha')}} for d in deals[:6]], indent=2)}
+{deals_json}
     
     DECISIÓN:
     1. Si hay algún vuelo con precio <= US$ {presupuesto} y escalas <= {escalas_max}, aprueba y NO refines (needs_refinement = false).
