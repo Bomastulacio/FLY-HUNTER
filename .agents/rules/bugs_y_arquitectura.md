@@ -33,3 +33,9 @@ Este archivo sirve como memoria a largo plazo para los agentes de IA que trabaje
 - **Estrategia de Optimización:**
   1. Playwright (scalpeo directo a $0) actúa como motor primario y escudo de cuota diario para preservar los 250 créditos.
   2. SerpApi actúa como red de seguridad (fallback) infalible en caso de fallo o para sampling estadístico en Python.
+
+## 6. Arquitectura de Grafos Cíclicos (LangGraph State Machine)
+- **Concepto:** En lugar de una cadena lineal estática (waterfall), el backend opera como un grafo de estados cíclico con razonamiento LLM (`Gemini Flash / OpenAI`):
+  1. **Loop de Refinamiento (Self-Correction):** Si el Crítico detecta que los vuelos encontrados no cumplen el presupuesto o las escalas, evalúa semánticamente si mover las fechas (+/- 1 o 2 días dentro de la ventana) puede rescatar tarifas más bajas y re-enruta el flujo hacia el recolector.
+  2. **Loop Multi-Alerta:** Procesa de forma secuencial todas las alertas activas en Supabase (`alerts_queue`) antes de avanzar al nodo de Data Scientist.
+  3. **Límites de Seguridad (Guards):** Máximo 2 iteraciones por alerta (`max_iterations = 2`) y lectura previa de caché en Supabase para no agotar la cuota de SerpApi ni tokens de LLM.

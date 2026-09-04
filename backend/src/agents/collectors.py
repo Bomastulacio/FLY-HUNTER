@@ -84,6 +84,57 @@ def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str, 
         print(f"Error fetching from SerpApi: {e}")
         return []
 
+def collect_flights_for_search(search: Dict, check_cache_first: bool = True) -> List[Dict]:
+    """
+    Recolector enfocado en una búsqueda específica (origen, destino, fechas, pax).
+    1. Si check_cache_first es True, revisa en Supabase si Playwright ya guardó vuelos frescos ($0 cost).
+    2. Si no hay vuelos en caché o se requiere búsqueda fresca/refinada, consulta SerpApi cuidando la cuota (250/mes).
+    """
+    origin = search.get("origin")
+    dest = search.get("dest")
+    dep_date = search.get("dep_date")
+    ret_date = search.get("ret_date")
+    adults = int(search.get("passengers", 1) or 1)
+    
+    if check_cache_first:
+        try:
+            from ..services.db import get_recent_flight_deals
+            recent = get_recent_flight_deals(days=1)
+            # Filtrar si coinciden ruta y fechas
+            matching = [
+                d for d in (recent or [])
+                if dest in d.get("ida_origen_destino", "") or dest in d.get("vuelta_origen_destino", "")
+            ]
+            if matching:
+                print(f"[Recolector Híbrido] ⚡ Usando {len(matching)} vuelos frescos de Playwright en Supabase para {dest} ($0 cuota).")
+                results = []
+                for d in matching:
+                    pax = int(d.get("pasajeros", adults) or adults)
+                    precio_total = float(d.get("precio_total_usd", 0) or 0)
+                    results.append({
+                        "ida_fecha": d.get("ida_fecha", dep_date),
+                        "vuelta_fecha": d.get("vuelta_fecha", ret_date),
+                        "ida_origen_destino": d.get("ida_origen_destino", f"{origin}-{dest}"),
+                        "vuelta_origen_destino": d.get("vuelta_origen_destino", f"{dest}-{origin}"),
+                        "precio_original": precio_total,
+                        "moneda_original": "USD",
+                        "precio_total_usd": precio_total,
+                        "pasajeros": pax,
+                        "precio_por_pasajero_usd": round(precio_total / pax, 2) if pax > 0 else precio_total,
+                        "aerolinea": d.get("aerolinea", "Aerolínea"),
+                        "cantidad_escalas": int(d.get("cantidad_escalas", 0) or 0),
+                        "duracion_total_minutos": int(d.get("duracion_total_minutos", 720) or 720),
+                        "link_reserva": d.get("link_reserva", ""),
+                        "fuente": d.get("fuente", "agent_playwright")
+                    })
+                return results
+        except Exception as e:
+            print(f"[Recolector Híbrido] Caché omitida ({e}). Procediendo con SerpApi.")
+
+    if all([origin, dest, dep_date, ret_date]):
+        return fetch_serpapi_flights(origin, dest, dep_date, ret_date, adults=adults)
+    return []
+
 def collect_dynamic_flights(mission: Dict) -> List[Dict]:
     """
     Recolector Híbrido Inteligente:
@@ -133,15 +184,8 @@ def collect_dynamic_flights(mission: Dict) -> List[Dict]:
         return []
         
     for search in searches:
-        origin = search.get("origin")
-        dest = search.get("dest")
-        dep_date = search.get("dep_date")
-        ret_date = search.get("ret_date")
-        adults = int(search.get("passengers", 1) or 1)
-        
-        if all([origin, dest, dep_date, ret_date]):
-            flights = fetch_serpapi_flights(origin, dest, dep_date, ret_date, adults=adults)
-            results.extend(flights)
+        flights = collect_flights_for_search(search, check_cache_first=False)
+        results.extend(flights)
             
     return results
 

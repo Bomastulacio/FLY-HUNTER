@@ -1,5 +1,8 @@
+import os
+import json
 import hashlib
-from typing import List, Dict
+import requests
+from typing import List, Dict, Any, Tuple
 
 GLITCH_THRESHOLD_PER_PAX = 400.0  # Tarifa error si es menor a USD 400 por pasajero (ida y vuelta)
 DEFAULT_MAX_BUDGET_PER_PAX = 1200.0
@@ -165,3 +168,105 @@ def filter_and_evaluate(deals: List[Dict], alerts: List[Dict] = None) -> List[Di
             evaluated_deals.append(cheapest)
             
     return evaluated_deals
+
+def evaluate_with_llm_critic(
+    deals: List[Dict], 
+    alert: Dict,
+    iteration: int = 0,
+    max_iterations: int = 2
+) -> Tuple[List[Dict], bool, str, Dict[str, int]]:
+    """
+    Agente Crítico LLM (Graph Node):
+    Utiliza Gemini (o OpenAI) para razonamiento semántico sobre las tarifas aéreas.
+    Determina si los vuelos son aprobados y si se requiere un loop de refinamiento
+    (ej: ajustar fechas +1 o -1 día) para encontrar mejores ofertas dentro del presupuesto.
+    
+    Retorna: (evaluated_deals, needs_refinement, refinement_reason, suggested_deltas)
+    """
+    # 1. Evaluación base heurística para garantizar consistencia en hashes y flags
+    evaluated = filter_and_evaluate(deals, [alert] if alert else [])
+    
+    has_approved_deal = any(
+        d.get('estado_aprobacion') == 'aprobado' and (d.get('es_oportunidad_oro') or not d.get('es_mejor_del_dia', False))
+        for d in evaluated
+    )
+    
+    gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    
+    # Si no hay LLM key o ya se llegó al máximo de iteraciones, usar heurística
+    if not (gemini_key or openai_key) or iteration >= max_iterations:
+        needs_refine = (not has_approved_deal) and (len(deals) > 0) and (iteration < max_iterations)
+        advice = "No se encontraron ofertas dentro de presupuesto. Refinando fechas (+1 día ida)." if needs_refine else ""
+        deltas = {"dep_delta": 1, "ret_delta": 0} if needs_refine else {"dep_delta": 0, "ret_delta": 0}
+        return evaluated, needs_refine, advice, deltas
+
+    # Si hay Gemini o OpenAI, realizar razonamiento de agente
+    pasajeros = max(1, int(alert.get("pasajeros", 1) or 1))
+    presupuesto = float(alert.get("presupuesto_max", 2400) or 2400)
+    escalas_max = int(alert.get("escalas_max", 1) or 1)
+    
+    prompt = f"""
+    Eres el Agente Crítico de Inteligencia de 'Fly Hunter' en un Grafo Cíclico de Búsqueda de Vuelos.
+    
+    OBJETIVO:
+    Evaluar los vuelos obtenidos para la alerta del usuario y decidir si se aprueban o si conviene
+    realizar un LOOP DE REFINAMIENTO cambiando las fechas dentro de la ventana de viaje.
+    
+    CRITERIOS DEL USUARIO:
+    - Pasajeros: {pasajeros}
+    - Presupuesto Máximo Total: US$ {presupuesto}
+    - Escalas Máximas: {escalas_max}
+    - Iteración Actual del Grafo: {iteration + 1} de {max_iterations}
+    
+    VUELOS RECOLECTADOS ({len(deals)} opciones):
+    {json.dumps([{{'aerolinea': d.get('aerolinea'), 'precio_usd': d.get('precio_total_usd'), 'escalas': d.get('cantidad_escalas'), 'ida': d.get('ida_fecha'), 'vuelta': d.get('vuelta_fecha')}} for d in deals[:6]], indent=2)}
+    
+    DECISIÓN:
+    1. Si hay algún vuelo con precio <= US$ {presupuesto} y escalas <= {escalas_max}, aprueba y NO refines (needs_refinement = false).
+    2. Si los vuelos superan el presupuesto o no hay vuelos y aún quedan iteraciones ({iteration + 1} < {max_iterations}):
+       activa needs_refinement = true y propone una pequeña modificación de fechas (dep_delta: +1 o -1 día, ret_delta: 0 o +1).
+    3. Si ya no hay margen de iteración, needs_refinement = false.
+    
+    Responde ÚNICAMENTE con un JSON válido con este formato:
+    {{
+      "needs_refinement": bool,
+      "refinement_reason": "explicación clara en 1 frase",
+      "dep_delta": int,
+      "ret_delta": int,
+      "summary_notification": "frase atractiva para el usuario"
+    }}
+    """
+    
+    try:
+        if gemini_key:
+            # Consulta directa a Gemini API v1beta
+            models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+            for model in models:
+                try:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
+                    payload = {
+                        "contents": [{"parts": [{"text": prompt}]}],
+                        "generationConfig": {"responseMimeType": "application/json"}
+                    }
+                    res = requests.post(url, json=payload, timeout=15)
+                    if res.status_code == 200:
+                        content = res.json()["candidates"][0]["content"]["parts"][0]["text"]
+                        data = json.loads(content)
+                        print(f"🤖 [Agente Crítico LLM ({model})]: {data.get('refinement_reason') or data.get('summary_notification')}")
+                        needs_refine = bool(data.get("needs_refinement", False)) and (iteration < max_iterations)
+                        deltas = {
+                            "dep_delta": int(data.get("dep_delta", 1)),
+                            "ret_delta": int(data.get("ret_delta", 0))
+                        }
+                        return evaluated, needs_refine, data.get("refinement_reason", ""), deltas
+                except Exception as model_err:
+                    continue
+                    
+    except Exception as e:
+        print(f"⚠️ [Agente Crítico LLM]: Excepción al consultar LLM ({e}). Usando fallback heurístico.")
+        
+    needs_refine = (not has_approved_deal) and (len(deals) > 0) and (iteration < max_iterations)
+    advice = "Presupuesto superado. Probando fechas alternativas." if needs_refine else ""
+    deltas = {"dep_delta": 1, "ret_delta": 0} if needs_refine else {"dep_delta": 0, "ret_delta": 0}
+    return evaluated, needs_refine, advice, deltas

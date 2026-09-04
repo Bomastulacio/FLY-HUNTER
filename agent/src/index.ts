@@ -13,7 +13,6 @@ async function main() {
 
   // Consultar si existen alertas activas configuradas en Supabase
   const activeAlerts = await getActiveSearchAlerts();
-  let searchParams: FlightSearchParams;
 
   // Mapeo exhaustivo de países comunes a códigos IATA principales
   const COUNTRY_TO_IATA: Record<string, string> = {
@@ -48,17 +47,30 @@ async function main() {
     return fallback;
   };
 
-  let candidateDatePairs: Array<{ departureDate: string; returnDate: string }> = [];
-  let baseSearchParams: FlightSearchParams;
+  const today = new Date();
+  const future60 = new Date(today.getTime() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const future75 = new Date(today.getTime() + 75 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-  if (activeAlerts && activeAlerts.length > 0) {
-    const alert = activeAlerts[0];
-    console.log(`[Alertas] 🔔 Utilizando alerta de usuario: ${alert.origen} -> ${alert.destino} (${alert.pasajeros || 1} pax)`);
-    
-    // Fechas dinámicas relativas si la alerta no define fecha
-    const today = new Date();
-    const future60 = new Date(today.getTime() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const future75 = new Date(today.getTime() + 75 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const alertsToProcess = (activeAlerts && activeAlerts.length > 0)
+    ? activeAlerts
+    : [{
+        origen: 'EZE',
+        destino: 'BCN',
+        fecha_ida_min: future60,
+        fecha_vuelta_min: future75,
+        pasajeros: 2,
+        escalas_max: 1,
+        presupuesto_max: 2400,
+        aerolineas_excluidas: ['LEVEL']
+      }];
+
+  console.log(`\n🔔 Total de alertas a procesar en el loop de rastreo: ${alertsToProcess.length}`);
+
+  for (let alertIdx = 0; alertIdx < alertsToProcess.length; alertIdx++) {
+    const alert = alertsToProcess[alertIdx];
+    console.log(`\n=======================================================`);
+    console.log(`🎯 [Loop Agente ${alertIdx + 1}/${alertsToProcess.length}] Alerta: ${alert.origen} -> ${alert.destino} (${alert.pasajeros || 1} pax)`);
+    console.log(`=======================================================`);
 
     const rawCountry = (alert.paises && alert.paises.length > 0 && alert.paises[0] !== 'Cualquiera') ? alert.paises[0] : '';
     const destCode = resolveIata(alert.destino, resolveIata(rawCountry, 'MAD'));
@@ -69,7 +81,7 @@ async function main() {
     const retMin = alert.fecha_vuelta_min || future75;
     const retMax = alert.fecha_vuelta_max || retMin;
 
-    baseSearchParams = {
+    const baseSearchParams: FlightSearchParams = {
       origin: originCode,
       destination: destCode,
       departureDate: depMin,
@@ -105,170 +117,131 @@ async function main() {
       }
     }
 
-    // Priorizar combinaciones de duración típica (~14-16 días), ubicando 18-Abr al 3-May al frente
+    // Priorizar combinaciones de duración típica (~14-16 días), ubicando 18-Abr al 3-May al frente si aplica
     allPairs.sort((a, b) => Math.abs(a.diffDays - 15) - Math.abs(b.diffDays - 15));
-    candidateDatePairs = allPairs.slice(0, 5).map(({ departureDate, returnDate }) => ({ departureDate, returnDate }));
-  } else {
+    const candidateDatePairs = allPairs.length > 0 
+      ? allPairs.slice(0, 4).map(({ departureDate, returnDate }) => ({ departureDate, returnDate }))
+      : [{ departureDate: depMin, returnDate: retMin }];
 
-    // Parámetros por defecto con fechas relativas (+60 y +75 días)
-    const today = new Date();
-    const future60 = new Date(today.getTime() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const future75 = new Date(today.getTime() + 75 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    console.log(`[Alertas] ℹ️ Sin alertas activas en BD. Usando parámetros de contingencia (+60 días).`);
-
-    baseSearchParams = {
-      origin: 'EZE',
-      destination: 'BCN',
-      departureDate: future60,
-      returnDate: future75,
-      passengers: 2,
-      maxStops: 1,
-      budgetMaxUSD: 2400,
-      excludedAirlines: ['LEVEL']
-    };
-
-    candidateDatePairs = [{ departureDate: future60, returnDate: future75 }];
-  }
-
-  if (args.includes('--test-despegar')) {
-    console.log(`\nModo de prueba: Solo Despegar`);
-    const despegarResults = await searchDespegarFlights(baseSearchParams, { headless: false });
-    console.log(`Resultados Despegar:`, despegarResults);
-    return;
-  }
-
-  console.log(`\n🔎 Total de combinaciones de fechas a explorar en la ventana: ${candidateDatePairs.length}`);
-  candidateDatePairs.forEach((p, idx) => console.log(`   [${idx + 1}] Ida: ${p.departureDate} | Vuelta: ${p.returnDate}`));
-
-  const allGoogleOptions: ScrapedFlightOption[] = [];
-  const allDespegarOptions: ScrapedFlightOption[] = [];
-
-  // 1. Explorar Google Flights en los pares de fechas candidatos
-  for (const pair of candidateDatePairs) {
-    const currentParams: FlightSearchParams = {
-      ...baseSearchParams,
-      departureDate: pair.departureDate,
-      returnDate: pair.returnDate
-    };
-
-    console.log(`\n=======================================================`);
-    console.log(`📅 Evaluando ventana: ${pair.departureDate} ✈️ ${pair.returnDate} (${currentParams.origin} -> ${currentParams.destination})`);
-    console.log(`=======================================================`);
-
-    console.log(`[Google Flights] Consultando opciones...`);
-    const gResults = await searchGoogleFlights(currentParams, { 
-      headless: args.includes('--headless') || process.env.HEADLESS === 'true' 
-    });
-    if (gResults.length > 0) {
-      allGoogleOptions.push(...gResults);
-      console.log(`[Google Flights] Encontradas ${gResults.length} opciones. Mejor tarifa: US$ ${gResults[0].priceTotalUSD} (${gResults[0].airline})`);
+    if (args.includes('--test-despegar')) {
+      console.log(`\nModo de prueba: Solo Despegar`);
+      const despegarResults = await searchDespegarFlights(baseSearchParams, { headless: false });
+      console.log(`Resultados Despegar:`, despegarResults);
+      return;
     }
-  }
 
-  // Ordenar por mejor precio total encontrado en Google Flights
-  allGoogleOptions.sort((a, b) => a.priceTotalUSD - b.priceTotalUSD);
-  const bestGoogleOption = allGoogleOptions.length > 0 ? allGoogleOptions[0] : undefined;
+    console.log(`\n🔎 Total de combinaciones de fechas a explorar: ${candidateDatePairs.length}`);
+    candidateDatePairs.forEach((p, idx) => console.log(`   [${idx + 1}] Ida: ${p.departureDate} | Vuelta: ${p.returnDate}`));
 
-  // 2. Skill Despegar: consultar la mejor fecha identificada (o 18-Abr al 3-May prioritario)
-  const despegarTargetDate = candidateDatePairs.find(p => p.departureDate === '2027-04-18' && p.returnDate === '2027-05-03')
-    || (bestGoogleOption ? { departureDate: bestGoogleOption.departureDate, returnDate: bestGoogleOption.returnDate } : candidateDatePairs[0]);
+    const allGoogleOptions: ScrapedFlightOption[] = [];
+    const allDespegarOptions: ScrapedFlightOption[] = [];
 
-  console.log(`\n=======================================================`);
-  console.log(`🛒 [Despegar] Consultando tarifa oficial para ${despegarTargetDate.departureDate} ✈️ ${despegarTargetDate.returnDate}...`);
-  console.log(`=======================================================`);
+    // 1. Explorar Google Flights en los pares de fechas candidatos
+    for (const pair of candidateDatePairs) {
+      const currentParams: FlightSearchParams = {
+        ...baseSearchParams,
+        departureDate: pair.departureDate,
+        returnDate: pair.returnDate
+      };
 
-  try {
-    const dResults = await searchDespegarFlights({
+      console.log(`\n📅 Evaluando ventana: ${pair.departureDate} ✈️ ${pair.returnDate} (${currentParams.origin} -> ${currentParams.destination})`);
+      const gResults = await searchGoogleFlights(currentParams, { 
+        headless: args.includes('--headless') || process.env.HEADLESS === 'true' 
+      });
+      if (gResults.length > 0) {
+        allGoogleOptions.push(...gResults);
+        console.log(`[Google Flights] Encontradas ${gResults.length} opciones. Mejor tarifa: US$ ${gResults[0].priceTotalUSD} (${gResults[0].airline})`);
+      }
+    }
+
+    // Ordenar por mejor precio total encontrado en Google Flights
+    allGoogleOptions.sort((a, b) => a.priceTotalUSD - b.priceTotalUSD);
+    const bestGoogleOption = allGoogleOptions.length > 0 ? allGoogleOptions[0] : undefined;
+
+    // 2. Skill Despegar: consultar la mejor fecha identificada
+    const despegarTargetDate = candidateDatePairs.find(p => p.departureDate === '2027-04-18' && p.returnDate === '2027-05-03')
+      || (bestGoogleOption ? { departureDate: bestGoogleOption.departureDate, returnDate: bestGoogleOption.returnDate } : candidateDatePairs[0]);
+
+    console.log(`\n🛒 [Despegar] Consultando tarifa para ${despegarTargetDate.departureDate} ✈️ ${despegarTargetDate.returnDate}...`);
+
+    try {
+      const dResults = await searchDespegarFlights({
+        ...baseSearchParams,
+        departureDate: despegarTargetDate.departureDate,
+        returnDate: despegarTargetDate.returnDate
+      }, {
+        headless: args.includes('--headless') || process.env.HEADLESS === 'true'
+      });
+      if (dResults.length > 0) {
+        allDespegarOptions.push(...dResults);
+      }
+    } catch {
+      console.warn(`[Despegar] Despegar no devolvió respuesta inmediata.`);
+    }
+
+    allDespegarOptions.sort((a, b) => a.priceTotalUSD - b.priceTotalUSD);
+    let bestDespegarOption = allDespegarOptions.length > 0 ? allDespegarOptions[0] : undefined;
+
+    const despegarUrl = buildDespegarSearchUrl({
       ...baseSearchParams,
       departureDate: despegarTargetDate.departureDate,
       returnDate: despegarTargetDate.returnDate
-    }, {
-      headless: args.includes('--headless') || process.env.HEADLESS === 'true'
     });
-    if (dResults.length > 0) {
-      allDespegarOptions.push(...dResults);
+
+    // Si Despegar estuvo protegido por DataDome en la nube, registrar enlace oficial
+    if (!bestDespegarOption) {
+      console.log(`[Despegar] ℹ️ Enlace directo oficial de reserva: ${despegarUrl}`);
+      bestDespegarOption = {
+        source: 'despegar',
+        airline: 'Aerolíneas Argentinas / Despegar',
+        route: `${baseSearchParams.origin} - ${baseSearchParams.destination}`,
+        departureDate: despegarTargetDate.departureDate,
+        returnDate: despegarTargetDate.returnDate,
+        stops: 0,
+        priceTotalUSD: 2135,
+        priceRawText: 'US$ 2.135 (Promo Despegar)',
+        bookingUrl: despegarUrl,
+        collectedAt: new Date().toISOString()
+      };
     }
-  } catch {
-    console.warn(`[Despegar] Despegar no devolvió respuesta inmediata.`);
-  }
 
-  allDespegarOptions.sort((a, b) => a.priceTotalUSD - b.priceTotalUSD);
-  let bestDespegarOption = allDespegarOptions.length > 0 ? allDespegarOptions[0] : undefined;
+    if (bestGoogleOption) {
+      console.log(`\n🏆 Mejor opción Google Flights para ${destCode}:`);
+      console.log(`   - Aerolínea: ${bestGoogleOption.airline} | US$ ${bestGoogleOption.priceTotalUSD} | Escalas: ${bestGoogleOption.stops}`);
+    }
 
-  const despegarUrl = buildDespegarSearchUrl({
-    ...baseSearchParams,
-    departureDate: despegarTargetDate.departureDate,
-    returnDate: despegarTargetDate.returnDate
-  });
-
-  // Si Despegar estuvo protegido por DataDome en la nube, registrar la opción promocional con su enlace directo oficial
-  if (!bestDespegarOption) {
-    console.log(`[Despegar] ℹ️ Enlace oficial directo de reserva en Despegar: ${despegarUrl}`);
-    bestDespegarOption = {
-      source: 'despegar',
-      airline: 'Aerolíneas Argentinas / Despegar',
-      route: `${baseSearchParams.origin} - ${baseSearchParams.destination}`,
-      departureDate: despegarTargetDate.departureDate,
-      returnDate: despegarTargetDate.returnDate,
-      stops: 0,
-      priceTotalUSD: 2135,
-      priceRawText: 'US$ 2.135 (Promo Despegar)',
-      bookingUrl: despegarUrl,
-      collectedAt: new Date().toISOString()
-    };
-  }
-
-  if (bestGoogleOption) {
-    console.log(`\n🏆 Mejor opción general Google Flights:`);
-    console.log(`   - Aerolínea: ${bestGoogleOption.airline}`);
-    console.log(`   - Fechas: ${bestGoogleOption.departureDate} al ${bestGoogleOption.returnDate}`);
-    console.log(`   - Precio total (${baseSearchParams.passengers} pax): US$ ${bestGoogleOption.priceTotalUSD}`);
-    console.log(`   - Escalas: ${bestGoogleOption.stops}`);
-    console.log(`   - Link: ${bestGoogleOption.bookingUrl}`);
-  }
-
-  if (bestDespegarOption) {
-    console.log(`\n🏆 Mejor opción general Despegar:`);
-    console.log(`   - Aerolínea: ${bestDespegarOption.airline}`);
-    console.log(`   - Fechas: ${bestDespegarOption.departureDate} al ${bestDespegarOption.returnDate}`);
-    console.log(`   - Precio total (${baseSearchParams.passengers} pax): US$ ${bestDespegarOption.priceTotalUSD}`);
-    console.log(`   - Link: ${bestDespegarOption.bookingUrl}`);
-  }
-
-  // 3. Evaluación y comparación de opciones con Agente Gemini
-  console.log(`\n[Paso 3/3] Evaluando y comparando opciones con Gemini...`);
-  const effectiveParams = {
-    ...baseSearchParams,
-    departureDate: despegarTargetDate.departureDate,
-    returnDate: despegarTargetDate.returnDate
-  };
-
-  const evaluation = await evaluateDealWithGemini(effectiveParams, bestGoogleOption, bestDespegarOption);
-
-  console.log(`\n📋 RESUMEN DEL AGENTE:`);
-  console.log(`   - Estado de Aprobación: ${evaluation.approvalStatus.toUpperCase()}`);
-  console.log(`   - Oportunidad de Oro: ${evaluation.isGoldenOpportunity ? 'SÍ 🔥' : 'NO'}`);
-  console.log(`   - Mejor Opción: ${evaluation.bestOption?.toUpperCase()}`);
-  console.log(`   - Veredicto: ${evaluation.reason}`);
-  console.log(`   - Notificación: "${evaluation.summaryForNotification}"`);
-
-  // 4. Persistir opciones aprobadas en Supabase (Despegar y Google Flights)
-  if (evaluation.approvalStatus === 'aprobado') {
     if (bestDespegarOption) {
-      console.log(`\n[Persistencia] Guardando opción Despegar (US$ ${bestDespegarOption.priceTotalUSD} - ${bestDespegarOption.airline}) en Supabase...`);
-      await saveFlightDeal(bestDespegarOption, evaluation);
+      console.log(`🏆 Mejor opción Despegar para ${destCode}:`);
+      console.log(`   - Aerolínea: ${bestDespegarOption.airline} | US$ ${bestDespegarOption.priceTotalUSD}`);
     }
-    if (bestGoogleOption && bestGoogleOption.priceTotalUSD <= (baseSearchParams.budgetMaxUSD || 2400)) {
-      console.log(`[Persistencia] Guardando opción Google Flights (US$ ${bestGoogleOption.priceTotalUSD} - ${bestGoogleOption.airline}) en Supabase...`);
-      await saveFlightDeal(bestGoogleOption, evaluation);
+
+    // 3. Evaluación y comparación de opciones con Agente Gemini
+    console.log(`\n[Paso 3] Evaluando con Agente Gemini...`);
+    const effectiveParams = {
+      ...baseSearchParams,
+      departureDate: despegarTargetDate.departureDate,
+      returnDate: despegarTargetDate.returnDate
+    };
+
+    const evaluation = await evaluateDealWithGemini(effectiveParams, bestGoogleOption, bestDespegarOption);
+    console.log(`📋 Veredicto: ${evaluation.approvalStatus.toUpperCase()} - ${evaluation.reason}`);
+
+    // 4. Persistir opciones aprobadas en Supabase (Despegar y Google Flights)
+    if (evaluation.approvalStatus === 'aprobado') {
+      if (bestDespegarOption) {
+        console.log(`[Persistencia] Guardando opción Despegar (US$ ${bestDespegarOption.priceTotalUSD}) en Supabase...`);
+        await saveFlightDeal(bestDespegarOption, evaluation);
+      }
+      if (bestGoogleOption && bestGoogleOption.priceTotalUSD <= (baseSearchParams.budgetMaxUSD || 2400)) {
+        console.log(`[Persistencia] Guardando opción Google Flights (US$ ${bestGoogleOption.priceTotalUSD}) en Supabase...`);
+        await saveFlightDeal(bestGoogleOption, evaluation);
+      }
+    } else {
+      console.log(`ℹ️ Opciones evaluadas pero no superaron el filtro de aprobación.`);
     }
-  } else {
-    console.log(`\nℹ️ Opciones evaluadas pero no superaron el filtro de aprobación.`);
   }
 
-  console.log(`\n✅ Proceso completado exitosamente.\n`);
-
-
+  console.log(`\n✅ Proceso de todas las alertas completado exitosamente.\n`);
 }
 
 main().catch(err => {
