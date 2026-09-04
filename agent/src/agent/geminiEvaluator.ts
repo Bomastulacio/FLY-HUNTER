@@ -73,21 +73,43 @@ export async function evaluateDealWithGemini(
       }
     `;
 
-    console.log(`[Agente Gemini] 🤖 Evaluando tarifas con Gemini Flash...`);
-    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-    const response = await ai.models.generateContent({
-      model,
-      contents: prompt,
-      config: { responseMimeType: 'application/json' }
-    });
+    // Lista de modelos candidatos en cascada (del más preferido a los de respaldo)
+    const candidates: string[] = [
+      process.env.GEMINI_MODEL,
+      'gemini-2.5-flash',
+      'gemini-2.5-flash-lite',
+      'gemini-2.5-pro',
+      'gemini-flash'
+    ].filter((m): m is string => Boolean(m && m.trim().length > 0));
 
-    const rawText = response.text || '{}';
-    const cleaned = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-    const parsed = JSON.parse(cleaned) as AgentEvaluation;
-    console.log(`[Agente Gemini] ✅ Veredicto: ${parsed.approvalStatus?.toUpperCase()} - ${parsed.reason}`);
-    return parsed;
+    const uniqueCandidates = [...new Set(candidates)];
+    let lastError: unknown = null;
+
+    for (const candidate of uniqueCandidates) {
+      try {
+        console.log(`[Agente Gemini] 🤖 Evaluando tarifas con modelo '${candidate}'...`);
+        const response = await ai.models.generateContent({
+          model: candidate,
+          contents: prompt,
+          config: { responseMimeType: 'application/json' }
+        });
+
+        const rawText = response.text || '{}';
+        const cleaned = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(cleaned) as AgentEvaluation;
+        console.log(`[Agente Gemini] ✅ Veredicto (${candidate}): ${parsed.approvalStatus?.toUpperCase()} - ${parsed.reason}`);
+        return parsed;
+      } catch (err: any) {
+        lastError = err;
+        const errMsg = err?.message || String(err);
+        const status = err?.status || err?.statusCode;
+        console.warn(`[Agente Gemini] ⚠️ Falló intento con '${candidate}' (Status: ${status || 'desconocido'}: ${errMsg}). Probando alternativa...`);
+      }
+    }
+
+    throw lastError || new Error('Ningún modelo candidato de Gemini pudo responder.');
   } catch (error) {
-    console.error(`[Agente Gemini] ❌ Error consultando Gemini API:`, error);
+    console.error(`[Agente Gemini] ❌ Error consultando Gemini API en todos los candidatos:`, error);
     // Fallback seguro
     return {
       isGoldenOpportunity: false,
