@@ -81,31 +81,35 @@ async function main() {
     };
 
     // Construir pares de fechas candidatos a evaluar dentro de la ventana del usuario
-    const depSet = new Set<string>([depMin, depMax]);
+    const depDates: string[] = [];
     const dStart = new Date(depMin);
     const dEnd = new Date(depMax);
     for (let d = new Date(dStart); d <= dEnd; d.setDate(d.getDate() + 1)) {
-      depSet.add(d.toISOString().split('T')[0]);
+      depDates.push(d.toISOString().split('T')[0]);
     }
 
-    const retSet = new Set<string>([retMin, retMax]);
+    const retDates: string[] = [];
     const rStart = new Date(retMin);
     const rEnd = new Date(retMax);
     for (let r = new Date(rStart); r <= rEnd; r.setDate(r.getDate() + 1)) {
-      retSet.add(r.toISOString().split('T')[0]);
+      retDates.push(r.toISOString().split('T')[0]);
     }
 
-    for (const dep of depSet) {
-      for (const ret of retSet) {
-        if (new Date(ret) > new Date(dep)) {
-          candidateDatePairs.push({ departureDate: dep, returnDate: ret });
+    const allPairs: Array<{ departureDate: string; returnDate: string; diffDays: number }> = [];
+    for (const dep of depDates) {
+      for (const ret of retDates) {
+        const diff = Math.round((new Date(ret).getTime() - new Date(dep).getTime()) / (1000 * 60 * 60 * 24));
+        if (diff >= 10 && diff <= 20) {
+          allPairs.push({ departureDate: dep, returnDate: ret, diffDays: diff });
         }
       }
     }
 
-    // Limitar a los pares estratégicos más prometedores (máx 4 para no demorar la corrida)
-    candidateDatePairs = candidateDatePairs.slice(0, 4);
+    // Priorizar combinaciones de duración típica (~14-16 días), ubicando 18-Abr al 3-May al frente
+    allPairs.sort((a, b) => Math.abs(a.diffDays - 15) - Math.abs(b.diffDays - 15));
+    candidateDatePairs = allPairs.slice(0, 5).map(({ departureDate, returnDate }) => ({ departureDate, returnDate }));
   } else {
+
     // Parámetros por defecto con fechas relativas (+60 y +75 días)
     const today = new Date();
     const future60 = new Date(today.getTime() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -139,6 +143,7 @@ async function main() {
   const allGoogleOptions: ScrapedFlightOption[] = [];
   const allDespegarOptions: ScrapedFlightOption[] = [];
 
+  // 1. Explorar Google Flights en los pares de fechas candidatos
   for (const pair of candidateDatePairs) {
     const currentParams: FlightSearchParams = {
       ...baseSearchParams,
@@ -150,7 +155,6 @@ async function main() {
     console.log(`📅 Evaluando ventana: ${pair.departureDate} ✈️ ${pair.returnDate} (${currentParams.origin} -> ${currentParams.destination})`);
     console.log(`=======================================================`);
 
-    // 1. Skill Google Flights
     console.log(`[Google Flights] Consultando opciones...`);
     const gResults = await searchGoogleFlights(currentParams, { 
       headless: args.includes('--headless') || process.env.HEADLESS === 'true' 
@@ -159,51 +163,48 @@ async function main() {
       allGoogleOptions.push(...gResults);
       console.log(`[Google Flights] Encontradas ${gResults.length} opciones. Mejor tarifa: US$ ${gResults[0].priceTotalUSD} (${gResults[0].airline})`);
     }
-
-    // 2. Skill Despegar
-    console.log(`[Despegar] Consultando opciones...`);
-    try {
-      const dResults = await searchDespegarFlights(currentParams, {
-        headless: args.includes('--headless') || process.env.HEADLESS === 'true'
-      });
-      if (dResults.length > 0) {
-        allDespegarOptions.push(...dResults);
-        console.log(`[Despegar] Encontradas ${dResults.length} opciones. Tarifa detectada: US$ ${dResults[0].priceTotalUSD} (${dResults[0].airline})`);
-      }
-    } catch {
-      console.warn(`[Despegar] Falló consulta puntual para esta fecha.`);
-    }
-
-    // Parada temprana si ya encontramos una tarifa de oro (< $2200 USD para 2 personas)
-    const currentBestUSD = Math.min(
-      ...allGoogleOptions.map(o => o.priceTotalUSD),
-      ...allDespegarOptions.map(o => o.priceTotalUSD)
-    );
-    if (currentBestUSD < 2200) {
-      console.log(`\n⚡ ¡Oportunidad detectada por debajo de US$ 2200 (US$ ${currentBestUSD})! Optimizando tiempo de corrida.`);
-      break;
-    }
   }
 
-  // Ordenar por mejor precio total
+  // Ordenar por mejor precio total encontrado en Google Flights
   allGoogleOptions.sort((a, b) => a.priceTotalUSD - b.priceTotalUSD);
-  allDespegarOptions.sort((a, b) => a.priceTotalUSD - b.priceTotalUSD);
-
   const bestGoogleOption = allGoogleOptions.length > 0 ? allGoogleOptions[0] : undefined;
+
+  // 2. Skill Despegar: consultar la mejor fecha identificada (o 18-Abr al 3-May prioritario)
+  const despegarTargetDate = candidateDatePairs.find(p => p.departureDate === '2027-04-18' && p.returnDate === '2027-05-03')
+    || (bestGoogleOption ? { departureDate: bestGoogleOption.departureDate, returnDate: bestGoogleOption.returnDate } : candidateDatePairs[0]);
+
+  console.log(`\n=======================================================`);
+  console.log(`🛒 [Despegar] Consultando tarifa oficial para ${despegarTargetDate.departureDate} ✈️ ${despegarTargetDate.returnDate}...`);
+  console.log(`=======================================================`);
+
+  try {
+    const dResults = await searchDespegarFlights({
+      ...baseSearchParams,
+      departureDate: despegarTargetDate.departureDate,
+      returnDate: despegarTargetDate.returnDate
+    }, {
+      headless: args.includes('--headless') || process.env.HEADLESS === 'true'
+    });
+    if (dResults.length > 0) {
+      allDespegarOptions.push(...dResults);
+    }
+  } catch {
+    console.warn(`[Despegar] Despegar no devolvió respuesta inmediata.`);
+  }
+
+  allDespegarOptions.sort((a, b) => a.priceTotalUSD - b.priceTotalUSD);
   let bestDespegarOption = allDespegarOptions.length > 0 ? allDespegarOptions[0] : undefined;
 
-  // Si Despegar no devolvió precio por captcha, generar enlace oficial de reserva para la mejor fecha
+  // Si Despegar no devolvió precio numérico por captcha, generar enlace oficial directo para el usuario
   if (!bestDespegarOption) {
-    const targetDate = bestGoogleOption 
-      ? { departureDate: bestGoogleOption.departureDate, returnDate: bestGoogleOption.returnDate }
-      : candidateDatePairs[0];
     const despegarUrl = buildDespegarSearchUrl({
       ...baseSearchParams,
-      departureDate: targetDate.departureDate,
-      returnDate: targetDate.returnDate
+      departureDate: despegarTargetDate.departureDate,
+      returnDate: despegarTargetDate.returnDate
     });
-    console.log(`[Despegar] ℹ️ Link oficial de reserva generado para comparación: ${despegarUrl}`);
+    console.log(`[Despegar] ℹ️ Enlace oficial directo de reserva en Despegar: ${despegarUrl}`);
   }
+
 
   if (bestGoogleOption) {
     console.log(`\n🏆 Mejor opción general Google Flights:`);
