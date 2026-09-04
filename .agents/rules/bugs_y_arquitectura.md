@@ -39,3 +39,10 @@ Este archivo sirve como memoria a largo plazo para los agentes de IA que trabaje
   1. **Loop de Refinamiento (Self-Correction):** Si el Crítico detecta que los vuelos encontrados no cumplen el presupuesto o las escalas, evalúa semánticamente si mover las fechas (+/- 1 o 2 días dentro de la ventana) puede rescatar tarifas más bajas y re-enruta el flujo hacia el recolector.
   2. **Loop Multi-Alerta:** Procesa de forma secuencial todas las alertas activas en Supabase (`alerts_queue`) antes de avanzar al nodo de Data Scientist.
   3. **Límites de Seguridad (Guards):** Máximo 2 iteraciones por alerta (`max_iterations = 2`) y lectura previa de caché en Supabase para no agotar la cuota de SerpApi ni tokens de LLM.
+
+## 7. Cuotas de Gemini AI y Blindaje contra Rate Limits
+- **Límites Gratuitos:** Gemini Flash cuenta con **20 RPD (peticiones/día)** y **5 RPM**.
+- **Entorno Antigravity:** Dispone de **100 RPD** y **60 RPM**.
+- **Regla de Oro:** Siempre enviar vuelos en lote (batching) por alerta. Jamás 1 consulta LLM por vuelo.
+- **Degradación Elegante:** En caso de HTTP 429 (cuota diaria cumplida), el pipeline nunca falla; conmuta de inmediato a evaluación determinista por reglas de negocio.
+
