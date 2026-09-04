@@ -74,14 +74,17 @@ export async function evaluateDealWithGemini(
     `;
 
     console.log(`[Agente Gemini] 🤖 Evaluando tarifas con Gemini Flash...`);
+    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
+      model,
       contents: prompt,
       config: { responseMimeType: 'application/json' }
     });
 
-    const parsed = JSON.parse(response.text || '{}') as AgentEvaluation;
-    console.log(`[Agente Gemini] ✅ Veredicto: ${parsed.approvalStatus.toUpperCase()} - ${parsed.reason}`);
+    const rawText = response.text || '{}';
+    const cleaned = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+    const parsed = JSON.parse(cleaned) as AgentEvaluation;
+    console.log(`[Agente Gemini] ✅ Veredicto: ${parsed.approvalStatus?.toUpperCase()} - ${parsed.reason}`);
     return parsed;
   } catch (error) {
     console.error(`[Agente Gemini] ❌ Error consultando Gemini API:`, error);
