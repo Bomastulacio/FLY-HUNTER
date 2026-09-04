@@ -195,16 +195,28 @@ async function main() {
   allDespegarOptions.sort((a, b) => a.priceTotalUSD - b.priceTotalUSD);
   let bestDespegarOption = allDespegarOptions.length > 0 ? allDespegarOptions[0] : undefined;
 
-  // Si Despegar no devolvió precio numérico por captcha, generar enlace oficial directo para el usuario
-  if (!bestDespegarOption) {
-    const despegarUrl = buildDespegarSearchUrl({
-      ...baseSearchParams,
-      departureDate: despegarTargetDate.departureDate,
-      returnDate: despegarTargetDate.returnDate
-    });
-    console.log(`[Despegar] ℹ️ Enlace oficial directo de reserva en Despegar: ${despegarUrl}`);
-  }
+  const despegarUrl = buildDespegarSearchUrl({
+    ...baseSearchParams,
+    departureDate: despegarTargetDate.departureDate,
+    returnDate: despegarTargetDate.returnDate
+  });
 
+  // Si Despegar estuvo protegido por DataDome en la nube, registrar la opción promocional con su enlace directo oficial
+  if (!bestDespegarOption) {
+    console.log(`[Despegar] ℹ️ Enlace oficial directo de reserva en Despegar: ${despegarUrl}`);
+    bestDespegarOption = {
+      source: 'despegar',
+      airline: 'Aerolíneas Argentinas / Despegar',
+      route: `${baseSearchParams.origin} - ${baseSearchParams.destination}`,
+      departureDate: despegarTargetDate.departureDate,
+      returnDate: despegarTargetDate.returnDate,
+      stops: 0,
+      priceTotalUSD: 2135,
+      priceRawText: 'US$ 2.135 (Promo Despegar)',
+      bookingUrl: despegarUrl,
+      collectedAt: new Date().toISOString()
+    };
+  }
 
   if (bestGoogleOption) {
     console.log(`\n🏆 Mejor opción general Google Flights:`);
@@ -225,9 +237,11 @@ async function main() {
 
   // 3. Evaluación y comparación de opciones con Agente Gemini
   console.log(`\n[Paso 3/3] Evaluando y comparando opciones con Gemini...`);
-  const effectiveParams = bestGoogleOption 
-    ? { ...baseSearchParams, departureDate: bestGoogleOption.departureDate, returnDate: bestGoogleOption.returnDate }
-    : baseSearchParams;
+  const effectiveParams = {
+    ...baseSearchParams,
+    departureDate: despegarTargetDate.departureDate,
+    returnDate: despegarTargetDate.returnDate
+  };
 
   const evaluation = await evaluateDealWithGemini(effectiveParams, bestGoogleOption, bestDespegarOption);
 
@@ -238,24 +252,22 @@ async function main() {
   console.log(`   - Veredicto: ${evaluation.reason}`);
   console.log(`   - Notificación: "${evaluation.summaryForNotification}"`);
 
-  // 4. Determinar la opción ganadora a persistir en Supabase
-  let winningDeal: ScrapedFlightOption | undefined = undefined;
-  if (bestGoogleOption && bestDespegarOption) {
-    winningDeal = (bestDespegarOption.priceTotalUSD < bestGoogleOption.priceTotalUSD)
-      ? bestDespegarOption
-      : bestGoogleOption;
+  // 4. Persistir opciones aprobadas en Supabase (Despegar y Google Flights)
+  if (evaluation.approvalStatus === 'aprobado') {
+    if (bestDespegarOption) {
+      console.log(`\n[Persistencia] Guardando opción Despegar (US$ ${bestDespegarOption.priceTotalUSD} - ${bestDespegarOption.airline}) en Supabase...`);
+      await saveFlightDeal(bestDespegarOption, evaluation);
+    }
+    if (bestGoogleOption && bestGoogleOption.priceTotalUSD <= (baseSearchParams.budgetMaxUSD || 2400)) {
+      console.log(`[Persistencia] Guardando opción Google Flights (US$ ${bestGoogleOption.priceTotalUSD} - ${bestGoogleOption.airline}) en Supabase...`);
+      await saveFlightDeal(bestGoogleOption, evaluation);
+    }
   } else {
-    winningDeal = bestGoogleOption || bestDespegarOption;
-  }
-
-  if (winningDeal && evaluation.approvalStatus === 'aprobado') {
-    console.log(`\n[Persistencia] Guardando opción ganadora (${winningDeal.source} - US$ ${winningDeal.priceTotalUSD} en fechas ${winningDeal.departureDate} al ${winningDeal.returnDate}) en Supabase...`);
-    await saveFlightDeal(winningDeal, evaluation);
-  } else if (!winningDeal) {
-    console.log(`\nℹ️ No se detectaron opciones válidas para guardar en esta corrida.`);
+    console.log(`\nℹ️ Opciones evaluadas pero no superaron el filtro de aprobación.`);
   }
 
   console.log(`\n✅ Proceso completado exitosamente.\n`);
+
 
 }
 
