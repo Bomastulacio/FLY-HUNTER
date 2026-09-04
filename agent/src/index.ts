@@ -3,7 +3,7 @@ import { searchGoogleFlights } from './skills/googleFlights.js';
 import { searchDespegarFlights, buildDespegarSearchUrl } from './skills/despegar.js';
 import { evaluateDealWithGemini } from './agent/geminiEvaluator.js';
 import { saveFlightDeal, getActiveSearchAlerts } from './db/supabase.js';
-import type { FlightSearchParams } from './types/flight.js';
+import type { FlightSearchParams, ScrapedFlightOption } from './types/flight.js';
 
 async function main() {
   const args = process.argv.slice(2);
@@ -83,25 +83,50 @@ async function main() {
     console.log(`\n⚠️ No se encontraron opciones en Google Flights para los filtros solicitados.`);
   }
 
-  // 2. Link / Skill Despegar para comparar
-  console.log(`\n[Paso 2/3] Generando comparación con Despegar para ${searchParams.passengers} pasajeros...`);
-  const despegarUrl = buildDespegarSearchUrl(searchParams);
-  console.log(`   - Link directo Despegar (${searchParams.passengers} personas): ${despegarUrl}`);
+  // 2. Skill Despegar (Playwright con evasión anti-bot)
+  console.log(`\n[Paso 2/3] Ejecutando Skill Despegar para ${searchParams.passengers} personas...`);
+  let bestDespegarOption: ScrapedFlightOption | undefined = undefined;
+  try {
+    const despegarResults = await searchDespegarFlights(searchParams, {
+      headless: args.includes('--headless') || process.env.HEADLESS === 'true'
+    });
+    if (despegarResults.length > 0) {
+      bestDespegarOption = despegarResults[0];
+      console.log(`\n🏆 Mejor tarifa Despegar:`);
+      console.log(`   - Aerolínea: ${bestDespegarOption.airline}`);
+      console.log(`   - Precio total (${searchParams.passengers} pax): US$ ${bestDespegarOption.priceTotalUSD}`);
+      console.log(`   - Link: ${bestDespegarOption.bookingUrl}`);
+    }
+  } catch (err) {
+    console.warn(`[Skill: Despegar] ⚠️ Despegar no devolvió resultados en esta pasada. Generando link de consulta.`);
+  }
 
-  // 3. Evaluación con Agente Gemini
-  console.log(`\n[Paso 3/3] Evaluando oportunidad con Gemini...`);
-  const evaluation = await evaluateDealWithGemini(searchParams, bestGoogleOption, undefined);
+  // 3. Evaluación y comparación de opciones con Agente Gemini
+  console.log(`\n[Paso 3/3] Evaluando y comparando opciones con Gemini...`);
+  const evaluation = await evaluateDealWithGemini(searchParams, bestGoogleOption, bestDespegarOption);
 
   console.log(`\n📋 RESUMEN DEL AGENTE:`);
   console.log(`   - Estado de Aprobación: ${evaluation.approvalStatus.toUpperCase()}`);
   console.log(`   - Oportunidad de Oro: ${evaluation.isGoldenOpportunity ? 'SÍ 🔥' : 'NO'}`);
+  console.log(`   - Mejor Opción: ${evaluation.bestOption?.toUpperCase()}`);
   console.log(`   - Veredicto: ${evaluation.reason}`);
   console.log(`   - Notificación: "${evaluation.summaryForNotification}"`);
 
-  // 4. Guardar en Supabase si está aprobado
-  if (bestGoogleOption && evaluation.approvalStatus === 'aprobado') {
-    console.log(`\n[Persistencia] Guardando mejor opción en Supabase...`);
-    await saveFlightDeal(bestGoogleOption, evaluation);
+  // 4. Determinar la opción ganadora a persistir en Supabase
+  let winningDeal: ScrapedFlightOption | undefined = undefined;
+  if (bestGoogleOption && bestDespegarOption) {
+    winningDeal = (bestDespegarOption.priceTotalUSD < bestGoogleOption.priceTotalUSD)
+      ? bestDespegarOption
+      : bestGoogleOption;
+  } else {
+    winningDeal = bestGoogleOption || bestDespegarOption;
+  }
+
+  if (winningDeal && evaluation.approvalStatus === 'aprobado') {
+    console.log(`\n[Persistencia] Guardando opción ganadora (${winningDeal.source} - US$ ${winningDeal.priceTotalUSD}) en Supabase...`);
+    await saveFlightDeal(winningDeal, evaluation);
+  } else if (!winningDeal) {
+    console.log(`\nℹ️ No se detectaron opciones válidas para guardar en esta corrida.`);
   }
 
   console.log(`\n✅ Proceso completado exitosamente.\n`);
