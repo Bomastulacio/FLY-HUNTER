@@ -5,8 +5,21 @@ import type { FlightSearchParams, ScrapedFlightOption } from '../types/flight.js
 chromium.use(stealthPlugin());
 
 export function buildDespegarSearchUrl(params: FlightSearchParams): string {
-  const origin = params.origin.toUpperCase();
-  const dest = params.destination.toUpperCase();
+  const origin = (params.origin.length === 3 ? params.origin : 'EZE').toUpperCase();
+  let dest = params.destination.toUpperCase();
+  const COUNTRY_MAP: Record<string, string> = {
+    'ESPAÑA': 'MAD', 'ESPANA': 'MAD', 'SPAIN': 'MAD',
+    'FRANCIA': 'CDG', 'FRANCE': 'CDG',
+    'ITALIA': 'FCO', 'ITALY': 'FCO',
+    'REINO UNIDO': 'LHR', 'UK': 'LHR',
+    'ALEMANIA': 'FRA', 'GERMANY': 'FRA',
+    'PORTUGAL': 'LIS'
+  };
+  if (COUNTRY_MAP[dest]) {
+    dest = COUNTRY_MAP[dest];
+  } else if (dest.length !== 3) {
+    dest = 'MAD';
+  }
   return `https://www.despegar.com.ar/vuelos/results/roundtrip/${origin}/${dest}/${params.departureDate}/${params.returnDate}/${params.passengers}/0/0`;
 }
 
@@ -61,12 +74,13 @@ export async function searchDespegarFlights(
 
     // Esperar a que carguen los resultados o la lista de vuelos con un breve jitter
     console.log(`[Skill: Despegar] Esperando cotización de vuelos...`);
-    await page.waitForTimeout(4000 + Math.floor(Math.random() * 2000));
+    await page.waitForSelector('span.amount, span.price-amount, .main-value, [class*="price-info"], [class*="flights-cluster"], .cluster-content', { timeout: 20000 }).catch(() => null);
+    await page.waitForTimeout(3000 + Math.floor(Math.random() * 2000));
 
     // Intentar extraer el nombre de la aerolínea
     let detectedAirline = 'Varios / Despegar';
     try {
-      const airlineLocator = page.locator('.airline-name, [class*="airline"], span:has-text("Aerolíneas"), span:has-text("Iberia"), span:has-text("Air Europa")').first();
+      const airlineLocator = page.locator('.airline-name, [class*="airline"], span:has-text("Aerolíneas"), span:has-text("Iberia"), span:has-text("Air Europa"), span:has-text("LATAM")').first();
       if (await airlineLocator.isVisible({ timeout: 4000 })) {
         const aText = await airlineLocator.innerText();
         if (aText && aText.trim().length > 0) {
@@ -78,7 +92,7 @@ export async function searchDespegarFlights(
     }
 
     // Intentar buscar tarjetas de vuelo en Despegar
-    const priceLocators = page.locator('span.amount, span.price-amount, .main-value, [class*="amount"]:not([class*="old"]), [class*="price"]').first();
+    const priceLocators = page.locator('span.amount, span.price-amount, .main-value, [class*="amount"]:not([class*="old"]), [class*="price"], .landing-inline-price').first();
     let bestPriceUSD = 0;
     let priceRaw = '';
 
@@ -104,7 +118,7 @@ export async function searchDespegarFlights(
         route: `${params.origin} - ${params.destination}`,
         departureDate: params.departureDate,
         returnDate: params.returnDate,
-        stops: 0, // Directo o con escalas según resultado
+        stops: 0,
         priceTotalUSD: bestPriceUSD,
         priceRawText: priceRaw || `US$ ${bestPriceUSD}`,
         bookingUrl: url,
@@ -112,7 +126,7 @@ export async function searchDespegarFlights(
       });
       console.log(`[Skill: Despegar] ✅ Tarifa detectada: ~US$ ${bestPriceUSD} (${priceRaw}) en ${detectedAirline}`);
     } else {
-      console.log(`[Skill: Despegar] ℹ️ No se detectó selector de precio inmediato. Link de reserva generado: ${url}`);
+      console.log(`[Skill: Despegar] ℹ️ Selector inmediato no detectado en página. Generado link de reserva oficial: ${url}`);
     }
 
     return results;

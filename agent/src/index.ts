@@ -15,6 +15,39 @@ async function main() {
   const activeAlerts = await getActiveSearchAlerts();
   let searchParams: FlightSearchParams;
 
+  // Mapeo exhaustivo de países comunes a códigos IATA principales
+  const COUNTRY_TO_IATA: Record<string, string> = {
+    'ESPAÑA': 'MAD',
+    'ESPANA': 'MAD',
+    'SPAIN': 'MAD',
+    'FRANCIA': 'CDG',
+    'FRANCE': 'CDG',
+    'ITALIA': 'FCO',
+    'ITALY': 'FCO',
+    'REINO UNIDO': 'LHR',
+    'UK': 'LHR',
+    'ALEMANIA': 'FRA',
+    'GERMANY': 'FRA',
+    'PORTUGAL': 'LIS',
+    'ESTADOS UNIDOS': 'MIA',
+    'EEUU': 'MIA',
+    'USA': 'MIA',
+    'BRASIL': 'GIG',
+    'BRAZIL': 'GIG',
+  };
+
+  const resolveIata = (codeOrName?: string, fallback = 'MAD'): string => {
+    if (!codeOrName) return fallback;
+    const clean = codeOrName.trim().toUpperCase();
+    if (/^[A-Z]{3}$/.test(clean)) return clean;
+    if (COUNTRY_TO_IATA[clean]) return COUNTRY_TO_IATA[clean];
+    // Buscar si contiene nombre de país
+    for (const [country, iata] of Object.entries(COUNTRY_TO_IATA)) {
+      if (clean.includes(country)) return iata;
+    }
+    return fallback;
+  };
+
   if (activeAlerts && activeAlerts.length > 0) {
     const alert = activeAlerts[0];
     console.log(`[Alertas] 🔔 Utilizando alerta de usuario: ${alert.origen} -> ${alert.destino} (${alert.pasajeros || 1} pax)`);
@@ -24,12 +57,12 @@ async function main() {
     const future60 = new Date(today.getTime() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const future75 = new Date(today.getTime() + 75 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-    const destCode = (alert.paises && alert.paises.length > 0 && alert.paises[0] !== 'Cualquiera')
-      ? alert.paises[0]
-      : (alert.destino && alert.destino.length === 3 ? alert.destino : 'BCN');
+    const rawCountry = (alert.paises && alert.paises.length > 0 && alert.paises[0] !== 'Cualquiera') ? alert.paises[0] : '';
+    const destCode = resolveIata(alert.destino, resolveIata(rawCountry, 'MAD'));
+    const originCode = resolveIata(alert.origen, 'EZE');
 
     searchParams = {
-      origin: alert.origen ? (alert.origen.includes('EZE') ? 'EZE' : alert.origen) : 'EZE',
+      origin: originCode,
       destination: destCode,
       departureDate: alert.fecha_ida_min || future60,
       returnDate: alert.fecha_vuelta_min || future75,
@@ -38,6 +71,7 @@ async function main() {
       budgetMaxUSD: alert.presupuesto_max ? Number(alert.presupuesto_max) : 2400,
       excludedAirlines: alert.aerolineas_excluidas || []
     };
+
   } else {
     // Parámetros por defecto con fechas relativas (+60 y +75 días)
     const today = new Date();

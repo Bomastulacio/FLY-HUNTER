@@ -73,14 +73,18 @@ export async function evaluateDealWithGemini(
       }
     `;
 
-    // Lista de modelos candidatos en cascada (del más preferido a los de respaldo)
+    // Lista de modelos candidatos en cascada recomendados por Google AI Studio
     const candidates: string[] = [
       process.env.GEMINI_MODEL,
+      'gemini-3.6-flash',
+      'gemini-3.5-flash-lite',
+      'gemini-3.1-pro-preview',
       'gemini-2.5-flash',
       'gemini-2.5-flash-lite',
-      'gemini-2.5-pro',
-      'gemini-flash'
+      'gemini-2.0-flash',
+      'gemini-1.5-flash'
     ].filter((m): m is string => Boolean(m && m.trim().length > 0));
+
 
     const uniqueCandidates = [...new Set(candidates)];
     let lastError: unknown = null;
