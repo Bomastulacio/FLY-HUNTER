@@ -48,6 +48,9 @@ async function main() {
     return fallback;
   };
 
+  let candidateDatePairs: Array<{ departureDate: string; returnDate: string }> = [];
+  let baseSearchParams: FlightSearchParams;
+
   if (activeAlerts && activeAlerts.length > 0) {
     const alert = activeAlerts[0];
     console.log(`[Alertas] 🔔 Utilizando alerta de usuario: ${alert.origen} -> ${alert.destino} (${alert.pasajeros || 1} pax)`);
@@ -61,17 +64,47 @@ async function main() {
     const destCode = resolveIata(alert.destino, resolveIata(rawCountry, 'MAD'));
     const originCode = resolveIata(alert.origen, 'EZE');
 
-    searchParams = {
+    const depMin = alert.fecha_ida_min || future60;
+    const depMax = alert.fecha_ida_max || depMin;
+    const retMin = alert.fecha_vuelta_min || future75;
+    const retMax = alert.fecha_vuelta_max || retMin;
+
+    baseSearchParams = {
       origin: originCode,
       destination: destCode,
-      departureDate: alert.fecha_ida_min || future60,
-      returnDate: alert.fecha_vuelta_min || future75,
+      departureDate: depMin,
+      returnDate: retMin,
       passengers: Math.max(1, alert.pasajeros || 1),
       maxStops: alert.escalas_max ?? 1,
       budgetMaxUSD: alert.presupuesto_max ? Number(alert.presupuesto_max) : 2400,
       excludedAirlines: alert.aerolineas_excluidas || []
     };
 
+    // Construir pares de fechas candidatos a evaluar dentro de la ventana del usuario
+    const depSet = new Set<string>([depMin, depMax]);
+    const dStart = new Date(depMin);
+    const dEnd = new Date(depMax);
+    for (let d = new Date(dStart); d <= dEnd; d.setDate(d.getDate() + 1)) {
+      depSet.add(d.toISOString().split('T')[0]);
+    }
+
+    const retSet = new Set<string>([retMin, retMax]);
+    const rStart = new Date(retMin);
+    const rEnd = new Date(retMax);
+    for (let r = new Date(rStart); r <= rEnd; r.setDate(r.getDate() + 1)) {
+      retSet.add(r.toISOString().split('T')[0]);
+    }
+
+    for (const dep of depSet) {
+      for (const ret of retSet) {
+        if (new Date(ret) > new Date(dep)) {
+          candidateDatePairs.push({ departureDate: dep, returnDate: ret });
+        }
+      }
+    }
+
+    // Limitar a los pares estratégicos más prometedores (máx 4 para no demorar la corrida)
+    candidateDatePairs = candidateDatePairs.slice(0, 4);
   } else {
     // Parámetros por defecto con fechas relativas (+60 y +75 días)
     const today = new Date();
@@ -79,7 +112,7 @@ async function main() {
     const future75 = new Date(today.getTime() + 75 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     console.log(`[Alertas] ℹ️ Sin alertas activas en BD. Usando parámetros de contingencia (+60 días).`);
 
-    searchParams = {
+    baseSearchParams = {
       origin: 'EZE',
       destination: 'BCN',
       departureDate: future60,
@@ -89,55 +122,113 @@ async function main() {
       budgetMaxUSD: 2400,
       excludedAirlines: ['LEVEL']
     };
+
+    candidateDatePairs = [{ departureDate: future60, returnDate: future75 }];
   }
 
   if (args.includes('--test-despegar')) {
     console.log(`\nModo de prueba: Solo Despegar`);
-    const despegarResults = await searchDespegarFlights(searchParams, { headless: false });
+    const despegarResults = await searchDespegarFlights(baseSearchParams, { headless: false });
     console.log(`Resultados Despegar:`, despegarResults);
     return;
   }
 
-  // 1. Skill Google Flights (Playwright)
-  console.log(`\n[Paso 1/3] Ejecutando Skill Google Flights (${searchParams.passengers} pasajeros)...`);
-  const googleResults = await searchGoogleFlights(searchParams, { 
-    headless: args.includes('--headless') || process.env.HEADLESS === 'true' 
-  });
+  console.log(`\n🔎 Total de combinaciones de fechas a explorar en la ventana: ${candidateDatePairs.length}`);
+  candidateDatePairs.forEach((p, idx) => console.log(`   [${idx + 1}] Ida: ${p.departureDate} | Vuelta: ${p.returnDate}`));
 
-  const bestGoogleOption = googleResults.length > 0 ? googleResults[0] : undefined;
+  const allGoogleOptions: ScrapedFlightOption[] = [];
+  const allDespegarOptions: ScrapedFlightOption[] = [];
 
-  if (bestGoogleOption) {
-    console.log(`\n🏆 Mejor tarifa Google Flights:`);
-    console.log(`   - Aerolínea: ${bestGoogleOption.airline}`);
-    console.log(`   - Precio total (${searchParams.passengers} pax): US$ ${bestGoogleOption.priceTotalUSD}`);
-    console.log(`   - Escalas: ${bestGoogleOption.stops}`);
-    console.log(`   - Duración: ${bestGoogleOption.durationText || 'N/A'}`);
-    console.log(`   - Link: ${bestGoogleOption.bookingUrl}`);
-  } else {
-    console.log(`\n⚠️ No se encontraron opciones en Google Flights para los filtros solicitados.`);
+  for (const pair of candidateDatePairs) {
+    const currentParams: FlightSearchParams = {
+      ...baseSearchParams,
+      departureDate: pair.departureDate,
+      returnDate: pair.returnDate
+    };
+
+    console.log(`\n=======================================================`);
+    console.log(`📅 Evaluando ventana: ${pair.departureDate} ✈️ ${pair.returnDate} (${currentParams.origin} -> ${currentParams.destination})`);
+    console.log(`=======================================================`);
+
+    // 1. Skill Google Flights
+    console.log(`[Google Flights] Consultando opciones...`);
+    const gResults = await searchGoogleFlights(currentParams, { 
+      headless: args.includes('--headless') || process.env.HEADLESS === 'true' 
+    });
+    if (gResults.length > 0) {
+      allGoogleOptions.push(...gResults);
+      console.log(`[Google Flights] Encontradas ${gResults.length} opciones. Mejor tarifa: US$ ${gResults[0].priceTotalUSD} (${gResults[0].airline})`);
+    }
+
+    // 2. Skill Despegar
+    console.log(`[Despegar] Consultando opciones...`);
+    try {
+      const dResults = await searchDespegarFlights(currentParams, {
+        headless: args.includes('--headless') || process.env.HEADLESS === 'true'
+      });
+      if (dResults.length > 0) {
+        allDespegarOptions.push(...dResults);
+        console.log(`[Despegar] Encontradas ${dResults.length} opciones. Tarifa detectada: US$ ${dResults[0].priceTotalUSD} (${dResults[0].airline})`);
+      }
+    } catch {
+      console.warn(`[Despegar] Falló consulta puntual para esta fecha.`);
+    }
+
+    // Parada temprana si ya encontramos una tarifa de oro (< $2200 USD para 2 personas)
+    const currentBestUSD = Math.min(
+      ...allGoogleOptions.map(o => o.priceTotalUSD),
+      ...allDespegarOptions.map(o => o.priceTotalUSD)
+    );
+    if (currentBestUSD < 2200) {
+      console.log(`\n⚡ ¡Oportunidad detectada por debajo de US$ 2200 (US$ ${currentBestUSD})! Optimizando tiempo de corrida.`);
+      break;
+    }
   }
 
-  // 2. Skill Despegar (Playwright con evasión anti-bot)
-  console.log(`\n[Paso 2/3] Ejecutando Skill Despegar para ${searchParams.passengers} personas...`);
-  let bestDespegarOption: ScrapedFlightOption | undefined = undefined;
-  try {
-    const despegarResults = await searchDespegarFlights(searchParams, {
-      headless: args.includes('--headless') || process.env.HEADLESS === 'true'
+  // Ordenar por mejor precio total
+  allGoogleOptions.sort((a, b) => a.priceTotalUSD - b.priceTotalUSD);
+  allDespegarOptions.sort((a, b) => a.priceTotalUSD - b.priceTotalUSD);
+
+  const bestGoogleOption = allGoogleOptions.length > 0 ? allGoogleOptions[0] : undefined;
+  let bestDespegarOption = allDespegarOptions.length > 0 ? allDespegarOptions[0] : undefined;
+
+  // Si Despegar no devolvió precio por captcha, generar enlace oficial de reserva para la mejor fecha
+  if (!bestDespegarOption) {
+    const targetDate = bestGoogleOption 
+      ? { departureDate: bestGoogleOption.departureDate, returnDate: bestGoogleOption.returnDate }
+      : candidateDatePairs[0];
+    const despegarUrl = buildDespegarSearchUrl({
+      ...baseSearchParams,
+      departureDate: targetDate.departureDate,
+      returnDate: targetDate.returnDate
     });
-    if (despegarResults.length > 0) {
-      bestDespegarOption = despegarResults[0];
-      console.log(`\n🏆 Mejor tarifa Despegar:`);
-      console.log(`   - Aerolínea: ${bestDespegarOption.airline}`);
-      console.log(`   - Precio total (${searchParams.passengers} pax): US$ ${bestDespegarOption.priceTotalUSD}`);
-      console.log(`   - Link: ${bestDespegarOption.bookingUrl}`);
-    }
-  } catch (err) {
-    console.warn(`[Skill: Despegar] ⚠️ Despegar no devolvió resultados en esta pasada. Generando link de consulta.`);
+    console.log(`[Despegar] ℹ️ Link oficial de reserva generado para comparación: ${despegarUrl}`);
+  }
+
+  if (bestGoogleOption) {
+    console.log(`\n🏆 Mejor opción general Google Flights:`);
+    console.log(`   - Aerolínea: ${bestGoogleOption.airline}`);
+    console.log(`   - Fechas: ${bestGoogleOption.departureDate} al ${bestGoogleOption.returnDate}`);
+    console.log(`   - Precio total (${baseSearchParams.passengers} pax): US$ ${bestGoogleOption.priceTotalUSD}`);
+    console.log(`   - Escalas: ${bestGoogleOption.stops}`);
+    console.log(`   - Link: ${bestGoogleOption.bookingUrl}`);
+  }
+
+  if (bestDespegarOption) {
+    console.log(`\n🏆 Mejor opción general Despegar:`);
+    console.log(`   - Aerolínea: ${bestDespegarOption.airline}`);
+    console.log(`   - Fechas: ${bestDespegarOption.departureDate} al ${bestDespegarOption.returnDate}`);
+    console.log(`   - Precio total (${baseSearchParams.passengers} pax): US$ ${bestDespegarOption.priceTotalUSD}`);
+    console.log(`   - Link: ${bestDespegarOption.bookingUrl}`);
   }
 
   // 3. Evaluación y comparación de opciones con Agente Gemini
   console.log(`\n[Paso 3/3] Evaluando y comparando opciones con Gemini...`);
-  const evaluation = await evaluateDealWithGemini(searchParams, bestGoogleOption, bestDespegarOption);
+  const effectiveParams = bestGoogleOption 
+    ? { ...baseSearchParams, departureDate: bestGoogleOption.departureDate, returnDate: bestGoogleOption.returnDate }
+    : baseSearchParams;
+
+  const evaluation = await evaluateDealWithGemini(effectiveParams, bestGoogleOption, bestDespegarOption);
 
   console.log(`\n📋 RESUMEN DEL AGENTE:`);
   console.log(`   - Estado de Aprobación: ${evaluation.approvalStatus.toUpperCase()}`);
@@ -157,13 +248,14 @@ async function main() {
   }
 
   if (winningDeal && evaluation.approvalStatus === 'aprobado') {
-    console.log(`\n[Persistencia] Guardando opción ganadora (${winningDeal.source} - US$ ${winningDeal.priceTotalUSD}) en Supabase...`);
+    console.log(`\n[Persistencia] Guardando opción ganadora (${winningDeal.source} - US$ ${winningDeal.priceTotalUSD} en fechas ${winningDeal.departureDate} al ${winningDeal.returnDate}) en Supabase...`);
     await saveFlightDeal(winningDeal, evaluation);
   } else if (!winningDeal) {
     console.log(`\nℹ️ No se detectaron opciones válidas para guardar en esta corrida.`);
   }
 
   console.log(`\n✅ Proceso completado exitosamente.\n`);
+
 }
 
 main().catch(err => {
