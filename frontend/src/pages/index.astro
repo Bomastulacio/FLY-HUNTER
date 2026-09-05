@@ -93,34 +93,59 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
         <p id="hero-subtitle">Configura tu radar para empezar a recibir alertas.</p>
       </header>
 
-      <!-- Radar Config Pill (Single tap target to edit preferences) -->
-      <a href="/alertas" id="radar-summary-strip" class="radar-summary-pill" style="display: none;" title="Toca para editar preferencias de radar" aria-label="Editar preferencias de radar">
-        <div class="summary-info">
-          <i class="ph ph-sliders-horizontal summary-icon"></i>
-          <span id="radar-summary-text" class="summary-text">Cargando radar...</span>
-        </div>
-        <span class="edit-pill-indicator">
-          <i class="ph ph-pencil-simple"></i>
-        </span>
-      </a>
+      <!-- CONTENEDOR DINÁMICO DEL RADAR (Dashboard Responsive) -->
+      <div id="dynamic-dashboard" class="dashboard-layout" style="display: none;">
+        
+        <!-- Sidebar Columna Izquierda (Desktop: sticky; Mobile: orden apilado) -->
+        <aside class="dashboard-sidebar">
+          
+          <!-- Radar Config Pill (Mobile / Tablet <1024px: tap target único para editar) -->
+          <a href="/alertas" id="radar-summary-strip" class="radar-summary-pill mobile-tablet-pill" style="display: none;" title="Toca para editar preferencias de radar" aria-label="Editar preferencias de radar">
+            <div class="summary-info">
+              <i class="ph ph-sliders-horizontal summary-icon"></i>
+              <span id="radar-summary-text" class="summary-text">Cargando radar...</span>
+            </div>
+            <span class="edit-pill-indicator" aria-hidden="true">
+              <i class="ph ph-pencil-simple"></i>
+            </span>
+          </a>
 
-      <!-- CONTENEDOR DINÁMICO DEL RADAR -->
-      <div id="dynamic-dashboard" style="display: none;">
-        <!-- Status bar del próximo rastreo (delgada, fuera del bento-grid) -->
-        <div id="countdown-strip-container" class="countdown-strip">
-          <div class="countdown-strip-left">
-            <span class="live-dot"></span>
-            <span class="countdown-strip-label">Próximo rastreo para <strong id="cd-target-dest">Europa</strong>:</span>
+          <!-- Status bar del próximo rastreo -->
+          <div id="countdown-strip-container" class="countdown-strip">
+            <div class="countdown-strip-left">
+              <span class="live-dot"></span>
+              <span class="countdown-strip-label">Próximo rastreo para <strong id="cd-target-dest">Europa</strong>:</span>
+            </div>
+            <div class="countdown-strip-timer">
+              <i class="ph ph-clock"></i>
+              <span id="compact-cd-val">Calculando...</span>
+            </div>
           </div>
-          <div class="countdown-strip-timer">
-            <i class="ph ph-clock"></i>
-            <span id="compact-cd-val">Calculando...</span>
-          </div>
-        </div>
 
-        <div class="bento-grid" id="destinations-grid">
-           <!-- Renderizado por JS -->
-        </div>
+          <!-- Desktop Expanded Radar Card (Desktop ≥1024px: Parámetros del radar siempre visibles y expandidos) -->
+          <div id="desktop-radar-panel" class="card desktop-radar-card">
+            <div class="desktop-radar-header">
+              <div class="desktop-radar-title">
+                <i class="ph ph-sliders-horizontal"></i>
+                <span>Parámetros del Radar</span>
+              </div>
+              <a href="/alertas" class="desktop-radar-edit-link" title="Modificar en Mis Alertas" aria-label="Modificar en Mis Alertas">
+                <i class="ph ph-pencil-simple"></i>
+                <span>Editar</span>
+              </a>
+            </div>
+            <div class="desktop-radar-body" id="desktop-radar-details">
+              <!-- Renderizado dinámico por JS -->
+            </div>
+          </div>
+
+        </aside>
+
+        <!-- Feed Principal Columna Derecha (Desktop: ancho consistente; Mobile: debajo de sidebar) -->
+        <section class="dashboard-feed" id="destinations-grid">
+           <!-- Renderizado por JS: Card destacada + Destinos -->
+        </section>
+
       </div>
       
       <!-- EMPTY STATE (Sin Alerta) -->
@@ -212,7 +237,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
         "Chile": "🇨🇱",
         "Colombia": "🇨🇴",
         "Perú": "🇵🇪",
-        "Uruguay": "🇺🇾",
+        "Uruguay": "UY",
         "Río de Janeiro": "🇧🇷",
         "República Dominicana": "🇩🇴",
         "Cancún": "🇲🇽",
@@ -228,13 +253,52 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
         "Nueva Zelanda": "🇳🇿"
       };
 
+      const countryIsoCodes: Record<string, string> = {
+        "España": "ES",
+        "Francia": "FR",
+        "Italia": "IT",
+        "Reino Unido": "GB",
+        "Alemania": "DE",
+        "Portugal": "PT",
+        "Países Bajos": "NL",
+        "Suiza": "CH",
+        "Grecia": "GR",
+        "París": "FR",
+        "Estados Unidos": "US",
+        "Canadá": "CA",
+        "México": "MX",
+        "Miami": "US",
+        "Nueva York": "US",
+        "Brasil": "BR",
+        "Chile": "CL",
+        "Colombia": "CO",
+        "Perú": "PE",
+        "Uruguay": "UY",
+        "Río de Janeiro": "BR",
+        "República Dominicana": "DO",
+        "Cancún": "MX",
+        "Cuba": "CU",
+        "Costa Rica": "CR",
+        "Puerto Rico": "PR",
+        "Japón": "JP",
+        "Tokio": "JP",
+        "Tailandia": "TH",
+        "Corea del Sur": "KR",
+        "Emiratos Árabes": "AE",
+        "Australia": "AU",
+        "Nueva Zelanda": "NZ"
+      };
+
       // @ts-ignore
       const allDeals = window.__SERVER_DATA__.approvedDeals || [];
       let cdInterval: any;
       
       const renderDashboard = (alert: any) => {
         const dash = document.getElementById('dynamic-dashboard');
-        if(dash) dash.style.display = 'block';
+        if (dash) {
+          dash.style.display = '';
+          dash.classList.add('is-active');
+        }
         
         const summaryStrip = document.getElementById('radar-summary-strip');
         if (summaryStrip) summaryStrip.style.display = 'flex';
@@ -242,31 +306,77 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
         const mainHero = document.getElementById('main-hero');
         if (mainHero) mainHero.style.display = 'none';
 
+        const orig = alert.origen || "EZE";
+        const dest = alert.destino || "Europa";
+        const fechasCompactas = (alert.fecha_ida_min && alert.fecha_vuelta_max)
+          ? `${formatDate(alert.fecha_ida_min)} - ${formatDate(alert.fecha_vuelta_max)}`
+          : "";
+        const escalasCompactas = `máx ${alert.escalas_max} esc.`;
+        const exclCompactas = (alert.aerolineas_excluidas && alert.aerolineas_excluidas.length > 0 && alert.aerolineas_excluidas !== "Ninguna")
+          ? `sin ${Array.isArray(alert.aerolineas_excluidas) ? alert.aerolineas_excluidas.join(', ') : alert.aerolineas_excluidas}`
+          : "";
+        const presupCompacto = `US$ ${alert.presupuesto_max}`;
+
+        // 1. Mobile Pill Summary
         const summaryTextEl = document.getElementById('radar-summary-text');
         if (summaryTextEl) {
-          const orig = "EZE";
-          const dest = alert.destino || "Europa";
-          const fechas = (alert.fecha_ida_min && alert.fecha_vuelta_max)
-            ? `${formatDate(alert.fecha_ida_min)} - ${formatDate(alert.fecha_vuelta_max)}`
-            : "";
-          const escalas = `máx ${alert.escalas_max} esc.`;
-          const excl = (alert.aerolineas_excluidas && alert.aerolineas_excluidas.length > 0 && alert.aerolineas_excluidas !== "Ninguna")
-            ? `sin ${Array.isArray(alert.aerolineas_excluidas) ? alert.aerolineas_excluidas.join(', ') : alert.aerolineas_excluidas}`
-            : "";
-          const presup = `US$ ${alert.presupuesto_max}`;
-          
           const parts = [
             `<strong>${orig} → ${dest}</strong>`,
-            fechas,
-            escalas,
-            excl,
-            `<strong>${presup}</strong>`
+            fechasCompactas,
+            escalasCompactas,
+            exclCompactas,
+            `<strong>${presupCompacto}</strong>`
           ].filter(Boolean);
-          
           summaryTextEl.innerHTML = parts.join(' · ');
         }
 
-        // 2. Countdown logic para actualización del scraper
+        // 2. Desktop Expanded Radar Panel (Siempre visible en desktop ≥1024px)
+        const desktopDetailsEl = document.getElementById('desktop-radar-details');
+        if (desktopDetailsEl) {
+          const fechasLargas = (alert.fecha_ida_min && alert.fecha_vuelta_max)
+            ? `${formatDate(alert.fecha_ida_min)} al ${formatDate(alert.fecha_vuelta_max)}`
+            : "Fechas flexibles";
+          const escalasLargas = alert.escalas_max === 0 ? "Vuelo directo" : `Hasta ${alert.escalas_max} escala${alert.escalas_max > 1 ? 's' : ''}`;
+          const exclLargas = (alert.aerolineas_excluidas && alert.aerolineas_excluidas.length > 0 && alert.aerolineas_excluidas !== "Ninguna")
+            ? `Sin ${Array.isArray(alert.aerolineas_excluidas) ? alert.aerolineas_excluidas.join(', ') : alert.aerolineas_excluidas}`
+            : "Todas las aerolíneas";
+          const presupLargo = `Hasta US$ ${alert.presupuesto_max}`;
+          const pax = Number(alert.pasajeros) || 2;
+          const paxText = pax === 1 ? "1 pasajero" : `${pax} pasajeros`;
+
+          desktopDetailsEl.innerHTML = `
+            <div class="radar-detail-item">
+              <div class="radar-detail-label"><i class="ph ph-airplane-takeoff"></i> Ruta</div>
+              <div class="radar-detail-value">${orig} → ${dest}</div>
+            </div>
+            <div class="radar-detail-item">
+              <div class="radar-detail-label"><i class="ph ph-calendar-blank"></i> Fechas</div>
+              <div class="radar-detail-value">${fechasLargas}</div>
+            </div>
+            <div class="radar-detail-item">
+              <div class="radar-detail-label"><i class="ph ph-tag"></i> Presupuesto máx.</div>
+              <div class="radar-detail-value highlight-price">${presupLargo}</div>
+            </div>
+            <div class="radar-detail-item">
+              <div class="radar-detail-label"><i class="ph ph-git-branch"></i> Escalas</div>
+              <div class="radar-detail-value">${escalasLargas}</div>
+            </div>
+            <div class="radar-detail-item">
+              <div class="radar-detail-label"><i class="ph ph-prohibit"></i> Restricciones</div>
+              <div class="radar-detail-value">${exclLargas}</div>
+            </div>
+            <div class="radar-detail-item">
+              <div class="radar-detail-label"><i class="ph ph-users"></i> Pasajeros</div>
+              <div class="radar-detail-value">${paxText}</div>
+            </div>
+            <a href="/alertas" class="btn btn-outline desktop-edit-radar-btn" title="Modificar en Mis Alertas" aria-label="Modificar en Mis Alertas">
+              <i class="ph ph-sliders"></i>
+              <span>Modificar radar</span>
+            </a>
+          `;
+        }
+
+        // 3. Countdown logic para actualización del scraper
         if(cdInterval) clearInterval(cdInterval);
         
         const updateCountdown = () => {
@@ -293,7 +403,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
         };
         cdInterval = setInterval(updateCountdown, 1000);
 
-        // 3. Destinations Grid
+        // 4. Feed de Vuelos y Destinos
         const grid = document.getElementById('destinations-grid');
         if (!grid) return;
         
@@ -313,7 +423,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
         if (pendingDeals && pendingDeals.length > 0) {
           const pDeal = pendingDeals[0];
           html += `
-            <div class="card" style="grid-column: 1 / -1; border: 1px solid var(--accent-color); background: rgba(159, 219, 22, 0.05); padding: 1.5rem;">
+            <div class="card" style="border: 1px solid var(--accent-color); background: rgba(159, 219, 22, 0.05); padding: 1.5rem; width: 100%; box-sizing: border-box;">
               <div class="card-header" style="font-size: 1.2rem;"><i class="ph-fill ph-warning" style="color: var(--accent-color); margin-right: 6px;"></i> Atención: Vuelo Anómalo Extremadamente Barato</div>
               <p style="margin: 0.5rem 0 1.5rem 0; color: var(--text-secondary); font-size: 1rem;">
                 Encontramos una ganga por <strong>${formatPrice(pDeal)}</strong> que rompe levemente tus reglas. ¿Te sirve?
@@ -334,7 +444,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
           `;
         }
 
-        // Helper para construir el único botón de reserva hacia la plataforma ganadora
+        // Helper para construir el botón de reserva hacia la plataforma ganadora
         const getDealButton = (deal: any, isPrimary = true) => {
           if (!deal) return '';
           const passengers = Number(alert?.pasajeros) || 2;
@@ -345,7 +455,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
           if (isDespegar) {
             url = deal.link_reserva || 'https://www.despegar.com.ar/vuelos/';
           } else {
-            // Para Google Flights: SIEMPRE generamos la URL con la cantidad exacta de adultos para evitar links viejos de 1 persona
+            // Para Google Flights: SIEMPRE generamos la URL con la cantidad exacta de adultos
             const routeParts = (deal.ida_origen_destino || 'EZE-BCN').split('-');
             const origin = (routeParts[0] || 'EZE').trim().toUpperCase();
             const dest = (routeParts[1] || 'BCN').trim().toUpperCase();
@@ -364,7 +474,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
 
           const btnClass = isPrimary ? 'btn btn-primary' : 'btn btn-outline';
           return `
-            <a href="${url}" target="_blank" class="${btnClass}" style="align-self: flex-start; margin-top: 1.5rem; display: inline-flex; align-items: center; gap: 0.5rem;" title="${label} (${passengers} personas)">
+            <a href="${url}" target="_blank" rel="noopener noreferrer" class="${btnClass} deal-reserve-btn" style="align-self: flex-start; margin-top: 1.5rem; display: inline-flex; align-items: center; gap: 0.5rem;" title="${label} (${passengers} personas)" aria-label="${label}">
               <span>${label}</span>
               <i class="ph ph-arrow-square-out"></i>
             </a>
@@ -392,7 +502,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
               </div>
               ${mainDealCountry ? `
                 <div class="main-deal-country">
-                  <span class="country-flag">${countryFlags[mainDealCountry] || '📍'}</span>
+                  <span class="country-iso-badge">${countryIsoCodes[mainDealCountry] || 'INT'}</span>
                   <span>${mainDealCountry}</span>
                 </div>
               ` : ''}
@@ -400,7 +510,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
             ${mainDeal ? `
               <div class="card-route">${mainDeal.ida_origen_destino} <i class="ph ph-airplane-tilt" style="opacity: 0.5; margin: 0 4px;"></i> ${mainDeal.vuelta_origen_destino}</div>
               <div class="card-date"><i class="ph ph-calendar-blank"></i> ${formatDate(mainDeal.ida_fecha)} al ${formatDate(mainDeal.vuelta_fecha)}</div>
-              <div style="color: var(--text-secondary); margin-top: 0.5rem; font-weight: 500;">${mainDeal.aerolinea} • ${mainDeal.cantidad_escalas} escalas</div>
+              <div style="color: var(--text-secondary); margin-top: 0.5rem; font-weight: 500; font-size: 0.9rem;">${mainDeal.aerolinea} • ${mainDeal.cantidad_escalas} escalas</div>
               <div class="card-price">${formatPrice(mainDeal)}</div>
               ${getDealButton(mainDeal, true)}
             ` : `
@@ -451,15 +561,14 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
 
         countriesWithDeals.sort((a, b) => a.deal.precio_total_usd - b.deal.precio_total_usd);
 
-        // 1. Países con ofertas encontradas (como cards completas anteriores)
+        // Países con ofertas encontradas (como cards completas)
         if (countriesWithDeals.length > 0) {
           countriesWithDeals.forEach(({ country, deal }) => {
-            const flag = countryFlags[country] || '📍';
             html += `
               <div class="card destination-flight-card">
                 <div class="main-deal-header">
                   <div class="main-deal-country">
-                    <span class="country-flag">${flag}</span>
+                    <span class="country-iso-badge">${countryIsoCodes[country] || 'INT'}</span>
                     <span>${country}</span>
                   </div>
                   <div class="main-deal-tag" style="color: var(--accent-color); background: rgba(209, 255, 76, 0.08); border-color: rgba(209, 255, 76, 0.25);">
@@ -477,7 +586,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
           });
         }
 
-        // 2. Países en búsqueda activa (explicando claramente que aún no hay vuelos bajo presupuesto)
+        // Países en búsqueda activa
         if (countriesSearching.length > 0) {
           const searchingTitle = mainDealCountry 
             ? `Rastreando el resto de ${alert.destino}` 
@@ -488,7 +597,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
             : `Actualmente no encontramos tarifas menores a <strong>US$ ${alert.presupuesto_max}</strong> para tus fechas. El radar sigue monitoreando activamente:`;
 
           html += `
-            <div class="card searching-radar-card" style="grid-column: 1 / -1;">
+            <div class="card searching-radar-card">
               <div class="searching-card-header">
                 <div class="radar-scan-circle">
                   <i class="ph ph-broadcast"></i>
@@ -499,11 +608,10 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
 
               <div class="searching-destinations-grid">
                 ${countriesSearching.map(({ country }) => {
-                  const flag = countryFlags[country] || '📍';
                   return `
                     <div class="searching-country-item">
                       <div class="searching-country-main">
-                        <span class="searching-flag">${flag}</span>
+                        <span class="country-iso-badge">${countryIsoCodes[country] || 'INT'}</span>
                         <strong class="searching-country-name">${country}</strong>
                       </div>
                       <span class="searching-country-note">Tarifas actuales superan US$ ${alert.presupuesto_max}</span>

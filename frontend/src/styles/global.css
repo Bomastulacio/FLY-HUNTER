@@ -31,10 +31,11 @@ h1, h2, h3, h4, .card-price {
 }
 
 main {
-  max-width: 1400px;
-  width: 96%;
+  max-width: 1200px;
+  width: 94%;
   margin: 0 auto;
-  padding: 2.5rem 0;
+  padding: 2rem 0 4rem 0;
+  box-sizing: border-box;
 }
 
 header {
@@ -44,7 +45,7 @@ header {
 }
 
 header h1 {
-  font-size: 4rem;
+  font-size: 3.5rem;
   font-weight: 800;
   letter-spacing: -0.04em;
   background: linear-gradient(135deg, #ffffff 0%, #a0a0a0 100%);
@@ -57,6 +58,176 @@ header p {
   color: var(--text-secondary);
   font-size: 1.1rem;
   font-weight: 500;
+}
+
+/* Dashboard Responsive Layout (Desktop 2 Columnas / Mobile 1 Columna) */
+.dashboard-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .dashboard-layout {
+    display: grid;
+    grid-template-columns: 340px minmax(0, 1fr);
+    gap: 1.75rem;
+    align-items: start;
+  }
+}
+
+.dashboard-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .dashboard-sidebar {
+    position: sticky;
+    top: 1.5rem;
+    z-index: 10;
+  }
+}
+
+.dashboard-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Desktop Expanded Radar Card */
+.desktop-radar-card {
+  display: none;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-lg);
+  padding: 1.35rem;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-sizing: border-box;
+  transition: all var(--transition-smooth);
+}
+
+.desktop-radar-card:hover {
+  border-color: var(--card-hover-border);
+}
+
+@media (min-width: 1024px) {
+  .desktop-radar-card {
+    display: flex;
+    flex-direction: column;
+  }
+  .mobile-tablet-pill {
+    display: none !important;
+  }
+}
+
+.desktop-radar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.85rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.desktop-radar-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.desktop-radar-title i {
+  color: var(--accent-color);
+  font-size: 1.15rem;
+}
+
+.desktop-radar-edit-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 150ms ease;
+  cursor: pointer;
+}
+
+.desktop-radar-edit-link:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.desktop-radar-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.radar-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.radar-detail-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.radar-detail-label i {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+.radar-detail-value {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.radar-detail-value.highlight-price {
+  color: var(--accent-color);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.desktop-edit-radar-btn {
+  margin-top: 0.5rem;
+  width: 100%;
+  padding: 0.65rem 1rem;
+  font-size: 0.88rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 8px;
+  box-sizing: border-box;
 }
 
 /* Grid System */
@@ -146,8 +317,8 @@ header p {
 
 /* Specific Cards */
 .main-deal {
-  grid-column: span 2;
-  grid-row: span 2;
+  width: 100%;
+  box-sizing: border-box;
   background: linear-gradient(145deg, rgba(209, 255, 76, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
   border-color: rgba(209, 255, 76, 0.2);
 }
@@ -240,7 +411,7 @@ header p {
   margin-bottom: 1rem;
 }
 
-/* Buttons */
+/* Buttons & Interactive Elements */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -252,7 +423,7 @@ header p {
   text-decoration: none;
   cursor: pointer;
   border: none;
-  transition: all var(--transition-smooth);
+  transition: transform 150ms ease, filter 150ms ease, box-shadow 150ms ease, background-color 150ms ease, border-color 150ms ease;
   margin-top: 1rem;
 }
 
@@ -264,8 +435,13 @@ header p {
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(209, 255, 76, 0.4);
+  filter: brightness(1.08);
+  box-shadow: 0 8px 25px rgba(209, 255, 76, 0.45);
   background-color: #dbff66;
+}
+
+.btn-primary:active {
+  transform: translateY(0);
 }
 
 .btn-outline {
@@ -275,8 +451,37 @@ header p {
 }
 
 .btn-outline:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.28);
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+}
+
+.btn-outline:active {
+  transform: translateY(0);
+}
+
+.deal-reserve-btn {
+  cursor: pointer;
+  transition: transform 150ms ease, filter 150ms ease, box-shadow 150ms ease;
+}
+
+.deal-reserve-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+/* Accessible Focus Ring for Keyboard Navigation */
+a:focus-visible,
+button:focus-visible,
+.btn:focus-visible,
+.radar-summary-pill:focus-visible,
+.desktop-radar-edit-link:focus-visible,
+.desktop-edit-radar-btn:focus-visible,
+.deal-reserve-btn:focus-visible,
+.profile-btn:focus-visible {
+  outline: 2px solid var(--accent-color) !important;
+  outline-offset: 3px !important;
 }
 
 /* Deal Actions (Google Flights + Despegar) */
@@ -582,6 +787,8 @@ header p {
 
 /* Destination Flight Card (Cards completas para ofertas encontradas) */
 .destination-flight-card {
+  width: 100%;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -590,12 +797,19 @@ header p {
 
 /* Searching Radar Card (Explicación clara de países sin ofertas bajo presupuesto) */
 .searching-radar-card {
-  padding: 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 1.75rem 1.5rem;
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: var(--border-radius-lg);
-  grid-column: 1 / -1;
-  box-sizing: border-box;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: all var(--transition-smooth);
+}
+
+.searching-radar-card:hover {
+  border-color: var(--card-hover-border);
 }
 
 .searching-card-header {
@@ -632,8 +846,8 @@ header p {
 
 .searching-header-desc {
   margin: 0 auto;
-  max-width: 480px;
-  font-size: 0.88rem;
+  max-width: 520px;
+  font-size: 0.9rem;
   line-height: 1.45;
   color: var(--text-secondary);
   text-align: center;
@@ -646,7 +860,9 @@ header p {
 .searching-destinations-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 0.85rem;
+  gap: 1rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .searching-country-item {
@@ -655,18 +871,20 @@ header p {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 1.1rem 1rem;
+  padding: 1.25rem 1rem;
   background: rgba(255, 255, 255, 0.025);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--border-radius-md);
-  gap: 0.45rem;
+  gap: 0.5rem;
   box-sizing: border-box;
   transition: all var(--transition-smooth);
 }
 
 .searching-country-item:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.22);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .searching-country-main {
@@ -676,9 +894,20 @@ header p {
   gap: 0.5rem;
 }
 
-.searching-flag {
-  font-size: 1.4rem;
-  line-height: 1;
+.country-iso-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Plus Jakarta Sans', monospace, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--text-primary);
+  line-height: 1.2;
 }
 
 .searching-country-name {
@@ -688,9 +917,10 @@ header p {
 }
 
 .searching-country-note {
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   color: var(--text-secondary);
   text-align: center;
+  line-height: 1.35;
 }
 
 .searching-status-badge {
@@ -698,10 +928,10 @@ header p {
   align-items: center;
   justify-content: center;
   gap: 0.45rem;
-  font-size: 0.78rem;
-  color: var(--accent-color);
-  background: rgba(209, 255, 76, 0.06);
-  border: 1px solid rgba(209, 255, 76, 0.2);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   padding: 0.35rem 0.85rem;
   border-radius: 100px;
   font-weight: 500;
@@ -713,8 +943,8 @@ header p {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--accent-color);
-  box-shadow: 0 0 6px var(--accent-color);
+  background: var(--text-secondary);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.2);
   animation: pulseDot 2s infinite ease-in-out;
 }
 
@@ -864,8 +1094,41 @@ header p {
   min-height: 250px;
 }
 
-/* 📱 Responsive Tablet */
-@media (max-width: 1024px) {
+/* 📱 Responsive Tablet & Mobile (Single column layout preserved) */
+@media (max-width: 1023px) {
+  .dashboard-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .dashboard-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    position: static;
+  }
+
+  #radar-summary-strip {
+    order: 1;
+    display: flex !important;
+  }
+
+  #countdown-strip-container {
+    order: 2;
+  }
+
+  .desktop-radar-card {
+    display: none !important;
+  }
+
+  .dashboard-feed {
+    order: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
   .bento-grid {
     grid-template-columns: repeat(2, 1fr);
   }
