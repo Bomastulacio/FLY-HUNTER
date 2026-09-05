@@ -152,29 +152,6 @@ header p {
   font-size: 1.15rem;
 }
 
-.desktop-radar-edit-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  color: var(--text-secondary);
-  font-size: 0.82rem;
-  font-weight: 600;
-  text-decoration: none;
-  padding: 0.3rem 0.6rem;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 150ms ease;
-  cursor: pointer;
-}
-
-.desktop-radar-edit-link:hover {
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.25);
-  transform: translateY(-1px);
-}
-
 .desktop-radar-body {
   display: flex;
   flex-direction: column;
@@ -228,6 +205,70 @@ header p {
   gap: 0.45rem;
   border-radius: 8px;
   box-sizing: border-box;
+}
+
+/* Sidebar Tip Card (Para balancear altura y contenido en desktop) */
+.sidebar-tips-card {
+  display: none;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: var(--border-radius-md);
+  padding: 1.15rem;
+  box-sizing: border-box;
+}
+
+@media (min-width: 1024px) {
+  .sidebar-tips-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
+.sidebar-tip-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sidebar-tip-title i {
+  color: var(--accent-color);
+  font-size: 1rem;
+}
+
+.sidebar-tip-desc {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.sidebar-history-link {
+  margin-top: 0.35rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: var(--accent-color);
+  text-decoration: none;
+  font-weight: 600;
+  transition: opacity 150ms ease;
+}
+
+.sidebar-history-link:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.nowrap-price {
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 /* Grid System */
@@ -476,7 +517,7 @@ a:focus-visible,
 button:focus-visible,
 .btn:focus-visible,
 .radar-summary-pill:focus-visible,
-.desktop-radar-edit-link:focus-visible,
+.sidebar-history-link:focus-visible,
 .desktop-edit-radar-btn:focus-visible,
 .deal-reserve-btn:focus-visible,
 .profile-btn:focus-visible {

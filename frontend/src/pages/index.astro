@@ -129,14 +129,25 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
                 <i class="ph ph-sliders-horizontal"></i>
                 <span>Parámetros del Radar</span>
               </div>
-              <a href="/alertas" class="desktop-radar-edit-link" title="Modificar en Mis Alertas" aria-label="Modificar en Mis Alertas">
-                <i class="ph ph-pencil-simple"></i>
-                <span>Editar</span>
-              </a>
             </div>
             <div class="desktop-radar-body" id="desktop-radar-details">
               <!-- Renderizado dinámico por JS -->
             </div>
+          </div>
+
+          <!-- Tarjeta informativa y de historial para balancear altura en Desktop -->
+          <div class="sidebar-tips-card">
+            <div class="sidebar-tip-title">
+              <i class="ph ph-shield-check"></i>
+              <span>Radar inteligente</span>
+            </div>
+            <p class="sidebar-tip-desc">
+              Monitoreamos tarifas automáticamente dos veces al día para alertarte ante anomalías y bajas de precio.
+            </p>
+            <a href="/alertas" class="sidebar-history-link">
+              <i class="ph ph-sliders"></i>
+              <span>Historial y configuración</span>
+            </a>
           </div>
 
         </aside>
@@ -306,7 +317,8 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
         const mainHero = document.getElementById('main-hero');
         if (mainHero) mainHero.style.display = 'none';
 
-        const orig = alert.origen || "EZE";
+        const origRaw = alert.origen || "EZE";
+        const orig = origRaw.split(',').map((s: string) => s.trim()).join(', ');
         const dest = alert.destino || "Europa";
         const fechasCompactas = (alert.fecha_ida_min && alert.fecha_vuelta_max)
           ? `${formatDate(alert.fecha_ida_min)} - ${formatDate(alert.fecha_vuelta_max)}`
@@ -614,7 +626,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
                         <span class="country-iso-badge">${countryIsoCodes[country] || 'INT'}</span>
                         <strong class="searching-country-name">${country}</strong>
                       </div>
-                      <span class="searching-country-note">Tarifas actuales superan US$ ${alert.presupuesto_max}</span>
+                      <span class="searching-country-note">Tarifas actuales superan <span class="nowrap-price">US$&nbsp;${alert.presupuesto_max}</span></span>
                       <span class="searching-status-badge">
                         <span class="pulse-mini-dot"></span>
                         <span>Buscando</span>
