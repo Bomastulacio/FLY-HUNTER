@@ -1814,7 +1814,7 @@ button:focus-visible,
 /* Cajas explicativas: Regla rota vs Razonamiento IA */
 .anomaly-insights-box {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
   margin-bottom: 1.25rem;
   padding: 1rem;
@@ -1825,7 +1825,7 @@ button:focus-visible,
 
 @media (min-width: 680px) {
   .anomaly-insights-box {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 }
 
@@ -1859,46 +1859,53 @@ button:focus-visible,
   line-height: 1.35;
 }
 
-/* Botones de acción */
+/* Botones de acción con Jerarquía Estricta */
 .anomaly-actions {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.75rem;
-  padding-top: 0.5rem;
+  padding-top: 0.75rem;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+.anomaly-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
 .btn-anomaly-approve {
-  background: var(--accent-color);
-  color: #050505;
-  border: none;
+  background: #10b981;
+  color: #ffffff;
+  border: 1px solid rgba(16, 185, 129, 0.5);
   font-weight: 700;
-  font-size: 0.9rem;
-  padding: 0.65rem 1.25rem;
+  font-size: 0.88rem;
+  padding: 0.6rem 1.25rem;
   border-radius: var(--border-radius-pill);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
   transition: all 0.2s;
-  box-shadow: 0 4px 14px rgba(209, 255, 76, 0.3);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
 }
 
 .btn-anomaly-approve:hover {
-  background: #bfee26;
+  background: #059669;
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(209, 255, 76, 0.45);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
 }
 
 .btn-anomaly-discard {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
   color: #f87171;
-  border: 1px solid rgba(248, 113, 113, 0.3);
+  border: 1px solid rgba(248, 113, 113, 0.25);
   font-weight: 600;
-  font-size: 0.9rem;
-  padding: 0.65rem 1.15rem;
+  font-size: 0.88rem;
+  padding: 0.6rem 1.15rem;
   border-radius: var(--border-radius-pill);
   cursor: pointer;
   display: inline-flex;
@@ -1908,29 +1915,29 @@ button:focus-visible,
 }
 
 .btn-anomaly-discard:hover {
-  background: rgba(248, 113, 113, 0.15);
+  background: rgba(248, 113, 113, 0.12);
   border-color: #f87171;
 }
 
 .btn-anomaly-inspect {
   background: transparent;
   color: var(--text-secondary);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   font-weight: 500;
   font-size: 0.85rem;
-  padding: 0.65rem 1rem;
+  padding: 0.6rem 1rem;
   border-radius: var(--border-radius-pill);
   text-decoration: none;
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.4rem;
   transition: all 0.2s;
 }
 
 .btn-anomaly-inspect:hover {
   color: #ffffff;
   border-color: rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 /* Animación de salida al interactuar */
@@ -2237,5 +2244,79 @@ details[open] .agent-logic-chevron {
   color: var(--accent-color);
   font-size: 1.2rem;
 }
+
+/* ==========================================================================
+   AFFORDANCE ÚNICO & REGLAS DE JERARQUÍA VISUAL (DESKTOP)
+   ========================================================================== */
+.btn-icon-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  font-size: 1.05rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.btn-icon-ghost:hover {
+  color: var(--accent-color);
+  border-color: rgba(209, 255, 76, 0.3);
+  background: rgba(209, 255, 76, 0.08);
+  transform: scale(1.06);
+}
+
+.agent-logic-top-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 0.25rem 0.65rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--border-radius-pill);
+  margin-bottom: 0.85rem;
+}
+
+.live-dot-mini {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success-color);
+  box-shadow: 0 0 8px var(--success-color);
+  display: inline-block;
+  animation: pulseGreen 2s infinite;
+}
+
+@keyframes pulseGreen {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+.radar-tabs-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.4rem 0 0.25rem;
+  white-space: nowrap;
+}
+
+.destination-flight-card {
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
 
 

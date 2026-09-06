@@ -132,34 +132,26 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
                 <i class="ph ph-sliders-horizontal"></i>
                 <span>Parámetros del Radar</span>
               </div>
+              <a href="/alertas" class="btn-icon-ghost" title="Modificar parámetros del radar" aria-label="Editar parámetros del radar">
+                <i class="ph ph-pencil-simple"></i>
+              </a>
             </div>
             <div class="desktop-radar-body" id="desktop-radar-details">
               <!-- Renderizado dinámico por JS -->
             </div>
           </div>
 
-          <!-- Tarjeta informativa y de historial para balancear altura en Desktop -->
-          <div class="sidebar-tips-card">
-            <div class="sidebar-tip-title">
-              <i class="ph ph-shield-check"></i>
-              <span>Radar inteligente</span>
-            </div>
-            <p class="sidebar-tip-desc">
-              Monitoreamos tarifas automáticamente dos veces al día para alertarte ante anomalías y bajas de precio.
-            </p>
-            <a href="/alertas" class="sidebar-history-link">
-              <i class="ph ph-sliders"></i>
-              <span>Historial y configuración</span>
-            </a>
-          </div>
-
-          <!-- Lógica del Agente (Explicación de Criterios & Conceptos) -->
+          <!-- Lógica del Agente & Monitoreo Inteligente (Consolidado) -->
           <div class="agent-logic-card">
+            <div class="agent-logic-top-badge">
+              <span class="live-dot-mini"></span>
+              <span>Monitoreo IA activo (09:00 & 21:00)</span>
+            </div>
             <details open>
               <summary class="agent-logic-summary">
                 <div class="agent-logic-header">
                   <i class="ph ph-brain" style="color: var(--accent-color); font-size: 1.15rem;"></i>
-                  <span>Lógica del Agente</span>
+                  <span>Criterios de la IA</span>
                 </div>
                 <i class="ph ph-caret-down agent-logic-chevron"></i>
               </summary>
@@ -428,10 +420,6 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
               <div class="radar-detail-label"><i class="ph ph-users"></i> Pasajeros</div>
               <div class="radar-detail-value">${paxText}</div>
             </div>
-            <a href="/alertas" class="btn btn-outline desktop-edit-radar-btn" title="Modificar en Mis Alertas" aria-label="Modificar en Mis Alertas">
-              <i class="ph ph-sliders"></i>
-              <span>Modificar radar</span>
-            </a>
           `;
         }
 
@@ -570,12 +558,14 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
                   <a href="${inspectUrl}" target="_blank" rel="noopener noreferrer" class="btn-anomaly-inspect" title="Ver detalles y verificar fechas/escalas en vivo">
                     <i class="ph ph-arrow-square-out"></i> Inspeccionar
                   </a>
-                  <button type="button" class="btn-anomaly-discard" onclick="window.handleAnomalyAction('${pDeal.id}', 'rechazar', this)">
-                    <i class="ph ph-trash"></i> Descartar
-                  </button>
-                  <button type="button" class="btn-anomaly-approve" onclick="window.handleAnomalyAction('${pDeal.id}', 'aprobar', this)">
-                    <i class="ph-fill ph-check-circle"></i> Aprobar Oferta
-                  </button>
+                  <div class="anomaly-actions-right">
+                    <button type="button" class="btn-anomaly-discard" onclick="window.handleAnomalyAction('${pDeal.id}', 'rechazar', this)">
+                      <i class="ph ph-trash"></i> Descartar
+                    </button>
+                    <button type="button" class="btn-anomaly-approve" onclick="window.handleAnomalyAction('${pDeal.id}', 'aprobar', this)">
+                      <i class="ph-fill ph-check-circle"></i> Aprobar Oferta
+                    </button>
+                  </div>
                 </div>
               </div>
             `;
@@ -923,7 +913,8 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
 
         tabsNav.style.display = 'flex';
         
-        let tabsHtml = alerts.map((a, idx) => {
+        let tabsHtml = `<span class="radar-tabs-label"><i class="ph ph-radar"></i> Mis Búsquedas:</span>`;
+        tabsHtml += alerts.map((a, idx) => {
           const isActive = idx === activeAlertIndex;
           const orig = (a.origen || 'EZE').split(',')[0].trim();
           const dest = a.destino || 'Europa';
