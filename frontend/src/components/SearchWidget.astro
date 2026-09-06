@@ -80,6 +80,14 @@ import { supabase } from '../lib/supabase';
       <!-- STEP 1: Origen, Fechas, Zona -->
       <div class="wizard-step" id="step-1">
         <div class="form-group full-width">
+          <label>Nombre de esta búsqueda (opcional)</label>
+          <div class="input-wrapper">
+            <span class="input-icon"><i class="ph ph-tag"></i></span>
+            <input type="text" name="nombre" placeholder="Ej: Europa Vacaciones, Asia Trabajo, Miami..." maxlength="45" />
+          </div>
+        </div>
+
+        <div class="form-group full-width">
           <label>Origen</label>
           <div class="input-wrapper">
             <span class="input-icon"><i class="ph ph-airplane-takeoff"></i></span>
@@ -1545,6 +1553,12 @@ import { supabase } from '../lib/supabase';
         .single();
         
       if (alertData && form) {
+        // Nombre
+        if (alertData.nombre) {
+          const nombreInp = form.querySelector('[name="nombre"]') as HTMLInputElement;
+          if (nombreInp) nombreInp.value = alertData.nombre;
+        }
+
         // Origen
         const origen = form.querySelector('[name="origen"]') as HTMLSelectElement;
         if (origen) origen.value = alertData.origen;
@@ -1643,6 +1657,7 @@ import { supabase } from '../lib/supabase';
     }
 
     const payload = {
+      nombre: formData.get('nombre') || null,
       origen: formData.get('origen'),
       destino: formData.get('destino'), 
       paises: finalCountries,           

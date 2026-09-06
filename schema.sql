@@ -1,4 +1,4 @@
-﻿create extension if not exists pgcrypto;
+create extension if not exists pgcrypto;
 
 create table public.flight_deals (
     id uuid primary key default gen_random_uuid(),
@@ -63,13 +63,14 @@ create policy "Permitir full access al service role insights"
     on public.route_insights
     using (auth.jwt() ->> 'role' = 'service_role');
 
--- Tabla de Alertas de B�squeda (Preferencias de usuario)
+-- Tabla de Alertas de Búsqueda (Preferencias de usuario)
 create table public.search_alerts (
     id uuid primary key default gen_random_uuid(),
     user_id uuid references auth.users(id) not null,
+    nombre text default 'Mi Radar',
     origen text not null,
     destino text not null,
-    tipo_viaje text not null, -- 'Ida y vuelta' o 'Solo ida'
+    tipo_viaje text not null default 'ida_vuelta',
     fecha_ida_min date,
     fecha_ida_max date,
     fecha_vuelta_min date,
@@ -85,13 +86,13 @@ create table public.search_alerts (
     activo boolean not null default true,
     creado_en timestamptz not null default now(),
     actualizado_en timestamptz not null default now(),
-    constraint unique_user_alert unique(user_id) -- Por ahora, 1 alerta por usuario
+    constraint unique_user_alert unique(user_id) -- Por ahora 1 alerta por defecto
 );
 
 -- Habilitar RLS
 alter table public.search_alerts enable row level security;
 
--- Pol�tica para que los usuarios puedan ver y editar SUS propias alertas
+-- Política para que los usuarios puedan ver y editar SUS propias alertas
 create policy "Usuarios ven sus alertas"
     on public.search_alerts
     for select
@@ -105,3 +106,12 @@ create policy "Usuarios editan sus alertas"
 create policy "Permitir full access al service role alertas"
     on public.search_alerts
     using (auth.jwt() ->> 'role' = 'service_role');
+
+-- =====================================================================
+-- MIGRACIÓN OPCIONAL: Habilitar múltiples alertas por usuario
+-- =====================================================================
+-- Para permitir múltiples búsquedas/radares en paralelo por usuario:
+-- 1. Quitar la restricción de unicidad:
+--    ALTER TABLE public.search_alerts DROP CONSTRAINT IF EXISTS unique_user_alert;
+-- 2. Agregar la columna de nombre personalizado si no existe:
+--    ALTER TABLE public.search_alerts ADD COLUMN IF NOT EXISTS nombre text DEFAULT 'Mi Radar';

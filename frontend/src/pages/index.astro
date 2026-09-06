@@ -20,7 +20,7 @@ const routeInsights = insightsData || [];
 // Procesar datos para enviarlos completos al cliente
 const allDeals = deals || [];
 const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' || d.es_oportunidad_oro);
-const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' && d.es_anomalia);
+const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' || (d.es_anomalia && d.estado_aprobacion !== 'rechazado' && d.estado_aprobacion !== 'aprobado'));
 ---
 
 <html lang="es">
@@ -93,6 +93,9 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
         <p id="hero-subtitle">Configura tu radar para empezar a recibir alertas.</p>
       </header>
 
+      <!-- Radar Tabs Nav (Selector de alertas múltiples) -->
+      <div id="radar-tabs-nav" class="radar-tabs-nav" style="display: none;"></div>
+
       <!-- CONTENEDOR DINÁMICO DEL RADAR (Dashboard Responsive) -->
       <div id="dynamic-dashboard" class="dashboard-layout" style="display: none;">
         
@@ -150,6 +153,49 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
             </a>
           </div>
 
+          <!-- Lógica del Agente (Explicación de Criterios & Conceptos) -->
+          <div class="agent-logic-card">
+            <details open>
+              <summary class="agent-logic-summary">
+                <div class="agent-logic-header">
+                  <i class="ph ph-brain" style="color: var(--accent-color); font-size: 1.15rem;"></i>
+                  <span>Lógica del Agente</span>
+                </div>
+                <i class="ph ph-caret-down agent-logic-chevron"></i>
+              </summary>
+              <div class="agent-logic-list">
+                <div class="agent-logic-item">
+                  <div class="logic-badge-icon gold"><i class="ph-fill ph-fire"></i></div>
+                  <div class="agent-logic-content">
+                    <strong>Oportunidad de Oro</strong>
+                    <p>Tarifa &gt;30% más barata que el presupuesto o histórico. Aprobada automáticamente.</p>
+                  </div>
+                </div>
+                <div class="agent-logic-item">
+                  <div class="logic-badge-icon approved"><i class="ph-fill ph-check-circle"></i></div>
+                  <div class="agent-logic-content">
+                    <strong>Aprobado</strong>
+                    <p>Cumple con el 100% de tus parámetros de escalas, fechas y presupuesto.</p>
+                  </div>
+                </div>
+                <div class="agent-logic-item">
+                  <div class="logic-badge-icon anomaly"><i class="ph-fill ph-warning-octagon"></i></div>
+                  <div class="agent-logic-content">
+                    <strong>Anomalía Pendiente</strong>
+                    <p>Ganga llamativa que rompe levemente una regla. Requiere tu decisión.</p>
+                  </div>
+                </div>
+                <div class="agent-logic-item">
+                  <div class="logic-badge-icon glitch"><i class="ph-fill ph-lightning"></i></div>
+                  <div class="agent-logic-content">
+                    <strong>Tarifa Error</strong>
+                    <p>Descuento extremo por falla técnica de la aerolínea. Dura pocos minutos.</p>
+                  </div>
+                </div>
+              </div>
+            </details>
+          </div>
+
         </aside>
 
         <!-- Feed Principal Columna Derecha (Desktop: ancho consistente; Mobile: debajo de sidebar) -->
@@ -168,11 +214,12 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
 
     </main>
 
-
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="toast-container"></div>
 
     <!-- Pasar datos del servidor al cliente -->
-    <script is:inline define:vars={{ approvedDeals, pendingDeals }}>
-      window.__SERVER_DATA__ = { approvedDeals, pendingDeals };
+    <script is:inline define:vars={{ allDeals, approvedDeals, pendingDeals }}>
+      window.__SERVER_DATA__ = { allDeals, approvedDeals, pendingDeals };
     </script>
 
     <script>
@@ -430,31 +477,120 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
           d.cantidad_escalas <= alert.escalas_max
         );
         
-        // Tarjeta de Atención (Vuelo Anómalo)
-        const pendingDeals = window.__SERVER_DATA__.pendingDeals || [];
-        if (pendingDeals && pendingDeals.length > 0) {
-          const pDeal = pendingDeals[0];
-          html += `
-            <div class="card" style="border: 1px solid var(--accent-color); background: rgba(159, 219, 22, 0.05); padding: 1.5rem; width: 100%; box-sizing: border-box;">
-              <div class="card-header" style="font-size: 1.2rem;"><i class="ph-fill ph-warning" style="color: var(--accent-color); margin-right: 6px;"></i> Atención: Vuelo Anómalo Extremadamente Barato</div>
-              <p style="margin: 0.5rem 0 1.5rem 0; color: var(--text-secondary); font-size: 1rem;">
-                Encontramos una ganga por <strong>${formatPrice(pDeal)}</strong> que rompe levemente tus reglas. ¿Te sirve?
-              </p>
-              
-              <div style="display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap;">
-                <div>
-                  <div class="card-route" style="font-size: 1.1rem;">${pDeal.ida_origen_destino} <i class="ph ph-airplane-tilt" style="opacity: 0.5; margin: 0 4px;"></i> ${pDeal.vuelta_origen_destino}</div>
-                  <div class="card-date" style="margin-bottom:0;"><i class="ph ph-calendar-blank"></i> ${formatDate(pDeal.ida_fecha)} al ${formatDate(pDeal.vuelta_fecha)}</div>
-                </div>
-                <div style="flex: 1;"></div>
-                <div style="display: flex; gap: 0.75rem;">
-                  <button class="btn btn-primary" onclick="alert('Se enviará webhook a GitHub para APROBAR.')" style="margin:0; padding: 0.6rem 1.2rem; font-size: 1rem;"><i class="ph ph-check" style="margin-right: 4px;"></i> Aprobar</button>
-                  <button class="btn btn-outline" onclick="alert('Vuelo descartado.')" style="margin:0; padding: 0.6rem 1.2rem; font-size: 1rem;"><i class="ph ph-x" style="margin-right: 4px;"></i> No Aprobar</button>
+        // Helper para renderizar la sección completa de Anomalías Pendientes
+        const renderAnomaliesHTML = (currentAlert: any) => {
+          // @ts-ignore
+          const pending = (window.__SERVER_DATA__.pendingDeals || []).filter((d: any) => d.estado_aprobacion === 'pendiente');
+          if (!pending || pending.length === 0) return '';
+
+          let sectionHtml = `
+            <section class="anomalies-section" id="anomalies-section">
+              <div class="anomalies-header">
+                <div class="anomalies-title-group">
+                  <div class="anomalies-icon-pulse">
+                    <i class="ph-fill ph-warning-octagon"></i>
+                  </div>
+                  <div>
+                    <h3 class="anomalies-title">
+                      <span>Anomalías Pendientes</span>
+                      <span class="anomalies-badge-count" id="anomalies-count">${pending.length}</span>
+                    </h3>
+                    <p class="anomalies-subtitle">Vuelos con tarifas extraordinarias que desvían levemente tus parámetros. Revisá y aprobá para sumarlos a tu radar.</p>
+                  </div>
                 </div>
               </div>
-            </div>
+              <div class="anomalies-list" style="display: flex; flex-direction: column; gap: 1rem;">
           `;
-        }
+
+          pending.forEach((pDeal: any) => {
+            // Analizar regla rota
+            let brokenRule = 'Desvío de parámetros estándar del radar';
+            const maxStops = Number(currentAlert?.escalas_max ?? 1);
+            const budgetMax = Number(currentAlert?.presupuesto_max ?? 2400);
+
+            if (pDeal.cantidad_escalas > maxStops) {
+              brokenRule = `${pDeal.cantidad_escalas} escalas (tu radar permite hasta ${maxStops} escala${maxStops === 1 ? '' : 's'})`;
+            } else if (pDeal.precio_total_usd > budgetMax) {
+              brokenRule = `Supera el presupuesto configurado de US$ ${budgetMax} (total: US$ ${pDeal.precio_total_usd})`;
+            } else if (pDeal.ida_fecha && currentAlert?.fecha_ida_min && pDeal.ida_fecha < currentAlert.fecha_ida_min) {
+              brokenRule = `Sale antes de tu fecha mínima programada (${formatDate(pDeal.ida_fecha)})`;
+            } else if (pDeal.vuelta_fecha && currentAlert?.fecha_vuelta_max && pDeal.vuelta_fecha > currentAlert.fecha_vuelta_max) {
+              brokenRule = `Regresa posterior a tu fecha máxima programada (${formatDate(pDeal.vuelta_fecha)})`;
+            }
+
+            // Criterio IA (por qué la marcó como interesante)
+            let agentReason = `Tarifa sumamente atractiva (${formatPrice(pDeal)}), con ahorro estimado superior a la media de la ruta ${pDeal.ida_origen_destino}.`;
+
+            // Enlace de reserva / inspección
+            const routeParts = (pDeal.ida_origen_destino || 'EZE-BCN').split('-');
+            const origin = (routeParts[0] || 'EZE').trim().toUpperCase();
+            const dest = (routeParts[1] || 'BCN').trim().toUpperCase();
+            const passengers = Number(currentAlert?.pasajeros) || 2;
+            const paxText = passengers === 1 ? '1 adult' : `${passengers} adults`;
+            const inspectUrl = pDeal.link_reserva || `https://www.google.com/travel/flights?q=Flights%20to%20${dest}%20from%20${origin}%20on%20${pDeal.ida_fecha}%20through%20${pDeal.vuelta_fecha}%20for%20${encodeURIComponent(paxText)}&curr=USD&hl=es`;
+
+            sectionHtml += `
+              <div class="anomaly-card" id="anomaly-card-${pDeal.id}">
+                <div class="anomaly-top-row">
+                  <span class="anomaly-tag">
+                    <i class="ph-fill ph-warning"></i>
+                    <span>Anomalía en Radar</span>
+                  </span>
+                  <div class="anomaly-price-block">
+                    <div class="anomaly-price-value">${formatPrice(pDeal)}</div>
+                    <div class="anomaly-price-caption">Total para ${passengers} pasajero${passengers > 1 ? 's' : ''}</div>
+                  </div>
+                </div>
+
+                <div class="anomaly-flight-info">
+                  <div class="anomaly-route-title">
+                    <span>${pDeal.ida_origen_destino}</span>
+                    <i class="ph ph-airplane-tilt" style="opacity: 0.5; font-size: 1.1rem;"></i>
+                    <span>${pDeal.vuelta_origen_destino || ''}</span>
+                  </div>
+                  <div class="anomaly-details-row">
+                    <span><i class="ph ph-calendar-blank"></i> ${formatDate(pDeal.ida_fecha)} al ${formatDate(pDeal.vuelta_fecha)}</span>
+                    <span><i class="ph ph-airplane"></i> ${pDeal.aerolinea || 'Aerolínea'}</span>
+                    <span style="color: #f59e0b; font-weight: 600;"><i class="ph ph-git-branch"></i> ${pDeal.cantidad_escalas} escala${pDeal.cantidad_escalas === 1 ? '' : 's'}</span>
+                  </div>
+                </div>
+
+                <div class="anomaly-insights-box">
+                  <div class="insight-item">
+                    <span class="insight-label broken"><i class="ph-fill ph-x-circle"></i> Regla que rompió:</span>
+                    <span class="insight-text">${brokenRule}</span>
+                  </div>
+                  <div class="insight-item">
+                    <span class="insight-label agent"><i class="ph-fill ph-sparkle"></i> Criterio de la IA:</span>
+                    <span class="insight-text">${agentReason}</span>
+                  </div>
+                </div>
+
+                <div class="anomaly-actions">
+                  <a href="${inspectUrl}" target="_blank" rel="noopener noreferrer" class="btn-anomaly-inspect" title="Ver detalles y verificar fechas/escalas en vivo">
+                    <i class="ph ph-arrow-square-out"></i> Inspeccionar
+                  </a>
+                  <button type="button" class="btn-anomaly-discard" onclick="window.handleAnomalyAction('${pDeal.id}', 'rechazar', this)">
+                    <i class="ph ph-trash"></i> Descartar
+                  </button>
+                  <button type="button" class="btn-anomaly-approve" onclick="window.handleAnomalyAction('${pDeal.id}', 'aprobar', this)">
+                    <i class="ph-fill ph-check-circle"></i> Aprobar Oferta
+                  </button>
+                </div>
+              </div>
+            `;
+          });
+
+          sectionHtml += `
+              </div>
+            </section>
+          `;
+
+          return sectionHtml;
+        };
+
+        // 1. Sección de Anomalías Pendientes
+        html += renderAnomaliesHTML(alert);
 
         // Helper para construir el botón de reserva hacia la plataforma ganadora
         const getDealButton = (deal: any, isPrimary = true) => {
@@ -508,9 +644,10 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
         html += `
           <div class="card main-deal">
             <div class="main-deal-header">
-              <div class="main-deal-tag">
-                <i class="ph-fill ph-fire"></i>
-                <span>Vuelo más barato</span>
+              <div class="main-deal-tag tooltip-trigger">
+                <i class="ph-fill ${mainDeal?.es_oportunidad_oro ? 'ph-fire' : 'ph-sparkle'}"></i>
+                <span>${mainDeal?.es_oportunidad_oro ? 'Oportunidad de Oro' : 'Vuelo más barato'}</span>
+                <span class="tooltip-box">${mainDeal?.es_oportunidad_oro ? 'Tarifa extraordinaria con más del 30% de ahorro frente al promedio histórico de la ruta.' : 'La tarifa más conveniente encontrada para los parámetros de tu radar.'}</span>
               </div>
               ${mainDealCountry ? `
                 <div class="main-deal-country">
@@ -583,9 +720,10 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
                     <span class="country-iso-badge">${countryIsoCodes[country] || 'INT'}</span>
                     <span>${country}</span>
                   </div>
-                  <div class="main-deal-tag" style="color: var(--accent-color); background: rgba(209, 255, 76, 0.08); border-color: rgba(209, 255, 76, 0.25);">
+                  <div class="main-deal-tag tooltip-trigger" style="color: var(--accent-color); background: rgba(209, 255, 76, 0.08); border-color: rgba(209, 255, 76, 0.25);">
                     <i class="ph ph-check-circle"></i>
-                    <span>Oferta</span>
+                    <span>${deal.es_oportunidad_oro ? 'Oportunidad de Oro' : 'Aprobado'}</span>
+                    <span class="tooltip-box">${deal.es_oportunidad_oro ? 'Tarifa extraordinaria con más del 30% de ahorro frente a la media histórica.' : 'Cumple 100% con tu presupuesto, cantidad de escalas y rango de fechas.'}</span>
                   </div>
                 </div>
                 <div class="card-route">${deal.ida_origen_destino} <i class="ph ph-airplane-tilt" style="opacity: 0.5; margin: 0 4px;"></i> ${deal.vuelta_origen_destino || ''}</div>
@@ -721,15 +859,20 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
             });
           }
 
-          // Traemos sus alertas
-          const { data: alertData } = await supabase
+          // Traemos todas las alertas configuradas del usuario
+          const { data: alertsList } = await supabase
             .from('search_alerts')
             .select('*')
             .eq('user_id', session.user.id)
-            .single();
+            .order('creado_en', { ascending: false });
             
-          if (alertData) {
-            renderDashboard(alertData);
+          if (alertsList && alertsList.length > 0) {
+            userAlerts = alertsList;
+            activeAlertIndex = 0;
+            // @ts-ignore
+            window.currentActiveAlert = userAlerts[0];
+            renderRadarTabs(userAlerts);
+            renderDashboard(userAlerts[0]);
           } else {
             // Logueado pero sin alertas
             const empty = document.getElementById('empty-state');
@@ -748,9 +891,146 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' &&
         }
       };
 
+      // Toast Notifications Helper
+      const showToast = (message: string, type = 'success') => {
+        let container = document.getElementById('toast-container');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        const icon = type === 'success' ? '<i class="ph ph-check"></i>' : '<i class="ph ph-x"></i>';
+        toast.innerHTML = `<span class="toast-icon">${icon}</span><span>${message}</span>`;
+        container.appendChild(toast);
+        void toast.offsetWidth;
+        toast.classList.add('show');
+        setTimeout(() => {
+          toast.classList.remove('show');
+          setTimeout(() => toast.remove(), 350);
+        }, 4000);
+      };
+
+      // Multi-Alerts Tabs Navigator
+      let userAlerts: any[] = [];
+      let activeAlertIndex = 0;
+
+      const renderRadarTabs = (alerts: any[]) => {
+        const tabsNav = document.getElementById('radar-tabs-nav');
+        if (!tabsNav) return;
+
+        if (!alerts || alerts.length === 0) {
+          tabsNav.style.display = 'none';
+          return;
+        }
+
+        tabsNav.style.display = 'flex';
+        
+        let tabsHtml = alerts.map((a, idx) => {
+          const isActive = idx === activeAlertIndex;
+          const orig = (a.origen || 'EZE').split(',')[0].trim();
+          const dest = a.destino || 'Europa';
+          const label = a.nombre || `${orig} → ${dest}`;
+          return `
+            <button type="button" class="radar-tab-pill ${isActive ? 'is-active' : ''}" data-alert-index="${idx}" title="Ver radar: ${label}">
+              ${isActive ? '<span class="tab-pulse"></span>' : '<i class="ph ph-airplane-tilt"></i>'}
+              <span>${label}</span>
+            </button>
+          `;
+        }).join('');
+
+        tabsHtml += `
+          <a href="/alertas" class="radar-tab-pill tab-add-new" title="Configurar o crear nuevas alertas">
+            <i class="ph ph-plus-circle"></i>
+            <span>+ Mis Alertas</span>
+          </a>
+        `;
+
+        tabsNav.innerHTML = tabsHtml;
+
+        tabsNav.querySelectorAll('button[data-alert-index]').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const idx = Number((e.currentTarget as HTMLElement).getAttribute('data-alert-index'));
+            if (idx !== activeAlertIndex && userAlerts[idx]) {
+              activeAlertIndex = idx;
+              // @ts-ignore
+              window.currentActiveAlert = userAlerts[activeAlertIndex];
+              renderRadarTabs(userAlerts);
+              renderDashboard(userAlerts[activeAlertIndex]);
+            }
+          });
+        });
+      };
+
+      // Manejador de acciones para Anomalías (Aprobar / Descartar)
+      // @ts-ignore
+      window.handleAnomalyAction = async (dealId: string, action: 'aprobar' | 'rechazar', btn: HTMLElement) => {
+        const card = document.getElementById(`anomaly-card-${dealId}`);
+        const originalHtml = btn.innerHTML;
+        btn.setAttribute('disabled', 'true');
+        btn.innerHTML = `<i class="ph ph-spinner-gap" style="animation: spin 1s linear infinite;"></i> Procesando...`;
+
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+          if (session?.access_token) {
+            headers['Authorization'] = `Bearer ${session.access_token}`;
+          }
+
+          const res = await fetch('/api/anomaly-action', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ deal_id: dealId, action })
+          });
+          const result = await res.json();
+
+          if (result.success) {
+            showToast(result.message, 'success');
+            if (card) {
+              card.classList.add('anomaly-dismissing');
+              setTimeout(() => {
+                card.remove();
+                const countEl = document.getElementById('anomalies-count');
+                const sectionEl = document.getElementById('anomalies-section');
+                const remaining = document.querySelectorAll('.anomaly-card');
+                if (countEl) countEl.innerText = `${remaining.length}`;
+                if (remaining.length === 0 && sectionEl) {
+                  sectionEl.style.display = 'none';
+                }
+              }, 450);
+            }
+
+            // Actualizar el estado de deals en memoria sin recargar la página
+            // @ts-ignore
+            const pendingList = window.__SERVER_DATA__.pendingDeals || [];
+            const idx = pendingList.findIndex((d: any) => d.id === dealId);
+            if (idx !== -1) {
+              const deal = pendingList.splice(idx, 1)[0];
+              if (action === 'aprobar') {
+                deal.estado_aprobacion = 'aprobado';
+                // @ts-ignore
+                if (!window.__SERVER_DATA__.approvedDeals) window.__SERVER_DATA__.approvedDeals = [];
+                // @ts-ignore
+                window.__SERVER_DATA__.approvedDeals.push(deal);
+                // Re-render feed con el deal recién aprobado para el usuario
+                // @ts-ignore
+                if (window.currentActiveAlert) {
+                  // @ts-ignore
+                  setTimeout(() => renderDashboard(window.currentActiveAlert), 500);
+                }
+              }
+            }
+          } else {
+            showToast('Error: ' + (result.error || 'No se pudo procesar'), 'error');
+            btn.removeAttribute('disabled');
+            btn.innerHTML = originalHtml;
+          }
+        } catch (err: any) {
+          showToast('Error de comunicación con el servidor', 'error');
+          btn.removeAttribute('disabled');
+          btn.innerHTML = originalHtml;
+        }
+      };
+
       // Iniciar cuando el DOM esté listo
       window.addEventListener('DOMContentLoaded', initDashboard);
-
     </script>
   </body>
 </html>
