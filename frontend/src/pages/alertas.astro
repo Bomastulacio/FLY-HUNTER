@@ -2,13 +2,14 @@
 import { supabase } from '../lib/supabase';
 import SearchWidget from '../components/SearchWidget.astro';
 import '../styles/global.css';
+import '../styles/compact.css';
 ---
 
 <html lang="es">
   <head>
     <meta charset="utf-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Mis Alertas - Flight Hunter</title>
     
     <!-- PWA Config -->
@@ -20,7 +21,7 @@ import '../styles/global.css';
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
   </head>
-  <body>
+  <body class="compact-app">
     <div class="bg-3d-scene">
       <div class="radar-circles" style="opacity: 0.5;">
         <div class="circle c1"></div>
@@ -33,7 +34,7 @@ import '../styles/global.css';
         <div class="alertas-header-text">
           <a href="/" class="back-link"><i class="ph ph-arrow-left"></i> Volver al Radar</a>
           <h1>Mis Alertas</h1>
-          <p>Configurá el Agente Estratega para que busque por ti.</p>
+          <p>Elegí tu viaje. Ajustá solo lo que necesites.</p>
         </div>
         <div class="alertas-header-actions">
           <div class="profile-menu-container">

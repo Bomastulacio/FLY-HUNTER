@@ -1,0 +1,130 @@
+/* Scoped to the flight feed and radar settings; authentication pages keep their theme. */
+body.compact-app { background: #10120f; --bg-base: #10120f; --text-primary: #f1f3ed; --text-secondary: #a9b0a3; --accent-color: #c9ef73; }
+.compact-app *, .compact-app *::before, .compact-app *::after { box-sizing: border-box; }
+.compact-app main { max-width: 900px; width: calc(100% - 40px); padding: 0 0 3rem; }
+.compact-app .bg-3d-scene { display: none; }
+.compact-app .top-nav { min-height: 76px; margin: 0 0 20px; padding: 12px 0; }
+.compact-app .top-nav-logo { font-size: 1.1rem; gap: 8px; }
+.compact-app .profile-btn { min-height: 44px; }
+.compact-app .top-nav .nav-alertas-btn { display: none; }
+.compact-app #main-hero { margin: 40px 0 24px; animation: none; text-align: left; }
+.compact-app #main-hero h1 { font-size: clamp(1.75rem, 5vw, 2.5rem); max-width: 24ch; }
+.compact-app #main-hero p { font-size: .95rem; }
+.compact-app .dashboard-layout, .compact-app .dashboard-layout.is-active { display: flex; flex-direction: column; gap: 20px; }
+.compact-app .dashboard-sidebar { position: static; gap: 10px; }
+.compact-app .dashboard-feed { gap: 12px; }
+.compact-app .radar-tabs-nav { gap: 10px; padding: 0; margin: 0 0 12px; flex-wrap: nowrap; }
+.radar-select-label { display: grid; gap: 5px; flex: 1; min-width: 0; font-size: .75rem; color: var(--text-secondary); }
+.radar-select { width: 100%; min-height: 44px; border: 1px solid #515849; border-radius: 10px; background: #191c17; color: var(--text-primary); padding: 8px 12px; font: inherit; font-size: .95rem; }
+.radar-manage { display: inline-flex; align-items: center; gap: 6px; align-self: end; min-height: 44px; padding: 8px 12px; font-size: .85rem; color: var(--text-primary); text-decoration: none; }
+.radar-overview { background: #191c17; border: 1px solid #30362a; border-radius: 12px; }
+.radar-overview > summary { display: flex; gap: 12px; align-items: center; padding: 12px 14px; min-height: 56px; list-style: none; cursor: pointer; }
+.radar-overview > summary > .ph { color: var(--accent-color); font-size: 20px; }
+.radar-overview .radar-summary-copy { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.radar-summary-copy strong { font-size: .875rem; font-weight: 600; }
+.radar-summary-copy small { font-size: .8rem; color: var(--text-secondary); }
+.radar-overview .radar-edit-label { font-size: .8rem; color: var(--text-secondary); white-space: nowrap; }
+.radar-overview-content { padding: 0 14px 14px; border-top: 1px solid #30362a; }
+.radar-overview .desktop-radar-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding: 14px 0; }
+.radar-overview .radar-detail-label { font-size: .65rem; }
+.radar-overview .radar-detail-value { font-size: .875rem; overflow-wrap: anywhere; }
+.radar-overview .radar-detail-value.highlight-price { font-size: .95rem; }
+.radar-config-link { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--accent-color); text-decoration: none; font-size: .875rem; }
+.compact-app .countdown-strip { padding: 0 4px; margin: 0; min-height: 24px; background: none; border: 0; box-shadow: none; border-radius: 0; gap: 8px; }
+.compact-app .countdown-strip-label, .compact-app .countdown-strip-timer { font-size: .75rem; color: var(--text-secondary); }
+.compact-app .countdown-strip-timer { font-variant-numeric: tabular-nums; }
+.feed-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.feed-toolbar h1 { margin: 0; font-size: 1.2rem; letter-spacing: -.03em; }
+.feed-filters { display: flex; gap: 4px; }
+.feed-filters button { min-height: 44px; padding: 8px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--text-secondary); font: inherit; font-size: .8rem; cursor: pointer; }
+.feed-filters button[aria-pressed="true"] { background: #293121; color: var(--accent-color); }
+.saved-note, .feed-empty { margin: 0; color: var(--text-secondary); font-size: .8rem; line-height: 1.6; }
+.feed-empty { padding: 24px 16px; border: 1px dashed #414936; border-radius: 12px; }
+.flight-item { position: relative; border: 1px solid #353b2f; border-radius: 14px; background: #191c17; overflow: clip; }
+.flight-item--featured { border-color: #566b38; }
+.flight-summary { padding: 18px; display: block; list-style: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.flight-summary::-webkit-details-marker, .radar-overview > summary::-webkit-details-marker { display: none; }
+.flight-summary-top { display: flex; align-items: center; gap: 10px; padding-right: 38px; flex-wrap: wrap; }
+.flight-destination { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.2rem; font-weight: 700; letter-spacing: -.03em; }
+.flight-badge { color: var(--accent-color); font-size: .68rem; font-weight: 600; }
+.flight-route-line { display: block; margin-top: 4px; font-size: .75rem; color: var(--text-secondary); }
+.flight-summary-facts { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 12px; align-items: end; margin-top: 16px; }
+.flight-dates { font-size: .875rem; }
+.flight-price { font-size: 1.65rem; font-weight: 700; line-height: 1; letter-spacing: -.05em; font-variant-numeric: tabular-nums; }
+.flight-airline { font-size: .75rem; color: var(--text-secondary); overflow-wrap: anywhere; }
+.flight-passengers { font-size: .7rem; text-align: right; color: var(--text-secondary); }
+.flight-expand { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; padding-top: 10px; border-top: 1px solid #30362a; color: var(--text-secondary); font-size: .75rem; }
+.flight-expand .ph { transition: transform 160ms ease; }
+.when-open { display: none; }
+.flight-disclosure[open] .when-open { display: inline; }
+.flight-disclosure[open] .when-closed { display: none; }
+.flight-disclosure[open] .flight-expand .ph { transform: rotate(180deg); }
+.flight-save { position: absolute; right: 7px; top: 6px; z-index: 1; min-width: 44px; min-height: 44px; display: grid; place-items: center; border: 0; background: transparent; color: var(--text-secondary); border-radius: 10px; font-size: 22px; cursor: pointer; }
+.flight-save[aria-pressed="true"] { color: var(--accent-color); background: #28321f; }
+.flight-content { border-top: 1px solid #30362a; padding: 0 18px 16px; }
+.flight-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 16px 0; }
+.flight-detail-grid dt { font-size: .7rem; color: var(--text-secondary); margin-bottom: 4px; }
+.flight-detail-grid dd { margin: 0; font-size: .875rem; overflow-wrap: anywhere; }
+.flight-detail-grid small { display: block; margin-top: 4px; font-size: .75rem; color: var(--text-secondary); }
+.flight-book { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; padding: 10px 14px; border-radius: 9px; background: var(--accent-color); color: #18210d; font-size: .875rem; font-weight: 600; text-decoration: none; }
+.flight-freshness { margin: 10px 0; font-size: .7rem; line-height: 1.5; color: var(--text-secondary); }
+.flight-explanation { border-top: 1px solid #30362a; }
+.flight-explanation summary { min-height: 44px; padding: 12px 0; cursor: pointer; font-size: .8rem; }
+.flight-explanation p { color: var(--text-secondary); font-size: .8rem; line-height: 1.5; margin: 0 0 8px; }
+.flight-edit { display: inline-flex; min-height: 44px; gap: 8px; align-items: center; color: var(--text-secondary); text-decoration: none; font-size: .8rem; }
+.compact-searching { padding: 12px 2px; color: var(--text-secondary); font-size: .8rem; line-height: 1.6; }
+.compact-searching summary { min-height: 44px; cursor: pointer; }
+.compact-searching p { margin: 8px 0 0; }
+.compact-app :where(summary, button, a, select):focus-visible { outline: 2px solid var(--accent-color); outline-offset: -3px; }
+.compact-app [hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.compact-app .toast-container { bottom: max(20px, env(safe-area-inset-bottom)); }
+.compact-app .alertas-header { margin: 24px 0; padding: 0; animation: none; }
+.compact-app .alertas-header h1 { font-size: 1.6rem; }
+.compact-app .search-widget-wrapper { display: block; margin-bottom: 24px; }
+.compact-app .search-widget-wrapper .sidebar-content { display: none; }
+.compact-app .search-widget-wrapper .main-content { padding: 16px; border-radius: 14px; background: #191c17; backdrop-filter: none; }
+.compact-app .search-widget-wrapper .main-content:hover { transform: none; box-shadow: none; }
+.compact-app #radar-dashboard .radar-summary-card { gap: 12px; margin-top: 0; }
+.compact-app #radar-dashboard .summary-section { padding: 14px; border-radius: 10px; }
+.compact-app #radar-dashboard .section-header { margin-bottom: 10px; }
+.compact-app #radar-dashboard .section-header h3 { font-size: .9rem; }
+.compact-app #radar-dashboard .section-content { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.compact-app #radar-dashboard .section-content.hidden { display: none; }
+.compact-app #radar-dashboard .summary-row { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 0; border: 0; }
+.compact-app #radar-dashboard .summary-row strong { text-align: left; overflow-wrap: anywhere; font-size: .9rem; }
+.compact-app #radar-dashboard .summary-row span { font-size: .7rem; }
+.compact-app #radar-dashboard .edit-step-btn { min-width: 44px; min-height: 44px; }
+.compact-app .radar-status-header { padding: 14px !important; margin-bottom: 12px !important; border-radius: 10px !important; background: #1d2317 !important; }
+.compact-app .radar-status-header .radar-pulse-icon { display: none !important; }
+.compact-app .radar-status-header .btn { min-height: 44px; margin-top: 0; }
+.compact-app .anomalies-section { margin: 0; padding: 0; border: 1px solid #685533; background: #201e17; border-radius: 12px; }
+.compact-review-summary { display: flex; gap: 8px; align-items: center; list-style: none; padding: 12px 14px; min-height: 48px; cursor: pointer; color: #e7c983; font-size: .85rem; }
+.compact-review-summary > .ph:last-child { margin-left: auto; }
+.compact-app .anomalies-list { display: grid; gap: 12px; padding: 0 12px 12px; }
+.compact-app .anomaly-card { padding: 14px; }
+.compact-app .anomaly-price-value { font-size: 1.5rem; }
+@media (hover: hover) {
+  .flight-summary:hover, .radar-overview > summary:hover { background: #20251b; }
+  .flight-save:hover { background: #303825; color: var(--accent-color); }
+  .flight-book:hover { background: #d6f798; }
+}
+@media (max-width: 600px) {
+  .compact-app main { width: calc(100% - 28px); padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+  .compact-app .top-nav { min-height: 64px; margin-bottom: 12px; gap: 8px; }
+  .compact-app .top-nav-logo { font-size: 1rem; }
+  .compact-app .top-nav-actions { gap: 4px; }
+  .compact-app .user-email-label { display: none; }
+  .compact-app .dashboard-layout { gap: 16px; }
+  .flight-summary { padding: 14px; }
+  .flight-content { padding: 0 14px 12px; }
+  .flight-destination { font-size: 1.1rem; }
+  .flight-price { font-size: 1.5rem; }
+  .flight-summary-top { column-gap: 8px; }
+  .radar-manage { padding-inline: 6px; }
+  .compact-app .countdown-strip { flex-wrap: wrap; justify-content: flex-start; }
+  .feed-toolbar h1 { font-size: 1.1rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .compact-app *, .compact-app *::before, .compact-app *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

@@ -1756,6 +1756,7 @@ import { supabase } from '../lib/supabase';
     updateSummary();
   }
 
+  let requestedRadarId = new URLSearchParams(window.location.search).get('radar');
   async function loadUserAlerts() {
     if (!currentUserId) return;
     const { data: alertsList, error } = await supabase
@@ -1766,6 +1767,11 @@ import { supabase } from '../lib/supabase';
 
     if (!error && alertsList && alertsList.length > 0) {
       userAlerts = alertsList;
+      if (requestedRadarId) {
+        const requestedIndex = userAlerts.findIndex((alert: any) => alert.id === requestedRadarId);
+        if (requestedIndex >= 0) activeAlertIndex = requestedIndex;
+        requestedRadarId = null;
+      }
       if (activeAlertIndex >= userAlerts.length) activeAlertIndex = 0;
       renderAlertPills();
       populateDashboardWithAlert(userAlerts[activeAlertIndex]);

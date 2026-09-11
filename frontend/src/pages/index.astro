@@ -1,6 +1,7 @@
 ---
 import { supabase } from '../lib/supabase';
 import '../styles/global.css';
+import '../styles/compact.css';
 
 // Habilitar SSR (Server-Side Rendering) en Vercel
 export const prerender = false;
@@ -19,7 +20,7 @@ const routeInsights = insightsData || [];
 
 // Procesar datos para enviarlos completos al cliente
 const allDeals = deals || [];
-const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' || d.es_oportunidad_oro);
+const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' || (d.es_oportunidad_oro && !['pendiente', 'rechazado'].includes(d.estado_aprobacion)));
 const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' || (d.es_anomalia && d.estado_aprobacion !== 'rechazado' && d.estado_aprobacion !== 'aprobado'));
 ---
 
@@ -27,7 +28,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
   <head>
     <meta charset="utf-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Flight Hunter - Mi Radar</title>
     
     <!-- PWA Config -->
@@ -39,7 +40,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
   </head>
-  <body>
+  <body class="compact-app">
     <!-- Auth Guard Loader -->
     <div id="auth-loader" style="position: fixed; inset: 0; background: var(--bg-color); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center;">
       <div style="font-size: 3rem; margin-bottom: 1rem; animation: pulse 1.5s infinite;"><i class="ph ph-airplane-tilt"></i></div>
@@ -99,128 +100,31 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
       <!-- CONTENEDOR DINÁMICO DEL RADAR (Dashboard Responsive) -->
       <div id="dynamic-dashboard" class="dashboard-layout" style="display: none;">
         
-        <!-- Sidebar Columna Izquierda (Desktop: sticky; Mobile: orden apilado) -->
-        <aside class="dashboard-sidebar">
-          
-          <!-- Radar Config Pill (Mobile / Tablet <1024px: tap target único para editar) -->
-          <a href="/alertas" id="radar-summary-strip" class="radar-summary-pill mobile-tablet-pill" style="display: none;" title="Toca para editar preferencias de radar" aria-label="Editar preferencias de radar">
-            <div class="summary-info">
-              <i class="ph ph-sliders-horizontal summary-icon"></i>
-              <span id="radar-summary-text" class="summary-text">Cargando radar...</span>
+        <aside class="dashboard-sidebar" aria-label="Tu búsqueda">
+          <details class="radar-overview">
+            <summary>
+              <i class="ph ph-sliders-horizontal" aria-hidden="true"></i>
+              <span class="radar-summary-copy" id="radar-summary-text">Cargando búsqueda...</span>
+              <span class="radar-edit-label">Filtros <i class="ph ph-caret-down" aria-hidden="true"></i></span>
+            </summary>
+            <div class="radar-overview-content">
+              <div class="desktop-radar-body" id="desktop-radar-details"></div>
+              <a href="/alertas" class="radar-config-link" id="radar-config-link"><i class="ph ph-pencil-simple" aria-hidden="true"></i> Editar esta búsqueda</a>
             </div>
-            <span class="edit-pill-indicator" aria-hidden="true">
-              <i class="ph ph-pencil-simple"></i>
-            </span>
-          </a>
-
-          <!-- Status bar del próximo rastreo -->
+          </details>
           <div id="countdown-strip-container" class="countdown-strip">
-            <div class="countdown-strip-left">
-              <span class="live-dot"></span>
-              <span class="countdown-strip-label">Próximo rastreo para <strong id="cd-target-dest">Europa</strong>:</span>
-            </div>
-            <div class="countdown-strip-timer">
-              <i class="ph ph-clock"></i>
-              <span id="compact-cd-val">Calculando...</span>
-            </div>
+            <span class="countdown-strip-label">Próxima búsqueda estimada · <strong id="cd-target-dest">Europa</strong></span>
+            <span class="countdown-strip-timer"><i class="ph ph-clock" aria-hidden="true"></i> <span id="compact-cd-val">Calculando...</span></span>
           </div>
-
-          <!-- Desktop Expanded Radar Card (Desktop ≥1024px: Parámetros del radar siempre visibles y expandidos) -->
-          <div id="desktop-radar-panel" class="card desktop-radar-card">
-            <div class="desktop-radar-header">
-              <div class="desktop-radar-title">
-                <i class="ph ph-sliders-horizontal"></i>
-                <span>Parámetros del Radar</span>
-              </div>
-              <a href="/alertas" class="btn-icon-ghost" title="Modificar parámetros del radar" aria-label="Editar parámetros del radar">
-                <i class="ph ph-pencil-simple"></i>
-              </a>
-            </div>
-            <div class="desktop-radar-body" id="desktop-radar-details">
-              <!-- Renderizado dinámico por JS -->
-            </div>
-          </div>
-
-          <!-- Radar Pulse: Actividad y Estado Durable -->
-          <div class="agent-logic-card fh-ui">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-              <span class="fh-label" id="pulse-radar-name">Radar Monitoreado</span>
-              <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; color: var(--accent-color); font-weight: 700; background: rgba(209, 255, 76, 0.1); padding: 2px 8px; border-radius: 999px;">
-                <span class="live-dot-mini"></span> EN LÍNEA
-              </span>
-            </div>
-            
-            <h3 id="pulse-activity-title" style="font-size: 1.05rem; font-weight: 700; margin: 0 0 0.65rem 0; color: #fff;">Revisando combinaciones</h3>
-
-            <ol class="fh-stages" aria-label="Etapas de la búsqueda">
-              <li class="fh-stage-item" style="color: var(--accent-color);">
-                <i class="ph ph-check-circle" aria-hidden="true"></i>
-                <span>Buscar: completado</span>
-              </li>
-              <li class="fh-stage-item" aria-current="step">
-                <i class="ph ph-funnel" aria-hidden="true"></i>
-                <span>Evaluar: en curso</span>
-              </li>
-              <li class="fh-stage-item">
-                <i class="ph ph-bell" aria-hidden="true"></i>
-                <span>Avisar: programado (09:00 & 21:00 hs)</span>
-              </li>
-            </ol>
-
-            <dl class="fh-facts" style="margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1px solid rgba(255,255,255,0.08);">
-              <div>
-                <dt>Última señal recibida</dt>
-                <dd id="last-signal-time">Hace instantes</dd>
-              </div>
-              <div>
-                <dt>Último barrido</dt>
-                <dd id="last-scan-status">Tarifas en monitoreo</dd>
-              </div>
-            </dl>
-
-            <details style="margin-top: 0.85rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.5rem;">
-              <summary class="agent-logic-summary" style="font-size: 0.82rem; color: var(--text-secondary);">
-                <div class="agent-logic-header">
-                  <i class="ph ph-brain" style="color: var(--accent-color); font-size: 1rem;"></i>
-                  <span>Ver Criterios de la IA</span>
-                </div>
-                <i class="ph ph-caret-down agent-logic-chevron"></i>
-              </summary>
-              <div class="agent-logic-list" style="margin-top: 0.75rem;">
-                <div class="agent-logic-item">
-                  <div class="logic-badge-icon gold"><i class="ph-fill ph-fire"></i></div>
-                  <div class="agent-logic-content">
-                    <strong>Oportunidad de Oro</strong>
-                    <p>Tarifa &gt;30% más barata que el presupuesto o histórico. Aprobada automáticamente.</p>
-                  </div>
-                </div>
-                <div class="agent-logic-item">
-                  <div class="logic-badge-icon approved"><i class="ph-fill ph-check-circle"></i></div>
-                  <div class="agent-logic-content">
-                    <strong>Aprobado</strong>
-                    <p>Cumple con el 100% de tus parámetros de escalas, fechas y presupuesto.</p>
-                  </div>
-                </div>
-                <div class="agent-logic-item">
-                  <div class="logic-badge-icon anomaly"><i class="ph-fill ph-warning-octagon"></i></div>
-                  <div class="agent-logic-content">
-                    <strong>Anomalía Pendiente</strong>
-                    <p>Ganga llamativa que rompe levemente una regla. Requiere tu decisión.</p>
-                  </div>
-                </div>
-                <div class="agent-logic-item">
-                  <div class="logic-badge-icon glitch"><i class="ph-fill ph-lightning"></i></div>
-                  <div class="agent-logic-content">
-                    <strong>Tarifa Error</strong>
-                    <p>Descuento extremo por falla técnica de la aerolínea. Dura pocos minutos.</p>
-                  </div>
-                </div>
-              </div>
-            </details>
-          </div>
-
         </aside>
-
+        <div class="feed-toolbar">
+          <h1>Tus vuelos</h1>
+          <div class="feed-filters" role="group" aria-label="Mostrar vuelos">
+            <button type="button" data-feed-filter="all" aria-pressed="true">Todos</button>
+            <button type="button" data-feed-filter="saved" aria-pressed="false"><i class="ph ph-bookmark-simple" aria-hidden="true"></i> Guardados</button>
+          </div>
+        </div>
+        <p class="saved-note" id="saved-note" hidden>Guardados en este navegador. Se muestran las ofertas vigentes de esta búsqueda.</p>
         <!-- Feed Principal Columna Derecha (Desktop: ancho consistente; Mobile: debajo de sidebar) -->
         <section class="dashboard-feed" id="destinations-grid">
            <!-- Renderizado por JS: Card destacada + Destinos -->
@@ -231,14 +135,15 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
       <!-- EMPTY STATE (Sin Alerta) -->
       <div id="empty-state" style="display: none; text-align: center; margin: 4rem 0;">
         <div style="font-size: 4rem; margin-bottom: 1rem; color: var(--text-secondary);"><i class="ph ph-broadcast"></i></div>
-        <h2>Aún no tienes un radar activo</h2>
-        <p style="color: var(--text-secondary); margin-bottom: 2rem;">Configura tus preferencias para que nuestra IA busque los mejores vuelos por vos.</p>
+        <h2>Todavía no tenés una búsqueda</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 2rem;">Elegí destino, fechas y presupuesto. Te mostramos las opciones que encontramos.</p>
+        <a href="/alertas" class="btn btn-primary">Configurar mi búsqueda</a>
       </div>
 
     </main>
 
     <!-- Toast Notifications Container -->
-    <div id="toast-container" class="toast-container"></div>
+    <div id="toast-container" class="toast-container" role="status" aria-live="polite" aria-atomic="false"></div>
 
     <!-- Pasar datos del servidor al cliente -->
     <script is:inline define:vars={{ allDeals, approvedDeals, pendingDeals, routeInsights }}>
@@ -247,6 +152,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
 
     <script>
       import { supabase } from '../lib/supabase';
+      import { renderCompactFlight, escapeHtml, usd } from '../utils/compactFlights';
 
       const formatPrice = (deal: any) => {
         const price = deal.precio_original || deal.precio_total_usd;
@@ -298,42 +204,6 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         "Nueva Zelanda": ["AKL"],
       };
 
-      const countryFlags: Record<string, string> = {
-        "España": "🇪🇸",
-        "Francia": "🇫🇷",
-        "Italia": "🇮🇹",
-        "Reino Unido": "🇬🇧",
-        "Alemania": "🇩🇪",
-        "Portugal": "🇵🇹",
-        "Países Bajos": "🇳🇱",
-        "Suiza": "🇨🇭",
-        "Grecia": "🇬🇷",
-        "París": "🇫🇷",
-        "Estados Unidos": "🇺🇸",
-        "Canadá": "🇨🇦",
-        "México": "🇲🇽",
-        "Miami": "🇺🇸",
-        "Nueva York": "🇺🇸",
-        "Brasil": "🇧🇷",
-        "Chile": "🇨🇱",
-        "Colombia": "🇨🇴",
-        "Perú": "🇵🇪",
-        "Uruguay": "UY",
-        "Río de Janeiro": "🇧🇷",
-        "República Dominicana": "🇩🇴",
-        "Cancún": "🇲🇽",
-        "Cuba": "🇨🇺",
-        "Costa Rica": "🇨🇷",
-        "Puerto Rico": "🇵🇷",
-        "Japón": "🇯🇵",
-        "Tokio": "🇯🇵",
-        "Tailandia": "🇹🇭",
-        "Corea del Sur": "🇰🇷",
-        "Emiratos Árabes": "🇦🇪",
-        "Australia": "🇦🇺",
-        "Nueva Zelanda": "🇳🇿"
-      };
-
       const countryIsoCodes: Record<string, string> = {
         "España": "ES",
         "Francia": "FR",
@@ -381,8 +251,6 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
           dash.classList.add('is-active');
         }
         
-        const summaryStrip = document.getElementById('radar-summary-strip');
-        if (summaryStrip) summaryStrip.style.display = 'flex';
         
         const mainHero = document.getElementById('main-hero');
         if (mainHero) mainHero.style.display = 'none';
@@ -393,26 +261,19 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         const fechasCompactas = (alert.fecha_ida_min && alert.fecha_vuelta_max)
           ? `${formatDate(alert.fecha_ida_min)} - ${formatDate(alert.fecha_vuelta_max)}`
           : "";
-        const escalasCompactas = `máx ${alert.escalas_max} esc.`;
+
         const exclCompactas = (alert.aerolineas_excluidas && alert.aerolineas_excluidas.length > 0 && alert.aerolineas_excluidas !== "Ninguna")
           ? `sin ${Array.isArray(alert.aerolineas_excluidas) ? alert.aerolineas_excluidas.join(', ') : alert.aerolineas_excluidas}`
           : "";
-        const presupCompacto = `US$ ${alert.presupuesto_max}`;
 
-        // 1. Mobile Pill Summary
+
         const summaryTextEl = document.getElementById('radar-summary-text');
         if (summaryTextEl) {
-          const parts = [
-            `<strong>${orig} → ${dest}</strong>`,
-            fechasCompactas,
-            escalasCompactas,
-            exclCompactas,
-            `<strong>${presupCompacto}</strong>`
-          ].filter(Boolean);
-          summaryTextEl.innerHTML = parts.join(' · ');
+          summaryTextEl.innerHTML = `<strong>${escapeHtml(orig)} → ${escapeHtml(dest)}</strong><small>${escapeHtml(fechasCompactas || 'Fechas flexibles')} · Hasta ${usd(alert.presupuesto_max)}</small>`;
         }
-
-        // 2. Desktop Expanded Radar Panel (Siempre visible en desktop ≥1024px)
+        const configLink = document.getElementById('radar-config-link') as HTMLAnchorElement;
+        if (configLink) configLink.href = `/alertas?radar=${encodeURIComponent(alert.id)}`;
+        // Full preferences are available on demand, on every screen size.
         const desktopDetailsEl = document.getElementById('desktop-radar-details');
         if (desktopDetailsEl) {
           const fechasLargas = (alert.fecha_ida_min && alert.fecha_vuelta_max)
@@ -422,7 +283,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
           const exclLargas = (alert.aerolineas_excluidas && alert.aerolineas_excluidas.length > 0 && alert.aerolineas_excluidas !== "Ninguna")
             ? `Sin ${Array.isArray(alert.aerolineas_excluidas) ? alert.aerolineas_excluidas.join(', ') : alert.aerolineas_excluidas}`
             : "Todas las aerolíneas";
-          const presupLargo = `Hasta US$ ${alert.presupuesto_max}`;
+          const presupLargo = `Hasta ${usd(alert.presupuesto_max)}`;
           const pax = Number(alert.pasajeros) || 2;
           const paxText = pax === 1 ? "1 pasajero" : `${pax} pasajeros`;
 
@@ -475,9 +336,9 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
           
           const hours = Math.floor(distance / (1000 * 60 * 60));
           const mins = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-          const secs = Math.floor((distance % (1000 * 60)) / 1000);
+
           
-          timerVal.innerText = `${hours.toString().padStart(2, '0')}h ${mins.toString().padStart(2, '0')}m ${secs.toString().padStart(2, '0')}s`;
+          timerVal.innerText = `${hours.toString().padStart(2, '0')}h ${mins.toString().padStart(2, '0')}m`;
         };
         cdInterval = setInterval(updateCountdown, 1000);
 
@@ -503,22 +364,9 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
           if (!pending || pending.length === 0) return '';
 
           let sectionHtml = `
-            <section class="anomalies-section" id="anomalies-section">
-              <div class="anomalies-header">
-                <div class="anomalies-title-group">
-                  <div class="anomalies-icon-pulse">
-                    <i class="ph-fill ph-warning-octagon"></i>
-                  </div>
-                  <div>
-                    <h3 class="anomalies-title">
-                      <span>Anomalías Pendientes</span>
-                      <span class="anomalies-badge-count" id="anomalies-count">${pending.length}</span>
-                    </h3>
-                    <p class="anomalies-subtitle">Vuelos con tarifas extraordinarias que desvían levemente tus parámetros. Revisá y aprobá para sumarlos a tu radar.</p>
-                  </div>
-                </div>
-              </div>
-              <div class="anomalies-list" style="display: flex; flex-direction: column; gap: 1rem;">
+            <details class="anomalies-section" id="anomalies-section">
+              <summary class="compact-review-summary"><i class="ph ph-warning-circle" aria-hidden="true"></i> Para revisar <span id="anomalies-count">${pending.length}</span><i class="ph ph-caret-down" aria-hidden="true"></i></summary>
+              <div class="anomalies-list">
           `;
 
           pending.forEach((pDeal: any) => {
@@ -538,7 +386,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
             }
 
             // Criterio IA (por qué la marcó como interesante)
-            let agentReason = `Tarifa sumamente atractiva (${formatPrice(pDeal)}), con ahorro estimado superior a la media de la ruta ${pDeal.ida_origen_destino}.`;
+            let agentReason = `Oferta marcada para revisión por el radar. Verificá las condiciones antes de aprobarla.`;
 
             // Enlace de reserva / inspección
             const routeParts = (pDeal.ida_origen_destino || 'EZE-BCN').split('-');
@@ -604,7 +452,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
 
           sectionHtml += `
               </div>
-            </section>
+            </details>
           `;
 
           return sectionHtml;
@@ -613,210 +461,8 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         // 1. Sección de Anomalías Pendientes
         html += renderAnomaliesHTML(alert);
 
-        // Helper para renderizar card completa con jerarquía visual y recorrido de decisión
-        const renderFlightCard = (deal: any, currentAlert: any, isMain = false, countryName = '') => {
-          if (!deal) return '';
-          const passengers = Number(currentAlert?.pasajeros) || 2;
-          const paxText = passengers === 1 ? '1 adulto' : `${passengers} adultos`;
-          const budgetMax = Number(currentAlert?.presupuesto_max) || 2400;
-
-          // Resolver país
-          let cName = countryName;
-          if (!cName) {
-            for (const [name, codes] of Object.entries(countryCodes)) {
-              if (codes.some(code => deal.ida_origen_destino.includes(code))) {
-                cName = name;
-                break;
-              }
-            }
-          }
-          const isoBadge = cName && countryIsoCodes[cName] ? countryIsoCodes[cName] : 'INT';
-
-          // Link de reserva validado y formateado
-          const isDespegar = deal.fuente === 'despegar';
-          const providerLabel = isDespegar ? 'Despegar' : 'Google Flights';
-          let bookingUrl = deal.link_reserva;
-          if (!bookingUrl || !isDespegar) {
-            const routeParts = (deal.ida_origen_destino || 'EZE-MAD').split('-');
-            const orig = (routeParts[0] || 'EZE').trim().toUpperCase();
-            const dst = (routeParts[1] || 'MAD').trim().toUpperCase();
-            const passengerQuery = passengers === 1 ? '1 adult' : `${passengers} adults`;
-            bookingUrl = `https://www.google.com/travel/flights?q=Flights%20to%20${dst}%20from%20${orig}%20on%20${deal.ida_fecha}%20through%20${deal.vuelta_fecha}%20for%20${encodeURIComponent(passengerQuery)}&curr=USD&hl=es`;
-          }
-
-          const cardClass = isMain ? 'card main-deal fh-ui' : 'card destination-flight-card fh-ui';
-          const isGold = deal.es_oportunidad_oro;
-          const statusBadgeText = isGold ? 'Oportunidad de Oro' : 'Aprobado';
-          const statusIcon = isGold ? 'ph-fill ph-fire' : 'ph-fill ph-check-circle';
-          const statusSub = isGold ? 'Por debajo de tu umbral · Respeta tus filtros' : 'Respeta tus filtros y fechas';
-
-          return `
-            <article class="${cardClass}" id="deal-card-${deal.id}" style="width: 100%;">
-              <!-- 1. ¿Adónde voy? -->
-              <header class="main-deal-header">
-                ${cName ? `
-                  <div class="main-deal-country">
-                    <span class="country-iso-badge">${isoBadge}</span>
-                    <span>${cName}</span>
-                  </div>
-                ` : `
-                  <span class="fh-label">${currentAlert.nombre || currentAlert.destino}</span>
-                `}
-                
-                <div class="main-deal-tag tooltip-trigger" style="${isGold ? '' : 'color: var(--accent-color); background: rgba(209, 255, 76, 0.08); border-color: rgba(209, 255, 76, 0.25);'}">
-                  <i class="${statusIcon}"></i>
-                  <span>${statusBadgeText}</span>
-                  <span class="tooltip-box">${isGold ? 'Tarifa extraordinaria con más del 30% de ahorro frente al promedio histórico.' : 'Cumple con el 100% de tus parámetros de fechas, escalas y presupuesto.'}</span>
-                </div>
-              </header>
-
-              <div class="card-route" style="font-size: 1.45rem; font-weight: 700; margin-top: 0.25rem;">
-                ${deal.ida_origen_destino} <i class="ph ph-airplane-tilt" style="opacity: 0.5; margin: 0 4px;"></i> ${deal.vuelta_origen_destino || ''}
-              </div>
-
-              <!-- 2. ¿Cuánto cuesta para todos? -->
-              <div style="margin-top: 0.6rem;">
-                <div class="card-price" style="margin: 0; line-height: 1;">${formatPrice(deal)}</div>
-                <div class="fh-muted" style="font-size: 0.82rem; margin-top: 0.35rem;">Total para ${paxText} · Ida y vuelta</div>
-              </div>
-
-              <!-- 3. ¿Cuándo y con qué condiciones? -->
-              <dl class="fh-facts" style="margin-block: 0.85rem;">
-                <div>
-                  <dt>Fechas</dt>
-                  <dd><i class="ph ph-calendar-blank"></i> ${formatDate(deal.ida_fecha)} al ${formatDate(deal.vuelta_fecha)}</dd>
-                </div>
-                <div>
-                  <dt>Escalas & Aerolínea</dt>
-                  <dd><i class="ph ph-airplane"></i> ${deal.cantidad_escalas === 0 ? 'Vuelo directo' : `${deal.cantidad_escalas} escala(s)`} · ${deal.aerolinea || 'Aerolínea'}</dd>
-                </div>
-              </dl>
-
-              <!-- 4. ¿Por qué vale la pena? -->
-              <p class="fh-positive" style="font-size: 0.85rem; margin-bottom: 0.85rem;">
-                <i class="ph ph-check-circle" aria-hidden="true"></i> ${statusSub}
-              </p>
-
-              <!-- 5. CTA Principal -->
-              <a href="${bookingUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; min-height: 2.75rem; text-decoration: none; font-weight: 650; box-sizing: border-box;">
-                <span>Ver en ${providerLabel}</span>
-                <i class="ph ph-arrow-up-right" aria-hidden="true"></i>
-              </a>
-
-              <!-- 1. Recorrido de Decisión ("Por qué te mostramos este vuelo") -->
-              <details class="fh-panel fh-explanation">
-                <summary><i class="ph ph-git-commit" style="color: var(--accent-color); margin-right: 0.35rem;"></i> Por qué te mostramos este vuelo</summary>
-                <ol class="fh-trail">
-                  <li>
-                    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
-                    <div>
-                      <strong>Cotización registrada</strong>
-                      <p>${formatPrice(deal)} en total para ${paxText}.</p>
-                      <small>Fuente: ${providerLabel} · Consulta del Agente</small>
-                    </div>
-                  </li>
-                  <li>
-                    <i class="ph ph-check-circle" aria-hidden="true"></i>
-                    <div>
-                      <strong>Respeta tus filtros</strong>
-                      <p>${deal.cantidad_escalas === 0 ? 'Vuelo directo' : `Hasta ${deal.cantidad_escalas} escala(s)`}. Sin aerolíneas excluidas.</p>
-                    </div>
-                  </li>
-                  <li>
-                    <i class="ph ph-calendar-check" aria-hidden="true"></i>
-                    <div>
-                      <strong>Fechas dentro de tu ventana</strong>
-                      <p>Ida el ${formatDate(deal.ida_fecha)}. Vuelta el ${formatDate(deal.vuelta_fecha)}.</p>
-                    </div>
-                  </li>
-                  <li class="fh-positive">
-                    <i class="ph ph-tag" aria-hidden="true"></i>
-                    <div>
-                      <strong>${isGold ? 'Califica como Oportunidad de Oro' : 'Aprobado por el radar'}</strong>
-                      <p>Por debajo de tu umbral de US$ ${budgetMax}.</p>
-                      <small style="color: var(--text-secondary); font-size: 0.74rem; display: flex; align-items: center; gap: 4px; margin-top: 3px;">
-                        <i class="ph ph-chart-line-up"></i>
-                        ${(() => {
-                          // @ts-ignore
-                          const insightsList = window.__SERVER_DATA__?.routeInsights || [];
-                          const matched = insightsList.find((ins: any) => ins.ruta === deal.ida_origen_destino);
-                          return (matched && matched.precio_promedio_7d) 
-                            ? `Promedio últimos 7 días: US$ ${Math.round(matched.precio_promedio_7d)} · Mínimo: US$ ${Math.round(matched.minimo_historico || matched.precio_promedio_7d)}`
-                            : 'Todavía no hay suficiente historial';
-                        })()}
-                      </small>
-                    </div>
-                  </li>
-                </ol>
-                <p class="fh-muted" style="font-size: 0.75rem; margin-top: 0.65rem; display: flex; align-items: center; gap: 4px;">
-                  <i class="ph ph-info"></i> El precio final puede cambiar cuando abras la búsqueda en la aerolínea.
-                </p>
-              </details>
-
-              <!-- 2. Alternativas del Strategist ("Qué cambia y cuánto cuesta") -->
-              <details class="fh-panel">
-                <summary><i class="ph ph-compass" style="color: var(--accent-color); margin-right: 0.35rem;"></i> Comparar fechas y alternativas</summary>
-                <p class="fh-muted" style="font-size: 0.8rem; margin-bottom: 0.5rem;">Mismo destino, ${paxText} y condiciones comparables evaluadas por el Agente Estratega.</p>
-                <ul class="fh-options">
-                  <li class="fh-option">
-                    <span class="fh-label">Búsqueda original</span>
-                    <strong>Salir el ${formatDate(deal.ida_fecha)}</strong>
-                    <span class="fh-price-small">${formatPrice(deal)}</span>
-                    <small>Vuelta el ${formatDate(deal.vuelta_fecha)}</small>
-                  </li>
-                  <li class="fh-option fh-option--preferred">
-                    <span class="fh-label">Alternativa de menor demanda</span>
-                    <strong>Salir 2 días después</strong>
-                    <span class="fh-price-small" style="color: var(--accent-color);">Flexibilidad sugerida</span>
-                    <span class="fh-positive"><i class="ph ph-trend-down"></i> Consultar fechas adyacentes</span>
-                    <small>Menor demanda estimada de asientos según estacionalidad</small>
-                  </li>
-                </ul>
-                <details class="fh-panel" style="margin-top: 0.5rem; background: transparent; border: 1px dashed rgba(255,255,255,0.12);">
-                  <summary style="font-size: 0.82rem; color: var(--text-secondary);"><i class="ph ph-airplane-in-flight" style="margin-right: 0.35rem;"></i> Explorar aeropuerto alternativo</summary>
-                  <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0.4rem 0 0 0;">
-                    <strong>Hub satélite:</strong> El Agente Estratega evalúa arribos a aeropuertos cercanos con conexión de tren de alta velocidad en el próximo ciclo.
-                  </p>
-                </details>
-              </details>
-
-              <!-- 3. Feedback: preferencias explícitas y reversibles -->
-              <section class="fh-panel" style="margin-top: 0.75rem;" aria-labelledby="feedback-title-${deal.id}">
-                <h4 id="feedback-title-${deal.id}" style="font-size: 0.86rem; font-weight: 600; color: #fff; margin: 0 0 0.4rem 0; display: flex; align-items: center; gap: 0.4rem;">
-                  <i class="ph ph-thumbs-up-down" style="color: var(--accent-color);"></i> ¿Qué te pareció esta opción?
-                </h4>
-                <fieldset class="fh-feedback">
-                  <legend class="fh-sr-only">Elegí el motivo</legend>
-                  <label class="fh-choice">
-                    <input type="radio" name="feedback-${deal.id}" value="layover_ok" onchange="window.enableFeedbackSave('${deal.id}')" />
-                    <span><i class="ph ph-check"></i> Esta escala me sirve</span>
-                  </label>
-                  <label class="fh-choice">
-                    <input type="radio" name="feedback-${deal.id}" value="layover_long" onchange="window.enableFeedbackSave('${deal.id}')" />
-                    <span><i class="ph ph-clock"></i> La espera es demasiado larga</span>
-                  </label>
-                  <label class="fh-choice">
-                    <input type="radio" name="feedback-${deal.id}" value="dates_unsuitable" onchange="window.enableFeedbackSave('${deal.id}')" />
-                    <span><i class="ph ph-calendar-x"></i> Estas fechas no me sirven</span>
-                  </label>
-                </fieldset>
-                
-                <div class="fh-field">
-                  <span>Aplicar a:</span>
-                  <select id="scope-${deal.id}">
-                    <option value="offer">Solo esta oferta</option>
-                    <option value="radar">Preferencias de este radar</option>
-                  </select>
-                </div>
-
-                <button type="button" class="fh-btn-save-pref" id="btn-save-${deal.id}" disabled onclick="window.saveDealFeedback('${deal.id}', '${currentAlert.id}', '${cName || currentAlert.destino}')">
-                  <i class="ph ph-floppy-disk"></i> Guardar preferencia
-                </button>
-              </section>
-
-            </article>
-          `;
-        };
+        const renderFlightCard = (deal: any, currentAlert: any, isMain = false, countryName = '') =>
+          renderCompactFlight(deal, currentAlert, isMain, countryName, savedFlights.has(String(deal.id)));
 
         // 1. Tarjeta Principal (Vuelo más barato o destacado)
         const mainDeal = affordableDeals.length > 0 ? affordableDeals[0] : null;
@@ -831,8 +477,8 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
           html += renderFlightCard(mainDeal, alert, true, mainDealCountry);
         } else {
           html += `
-            <div class="card main-deal" style="text-align: center; padding: 2.5rem;">
-              <p style="color: var(--text-secondary); margin: 0; font-size: 1rem;">No encontramos vuelos que cumplan con tu presupuesto de US$ ${alert.presupuesto_max} y filtros actuales.</p>
+            <div class="card main-deal" style="text-align: left; padding: 1.25rem;">
+              <p style="color: var(--text-secondary); margin: 0; font-size: 1rem;">No encontramos vuelos que cumplan con tu presupuesto de ${usd(alert.presupuesto_max)} y filtros actuales.</p>
             </div>
           `;
         }
@@ -870,9 +516,9 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
             return;
           }
 
-          if (destDeal) {
+          if (destDeal && !countriesWithDeals.some(item => item.deal.id === destDeal.id)) {
             countriesWithDeals.push({ country, deal: destDeal });
-          } else {
+          } else if (!destDeal) {
             countriesSearching.push({ country });
           }
         });
@@ -886,63 +532,11 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
           });
         }
 
-        // Países en búsqueda activa
         if (countriesSearching.length > 0) {
-          const searchingTitle = mainDealCountry 
-            ? `Rastreando el resto de ${alert.destino}` 
-            : `Rastreando destinos en ${alert.destino}`;
-            
-          const searchingDesc = mainDealCountry
-            ? `Además de la oferta encontrada para <strong>${mainDealCountry}</strong>, tu radar continúa buscando tarifas menores a <strong>US$ ${alert.presupuesto_max}</strong> en:`
-            : `Actualmente no encontramos tarifas menores a <strong>US$ ${alert.presupuesto_max}</strong> para tus fechas. El radar sigue monitoreando activamente:`;
-
-          html += `
-            <div class="card searching-radar-card">
-              <div class="searching-card-header">
-                <div class="radar-scan-circle">
-                  <i class="ph ph-broadcast"></i>
-                </div>
-                <h3 class="searching-header-title">${searchingTitle}</h3>
-                <p class="searching-header-desc">${searchingDesc}</p>
-              </div>
-
-              <div class="searching-destinations-grid">
-                ${countriesSearching.map(({ country }) => {
-                  return `
-                    <div class="searching-country-item">
-                      <div class="searching-country-main">
-                        <span class="country-iso-badge">${countryIsoCodes[country] || 'INT'}</span>
-                        <strong class="searching-country-name">${country}</strong>
-                      </div>
-                      <span class="searching-country-note">Tarifas actuales superan <span class="nowrap-price">US$&nbsp;${alert.presupuesto_max}</span></span>
-                      <span class="searching-status-badge">
-                        <span class="pulse-mini-dot"></span>
-                        <span>Buscando</span>
-                      </span>
-                    </div>
-                  `;
-                }).join('')}
-              </div>
-            </div>
-          `;
+          html += `<details class="compact-searching"><summary>${countriesSearching.length} destinos sin ofertas en tus filtros</summary><p>${countriesSearching.map(({ country }) => escapeHtml(country)).join(' · ')}. Volvemos a revisar en la próxima búsqueda.</p></details>`;
         }
-
         grid.innerHTML = html;
-        
-        // Actualizar Radar Pulse en el sidebar
-        const pulseName = document.getElementById('pulse-radar-name');
-        if (pulseName) pulseName.textContent = alert.nombre || 'Mi Radar';
-
-        const pulseTitle = document.getElementById('pulse-activity-title');
-        if (pulseTitle) pulseTitle.textContent = `Revisando combinaciones hacia ${alert.destino}`;
-
-        const lastScanStatus = document.getElementById('last-scan-status');
-        if (lastScanStatus) {
-          lastScanStatus.textContent = affordableDeals.length > 0
-            ? `${affordableDeals.length} opciones en presupuesto`
-            : `Rastreando opciones bajo US$ ${alert.presupuesto_max}`;
-        }
-
+        applySavedFilter();
         updateCountdown();
       };
 
@@ -967,6 +561,11 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         if (loader) loader.style.display = 'none';
 
         if (session) {
+          savedStorageKey = `fh_saved_flights_v1:${session.user.id}`;
+          try {
+            const stored = JSON.parse(localStorage.getItem(savedStorageKey) || '[]');
+            savedFlights = new Set(Array.isArray(stored) ? stored.filter((id: unknown) => typeof id === 'string').slice(-500) : []);
+          } catch { savedFlights = new Set(); }
           // Actualizar UI para usuario logueado
           const loginBtn = document.getElementById('nav-login-btn');
           if (loginBtn) loginBtn.style.display = 'none';
@@ -1073,46 +672,64 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         }, 4000);
       };
 
-      // Feedback Handlers
-      // @ts-ignore
-      window.enableFeedbackSave = (dealId: string) => {
-        const btn = document.getElementById(`btn-save-${dealId}`) as HTMLButtonElement;
-        if (btn) btn.disabled = false;
-      };
-
-      // @ts-ignore
-      window.saveDealFeedback = async (dealId: string, alertId: string, destName: string) => {
-        const selectedRadio = document.querySelector(`input[name="feedback-${dealId}"]:checked`) as HTMLInputElement;
-        const scopeSelect = document.getElementById(`scope-${dealId}`) as HTMLSelectElement;
-        const btn = document.getElementById(`btn-save-${dealId}`) as HTMLButtonElement;
-        
-        if (!selectedRadio) return;
-        
-        const reason = selectedRadio.value;
-        const scope = scopeSelect ? scopeSelect.value : 'offer';
-        
-        if (btn) {
-          btn.disabled = true;
-          btn.innerHTML = '<i class="ph ph-circle-notch" style="animation: spin 1s infinite;"></i> Guardando...';
+      // Bookmarks are scoped to the signed-in user and this browser.
+      let savedFlights = new Set<string>();
+      let savedStorageKey = '';
+      let feedFilter = 'all';
+      const applySavedFilter = () => {
+        const grid = document.getElementById('destinations-grid');
+        if (!grid) return;
+        grid.querySelector('.saved-empty')?.remove();
+        let visible = 0;
+        grid.querySelectorAll<HTMLElement>('.flight-item').forEach(card => {
+          card.hidden = feedFilter === 'saved' && !savedFlights.has(card.dataset.flightId || '');
+          if (!card.hidden) visible++;
+        });
+        grid.querySelectorAll<HTMLElement>(':scope > :not(.flight-item)').forEach(el => { el.hidden = feedFilter === 'saved'; });
+        if (feedFilter === 'saved' && !visible) {
+          const empty = document.createElement('p');
+          empty.className = 'feed-empty saved-empty';
+          empty.textContent = 'No tenés vuelos guardados vigentes en esta búsqueda. Tocá el marcador de una oferta para tenerla a mano.';
+          grid.append(empty);
         }
-
-        const feedbackKey = `fh_feedback_${dealId}`;
-        const feedbackData = { dealId, alertId, reason, scope, createdAt: new Date().toISOString() };
-        try {
-          localStorage.setItem(feedbackKey, JSON.stringify(feedbackData));
-        } catch (e) {}
-
-        setTimeout(() => {
-          if (btn) {
-            btn.innerHTML = '<i class="ph ph-check"></i> Preferencia guardada';
-            btn.style.background = 'rgba(255,255,255,0.1)';
-            btn.style.color = 'var(--text-secondary)';
-          }
-          
-          const label = scope === 'radar' ? `Preferencias de radar para ${destName}` : 'esta oferta';
-          showToast(`Preferencia guardada para ${label}.`, 'success');
-        }, 350);
+        const note = document.getElementById('saved-note');
+        if (note) note.hidden = feedFilter !== 'saved';
+        document.querySelectorAll<HTMLButtonElement>('[data-feed-filter]').forEach(btn => {
+          btn.setAttribute('aria-pressed', String(btn.dataset.feedFilter === feedFilter));
+        });
       };
+      document.querySelectorAll<HTMLButtonElement>('[data-feed-filter]').forEach(btn => {
+        btn.addEventListener('click', () => { feedFilter = btn.dataset.feedFilter || 'all'; applySavedFilter(); });
+      });
+      document.getElementById('destinations-grid')?.addEventListener('click', event => {
+        const button = (event.target as Element).closest<HTMLButtonElement>('[data-save-id]');
+        if (!button || !savedStorageKey) return;
+        const id = button.dataset.saveId!;
+        const next = new Set(savedFlights);
+        const saving = !next.has(id);
+        if (saving) next.add(id); else next.delete(id);
+        try {
+          localStorage.setItem(savedStorageKey, JSON.stringify([...next].slice(-500)));
+          savedFlights = next;
+          button.setAttribute('aria-pressed', String(saving));
+          button.setAttribute('aria-label', saving ? 'Quitar de guardados' : 'Guardar vuelo');
+          button.title = saving ? 'Quitar de guardados' : 'Guardar en este navegador';
+          const icon = button.querySelector('i');
+          if (icon) icon.className = saving ? 'ph-fill ph-bookmark-simple' : 'ph ph-bookmark-simple';
+          showToast(saving ? 'Vuelo guardado en este navegador.' : 'Vuelo quitado de guardados.');
+          applySavedFilter();
+          if (feedFilter === 'saved' && !saving) document.querySelector<HTMLButtonElement>('[data-feed-filter="saved"]')?.focus();
+        } catch {
+          showToast('No pudimos guardar en este navegador. Revisá el almacenamiento disponible.', 'error');
+        }
+      });
+      document.getElementById('destinations-grid')?.addEventListener('toggle', event => {
+        const opened = event.target;
+        if (!(opened instanceof HTMLDetailsElement) || !opened.classList.contains('flight-disclosure') || !opened.open) return;
+        document.querySelectorAll<HTMLDetailsElement>('.flight-disclosure[open]').forEach(item => {
+          if (item !== opened) item.open = false;
+        });
+      }, true);
 
       // Multi-Alerts Tabs Navigator
       let userAlerts: any[] = [];
@@ -1129,40 +746,20 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
 
         tabsNav.style.display = 'flex';
         
-        let tabsHtml = `<span class="radar-tabs-label"><i class="ph ph-radar"></i> Mis Búsquedas:</span>`;
-        tabsHtml += alerts.map((a, idx) => {
-          const isActive = idx === activeAlertIndex;
-          const orig = (a.origen || 'EZE').split(',')[0].trim();
-          const dest = a.destino || 'Europa';
-          const label = a.nombre || `${orig} → ${dest}`;
-          return `
-            <button type="button" class="radar-tab-pill ${isActive ? 'is-active' : ''}" data-alert-index="${idx}" title="Ver radar: ${label}">
-              ${isActive ? '<span class="tab-pulse"></span>' : '<i class="ph ph-airplane-tilt"></i>'}
-              <span>${label}</span>
-            </button>
-          `;
-        }).join('');
-
-        tabsHtml += `
-          <a href="/alertas" class="radar-tab-pill tab-add-new" title="Configurar o crear nuevas alertas">
-            <i class="ph ph-plus-circle"></i>
-            <span>+ Mis Alertas</span>
-          </a>
-        `;
-
-        tabsNav.innerHTML = tabsHtml;
-
-        tabsNav.querySelectorAll('button[data-alert-index]').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            const idx = Number((e.currentTarget as HTMLElement).getAttribute('data-alert-index'));
-            if (idx !== activeAlertIndex && userAlerts[idx]) {
-              activeAlertIndex = idx;
-              // @ts-ignore
-              window.currentActiveAlert = userAlerts[activeAlertIndex];
-              renderRadarTabs(userAlerts);
-              renderDashboard(userAlerts[activeAlertIndex]);
-            }
-          });
+        tabsNav.innerHTML = `<label class="radar-select-label">Tu búsqueda<select class="radar-select" aria-label="Elegir búsqueda"></select></label><a class="radar-manage" href="/alertas"><i class="ph ph-sliders" aria-hidden="true"></i> Mis Alertas</a>`;
+        const select = tabsNav.querySelector('select')!;
+        alerts.forEach((a, idx) => {
+          const option = document.createElement('option');
+          option.value = String(idx);
+          option.textContent = a.nombre || `${a.origen || 'EZE'} → ${a.destino || 'Europa'}`;
+          option.selected = idx === activeAlertIndex;
+          select.append(option);
+        });
+        select.addEventListener('change', () => {
+          activeAlertIndex = Number(select.value);
+          // @ts-ignore
+          window.currentActiveAlert = userAlerts[activeAlertIndex];
+          renderDashboard(userAlerts[activeAlertIndex]);
         });
       };
 
