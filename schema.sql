@@ -85,8 +85,8 @@ create table public.search_alerts (
     email text not null,
     activo boolean not null default true,
     creado_en timestamptz not null default now(),
-    actualizado_en timestamptz not null default now(),
-    constraint unique_user_alert unique(user_id) -- Por ahora 1 alerta por defecto
+    actualizado_en timestamptz not null default now()
+    -- Soporta múltiples búsquedas activas por usuario (sin unique constraint)
 );
 
 -- Habilitar RLS

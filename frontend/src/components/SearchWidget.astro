@@ -7,15 +7,30 @@ import { supabase } from '../lib/supabase';
   <div class="main-content card">
     <!-- DASHBOARD VIEW (Shown if active alert exists) -->
     <div id="radar-dashboard" class="hidden">
+      <!-- Selector y Gestor de Búsquedas Múltiples -->
+      <div class="radar-manager-bar" style="margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;" id="radar-alerts-list">
+          <!-- Renderizado dinámico de píldoras de cada búsqueda -->
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <button type="button" id="btn-create-new-radar" class="btn btn-outline" style="padding: 0.45rem 0.9rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem;">
+            <i class="ph ph-plus-circle"></i> + Nueva Búsqueda
+          </button>
+          <button type="button" id="btn-delete-radar" class="btn btn-outline" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3); padding: 0.45rem 0.75rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.3rem;" title="Eliminar esta búsqueda del radar">
+            <i class="ph ph-trash"></i>
+          </button>
+        </div>
+      </div>
+
       <div class="radar-status-header">
          <div class="radar-pulse-icon">
             <div class="pulse-ring"></div>
             <i class="ph ph-radar"></i>
          </div>
          <div style="flex: 1;">
-           <h2 style="margin:0; font-size: 1.3rem;">Tu radar está activo</h2>
+           <h2 id="dash-radar-title" style="margin:0; font-size: 1.3rem;">Tu radar está activo</h2>
            <p style="margin: 4px 0 0; color: var(--text-secondary); font-size: 0.85rem;">Buscando automáticamente oportunidades para vos.</p>
-           <p style="margin: 6px 0 0; color: var(--accent-color); font-size: 0.75rem; font-weight: 500; display: flex; align-items: center; gap: 4px;"><i class="ph ph-clock"></i> Última búsqueda: hace 2h</p>
+           <p style="margin: 6px 0 0; color: var(--accent-color); font-size: 0.75rem; font-weight: 500; display: flex; align-items: center; gap: 4px;"><i class="ph ph-clock"></i> Monitoreo diario automático</p>
          </div>
       </div>
 
@@ -60,14 +75,19 @@ import { supabase } from '../lib/supabase';
 
     <!-- WIZARD VIEW (Shown if creating or editing) -->
     <div id="wizard-view-container" class="hidden">
-      <div class="widget-header">
-        <div style="flex-shrink: 0;">
-          <img src="/favicon.svg" alt="FlyHunter" width="56" height="56" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(159, 219, 22, 0.2);" />
+      <div class="widget-header" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+        <div style="display: flex; gap: 1rem; align-items: center;">
+          <div style="flex-shrink: 0;">
+            <img src="/favicon.svg" alt="FlyHunter" width="56" height="56" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(159, 219, 22, 0.2);" />
+          </div>
+          <div>
+            <h2 id="wizard-title">Personalizá tu radar de vuelos</h2>
+            <p id="wizard-subtitle">Elegí tu origen, fechas y destinos. Te avisamos cuando haya oportunidades de oro.</p>
+          </div>
         </div>
-        <div>
-          <h2 id="wizard-title">Personalizá tu radar de vuelos</h2>
-          <p id="wizard-subtitle">Elegí tu origen, fechas y destinos. Te avisamos cuando haya oportunidades de oro.</p>
-        </div>
+        <button type="button" id="btn-cancel-wizard" class="btn btn-outline" style="display: none; padding: 0.45rem 0.9rem; font-size: 0.85rem; align-items: center; gap: 0.4rem;">
+          <i class="ph ph-arrow-left"></i> Volver
+        </button>
       </div>
 
     <form id="search-alert-form" class="widget-form">
@@ -1510,6 +1530,8 @@ import { supabase } from '../lib/supabase';
     if (wizardContainer) wizardContainer.classList.remove('hidden');
     const headerP = document.querySelector('.alertas-header-text p');
     if (headerP) headerP.textContent = 'Configurá el Agente Estratega para que busque por ti.';
+    const cancelBtn = document.getElementById('btn-cancel-wizard');
+    if (cancelBtn) cancelBtn.style.display = userAlerts.length > 0 ? 'inline-flex' : 'none';
     currentStep = step;
     showStep(step);
   }
@@ -1518,11 +1540,19 @@ import { supabase } from '../lib/supabase';
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       const step = parseInt((btn as HTMLElement).dataset.step || '1');
+      const currentAlert = userAlerts[activeAlertIndex];
+      if (currentAlert) {
+        currentEditingAlertId = currentAlert.id;
+        populateFormWithAlert(currentAlert);
+        submitBtn.innerHTML = 'Guardar Cambios';
+        const wizardTitle = document.getElementById('wizard-title');
+        if (wizardTitle) wizardTitle.textContent = 'Modificar búsqueda del radar';
+      }
       showWizardView(step);
     });
   });
 
-  // Init Form (Check Auth)
+  // Init Form & Multi-Alerts State
   const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
   const authMessage = document.getElementById('auth-message');
   const emailAuthSection = document.getElementById('email-auth-section');
@@ -1530,6 +1560,271 @@ import { supabase } from '../lib/supabase';
   
   let currentUserId: string | null = null;
   let currentUserEmail: string | null = null;
+  let userAlerts: any[] = [];
+  let activeAlertIndex = 0;
+  let currentEditingAlertId: string | null = null;
+
+  // Renderizador de pestañas/píldoras de búsqueda en el dashboard
+  function renderAlertPills() {
+    const listEl = document.getElementById('radar-alerts-list');
+    if (!listEl) return;
+    
+    if (userAlerts.length === 0) {
+      listEl.innerHTML = '';
+      return;
+    }
+
+    listEl.innerHTML = userAlerts.map((a, idx) => {
+      const isActive = idx === activeAlertIndex;
+      const label = a.nombre || `${(a.origen || 'EZE').split(',')[0]} → ${a.destino || 'Europa'}`;
+      const activeStyle = isActive 
+        ? 'background: var(--accent-color); color: #000; font-weight: 600; border-color: var(--accent-color); box-shadow: 0 0 12px rgba(159, 219, 22, 0.3);'
+        : 'background: rgba(255,255,255,0.05); color: var(--text-secondary); border: 1px solid rgba(255,255,255,0.1);';
+      return `
+        <button type="button" class="btn-alert-pill" data-idx="${idx}" style="cursor: pointer; padding: 0.4rem 0.85rem; border-radius: 9999px; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem; transition: all 0.2s; ${activeStyle}">
+          <i class="ph ${isActive ? 'ph-check-circle' : 'ph-airplane-tilt'}"></i>
+          <span>${label}</span>
+        </button>
+      `;
+    }).join('');
+
+    listEl.querySelectorAll('.btn-alert-pill').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = Number((btn as HTMLElement).dataset.idx);
+        if (!isNaN(idx) && userAlerts[idx]) {
+          activeAlertIndex = idx;
+          populateDashboardWithAlert(userAlerts[idx]);
+          renderAlertPills();
+        }
+      });
+    });
+  }
+
+  function populateDashboardWithAlert(alert: any) {
+    if (!alert) return;
+    currentEditingAlertId = alert.id;
+
+    const titleEl = document.getElementById('dash-radar-title');
+    if (titleEl) titleEl.textContent = alert.nombre || `Radar ${alert.origen} → ${alert.destino}`;
+
+    const dashOrigin = document.getElementById('dash-origen');
+    if (dashOrigin) dashOrigin.textContent = alert.origen || 'EZE/AEP';
+
+    const formatDate = (dStr: string) => {
+      if (!dStr) return '-';
+      try {
+        const parts = dStr.split('-');
+        const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+        return new Intl.DateTimeFormat('es-AR', {day: 'numeric', month: 'short'}).format(d);
+      } catch(e) { return dStr; }
+    };
+
+    const dashIda = document.getElementById('dash-ida');
+    if (dashIda) dashIda.textContent = (alert.fecha_ida_min && alert.fecha_ida_max) 
+      ? `${formatDate(alert.fecha_ida_min)} - ${formatDate(alert.fecha_ida_max)}` 
+      : (alert.fecha_ida_min ? formatDate(alert.fecha_ida_min) : '-');
+
+    const dashVuelta = document.getElementById('dash-vuelta');
+    if (dashVuelta) dashVuelta.textContent = (alert.fecha_vuelta_min && alert.fecha_vuelta_max) 
+      ? `${formatDate(alert.fecha_vuelta_min)} - ${formatDate(alert.fecha_vuelta_max)}` 
+      : (alert.fecha_vuelta_min ? formatDate(alert.fecha_vuelta_min) : '-');
+
+    const dashZone = document.getElementById('dash-zona');
+    if (dashZone) dashZone.textContent = alert.destino || 'Europa';
+
+    const formatCurrency = (val: any) => {
+      if (!val) return '0';
+      return new Intl.NumberFormat('es-AR').format(Number(val));
+    };
+
+    const dashPresupuesto = document.getElementById('dash-presupuesto');
+    if (dashPresupuesto) {
+      const min = alert.presupuesto_min ? `US$${formatCurrency(alert.presupuesto_min)} - ` : '';
+      dashPresupuesto.textContent = `${min}US$${formatCurrency(alert.presupuesto_max)}`;
+    }
+
+    const dashPax = document.getElementById('dash-pasajeros');
+    if (dashPax) dashPax.textContent = String(alert.pasajeros || 1);
+
+    const dashEscalas = document.getElementById('dash-escalas');
+    if (dashEscalas) dashEscalas.textContent = alert.escalas_max === 0 ? 'Vuelo directo' : `Hasta ${alert.escalas_max}`;
+
+    const dashPaises = document.getElementById('dash-paises');
+    if (dashPaises) {
+      dashPaises.textContent = (alert.paises && alert.paises.length > 0 && !alert.paises.includes('Cualquiera'))
+        ? alert.paises.join(', ')
+        : 'Toda la zona';
+    }
+
+    const dashAirlines = document.getElementById('dash-aerolineas');
+    if (dashAirlines) {
+      dashAirlines.textContent = (alert.aerolineas_excluidas && alert.aerolineas_excluidas.length > 0)
+        ? alert.aerolineas_excluidas.join(', ')
+        : 'Ninguna';
+    }
+  }
+
+  function populateFormWithAlert(alertData: any) {
+    if (!form || !alertData) return;
+    
+    // Nombre
+    const nombreInp = form.querySelector('[name="nombre"]') as HTMLInputElement;
+    if (nombreInp) nombreInp.value = alertData.nombre || '';
+
+    // Origen
+    const origen = form.querySelector('[name="origen"]') as HTMLSelectElement;
+    if (origen) origen.value = alertData.origen || 'EZE,AEP';
+    
+    // Fechas
+    if (alertData.fecha_ida_min) (form.querySelector('[name="fecha_ida_min"]') as HTMLInputElement).value = alertData.fecha_ida_min;
+    if (alertData.fecha_ida_max) (form.querySelector('[name="fecha_ida_max"]') as HTMLInputElement).value = alertData.fecha_ida_max;
+    if (alertData.fecha_vuelta_min) (form.querySelector('[name="fecha_vuelta_min"]') as HTMLInputElement).value = alertData.fecha_vuelta_min;
+    if (alertData.fecha_vuelta_max) (form.querySelector('[name="fecha_vuelta_max"]') as HTMLInputElement).value = alertData.fecha_vuelta_max;
+    
+    // Zona
+    const zoneInput = form.querySelector(`input[name="destino"][value="${alertData.destino}"]`) as HTMLInputElement;
+    if (zoneInput) {
+      zoneInput.checked = true;
+      document.querySelectorAll('.zone-card').forEach(c => c.classList.remove('active'));
+      zoneInput.parentElement?.classList.add('active');
+      renderCountries(alertData.destino);
+    }
+    
+    // Paises
+    selectedCountries = [];
+    if (alertData.paises && alertData.paises.length > 0 && !alertData.paises.includes('Cualquiera')) {
+        selectedCountries = alertData.paises;
+        const pills = document.querySelectorAll('.country-pill input');
+        pills.forEach(p => {
+          const pVal = (p as HTMLInputElement).value;
+          if (selectedCountries.includes(pVal)) {
+            (p as HTMLInputElement).checked = true;
+            p.parentElement?.classList.add('selected');
+          } else {
+            (p as HTMLInputElement).checked = false;
+            p.parentElement?.classList.remove('selected');
+          }
+        });
+        const counter = document.getElementById('countries-counter');
+        if (counter) counter.innerText = `${selectedCountries.length}/4 seleccionados`;
+    }
+    
+    // Aerolíneas excluidas
+    excludedAirlines = alertData.aerolineas_excluidas || [];
+    renderExcludedPills();
+    
+    // Presupuesto
+    if (alertData.presupuesto_min && inputMin && sliderMin) {
+      inputMin.value = alertData.presupuesto_min;
+      sliderMin.value = alertData.presupuesto_min;
+    }
+    if (alertData.presupuesto_max && inputMax && sliderMax) {
+      inputMax.value = alertData.presupuesto_max;
+      sliderMax.value = alertData.presupuesto_max;
+    }
+    updateRangeFill();
+    
+    // Escalas
+    const escalas = form.querySelector(`input[name="escalas_max"][value="${alertData.escalas_max}"]`) as HTMLInputElement;
+    if (escalas) {
+      escalas.checked = true;
+      document.querySelectorAll('input[name="escalas_max"]').forEach(c => c.parentElement?.classList.remove('active'));
+      escalas.parentElement?.classList.add('active');
+    }
+    
+    // Pasajeros
+    const pasajeros = form.querySelector(`input[name="pasajeros"][value="${alertData.pasajeros || 1}"]`) as HTMLInputElement;
+    if (pasajeros) {
+      pasajeros.checked = true;
+      document.querySelectorAll('input[name="pasajeros"]').forEach(inp => {
+        (inp as HTMLInputElement).parentElement?.classList.remove('active');
+      });
+      pasajeros.parentElement?.classList.add('active');
+    }
+
+    updateSummary();
+  }
+
+  function resetFormToDefaults() {
+    if (!form) return;
+    form.reset();
+    selectedCountries = [];
+    excludedAirlines = [];
+    renderExcludedPills();
+    renderCountries('Europa');
+    
+    const zoneEuropa = form.querySelector('input[name="destino"][value="Europa"]') as HTMLInputElement;
+    if (zoneEuropa) {
+      zoneEuropa.checked = true;
+      document.querySelectorAll('.zone-card').forEach(c => c.classList.remove('active'));
+      zoneEuropa.parentElement?.classList.add('active');
+    }
+    
+    if (inputMin && sliderMin) { inputMin.value = '800'; sliderMin.value = '800'; }
+    if (inputMax && sliderMax) { inputMax.value = '2400'; sliderMax.value = '2400'; }
+    updateRangeFill();
+    
+    const counter = document.getElementById('countries-counter');
+    if (counter) counter.innerText = '0/4 seleccionados';
+
+    updateSummary();
+  }
+
+  async function loadUserAlerts() {
+    if (!currentUserId) return;
+    const { data: alertsList, error } = await supabase
+      .from('search_alerts')
+      .select('*')
+      .eq('user_id', currentUserId)
+      .order('creado_en', { ascending: false });
+
+    if (!error && alertsList && alertsList.length > 0) {
+      userAlerts = alertsList;
+      if (activeAlertIndex >= userAlerts.length) activeAlertIndex = 0;
+      renderAlertPills();
+      populateDashboardWithAlert(userAlerts[activeAlertIndex]);
+      showDashboardView();
+    } else {
+      userAlerts = [];
+      currentEditingAlertId = null;
+      resetFormToDefaults();
+      showWizardView(1);
+    }
+  }
+
+  // Botón Nueva Búsqueda
+  document.getElementById('btn-create-new-radar')?.addEventListener('click', () => {
+    currentEditingAlertId = null;
+    resetFormToDefaults();
+    const wizardTitle = document.getElementById('wizard-title');
+    if (wizardTitle) wizardTitle.textContent = 'Crear nueva búsqueda de vuelos';
+    submitBtn.innerHTML = 'Activar Nueva Búsqueda';
+    showWizardView(1);
+  });
+
+  // Botón Cancelar Wizard
+  document.getElementById('btn-cancel-wizard')?.addEventListener('click', () => {
+    if (userAlerts.length > 0) {
+      showDashboardView();
+    }
+  });
+
+  // Botón Eliminar Búsqueda
+  document.getElementById('btn-delete-radar')?.addEventListener('click', async () => {
+    if (!userAlerts[activeAlertIndex]) return;
+    const alertToDelete = userAlerts[activeAlertIndex];
+    const name = alertToDelete.nombre || `${alertToDelete.origen} → ${alertToDelete.destino}`;
+    if (!confirm(`¿Estás seguro de que deseas eliminar la búsqueda "${name}" de tu radar?`)) return;
+
+    const { error } = await supabase.from('search_alerts').delete().eq('id', alertToDelete.id);
+    if (error) {
+      showToast('Error al eliminar búsqueda: ' + error.message, 'error');
+    } else {
+      showToast('Búsqueda eliminada correctamente.', 'info');
+      activeAlertIndex = 0;
+      await loadUserAlerts();
+    }
+  });
 
   window.addEventListener('DOMContentLoaded', async () => {
     // Render initial zone
@@ -1545,96 +1840,7 @@ import { supabase } from '../lib/supabase';
         emailInput.removeAttribute('required');
       }
       
-      // Intentar cargar la alerta existente del usuario
-      const { data: alertData } = await supabase
-        .from('search_alerts')
-        .select('*')
-        .eq('user_id', currentUserId)
-        .single();
-        
-      if (alertData && form) {
-        // Nombre
-        if (alertData.nombre) {
-          const nombreInp = form.querySelector('[name="nombre"]') as HTMLInputElement;
-          if (nombreInp) nombreInp.value = alertData.nombre;
-        }
-
-        // Origen
-        const origen = form.querySelector('[name="origen"]') as HTMLSelectElement;
-        if (origen) origen.value = alertData.origen;
-        
-        // Fechas
-        if (alertData.fecha_ida_min) (form.querySelector('[name="fecha_ida_min"]') as HTMLInputElement).value = alertData.fecha_ida_min;
-        if (alertData.fecha_ida_max) (form.querySelector('[name="fecha_ida_max"]') as HTMLInputElement).value = alertData.fecha_ida_max;
-        if (alertData.fecha_vuelta_min) (form.querySelector('[name="fecha_vuelta_min"]') as HTMLInputElement).value = alertData.fecha_vuelta_min;
-        if (alertData.fecha_vuelta_max) (form.querySelector('[name="fecha_vuelta_max"]') as HTMLInputElement).value = alertData.fecha_vuelta_max;
-        
-        // Zona
-        const zoneInput = form.querySelector(`input[name="destino"][value="${alertData.destino}"]`) as HTMLInputElement;
-        if (zoneInput) {
-          zoneInput.checked = true;
-          document.querySelectorAll('.zone-card').forEach(c => c.classList.remove('active'));
-          zoneInput.parentElement?.classList.add('active');
-          renderCountries(alertData.destino);
-        }
-        
-        // Paises
-        if (alertData.paises && alertData.paises.length > 0 && !alertData.paises.includes('Cualquiera')) {
-           selectedCountries = alertData.paises;
-           const pills = document.querySelectorAll('.country-pill input');
-           pills.forEach(p => {
-             const pVal = (p as HTMLInputElement).value;
-             if (selectedCountries.includes(pVal)) {
-               (p as HTMLInputElement).checked = true;
-               p.parentElement?.classList.add('selected');
-             }
-           });
-           const counter = document.getElementById('countries-counter');
-           if (counter) counter.innerText = `${selectedCountries.length}/4 seleccionados`;
-        }
-        
-        // Aerolíneas excluidas
-        if (alertData.aerolineas_excluidas && alertData.aerolineas_excluidas.length > 0) {
-          excludedAirlines = alertData.aerolineas_excluidas;
-          renderExcludedPills();
-        }
-        
-        // Presupuesto
-        if (alertData.presupuesto_min && inputMin && sliderMin) {
-          inputMin.value = alertData.presupuesto_min;
-          sliderMin.value = alertData.presupuesto_min;
-        }
-        if (alertData.presupuesto_max && inputMax && sliderMax) {
-          inputMax.value = alertData.presupuesto_max;
-          sliderMax.value = alertData.presupuesto_max;
-        }
-        updateRangeFill();
-        
-        // Escalas
-        const escalas = form.querySelector(`input[name="escalas_max"][value="${alertData.escalas_max}"]`) as HTMLInputElement;
-        if (escalas) {
-          escalas.checked = true;
-          document.querySelectorAll('input[name="escalas_max"]').forEach(c => c.parentElement?.classList.remove('active'));
-          escalas.parentElement?.classList.add('active');
-        }
-        
-        // Pasajeros
-        const pasajeros = form.querySelector(`input[name="pasajeros"][value="${alertData.pasajeros || 1}"]`) as HTMLInputElement;
-        if (pasajeros) {
-          pasajeros.checked = true;
-          document.querySelectorAll('input[name="pasajeros"]').forEach(inp => {
-            (inp as HTMLInputElement).parentElement?.classList.remove('active');
-          });
-          pasajeros.parentElement?.classList.add('active');
-        }
-        
-        // Boton
-        submitBtn.innerHTML = 'Actualizar Radar';
-        
-        showDashboardView();
-      } else {
-        showWizardView(1);
-      }
+      await loadUserAlerts();
     } else {
       if (emailInput) emailInput.setAttribute('required', 'true');
       showWizardView(1);
@@ -1670,7 +1876,8 @@ import { supabase } from '../lib/supabase';
       pasajeros: Number(formData.get('pasajeros') || 1),
       presupuesto_min: formData.get('presupuesto_min') ? Number(formData.get('presupuesto_min')) : null,
       presupuesto_max: formData.get('presupuesto_max') ? Number(formData.get('presupuesto_max')) : null,
-      escalas_max: Number(formData.get('escalas_max'))
+      escalas_max: Number(formData.get('escalas_max')),
+      activo: true
     };
     
     if (!currentUserId) {
@@ -1695,17 +1902,28 @@ import { supabase } from '../lib/supabase';
       if(authMessage) authMessage.classList.remove('hidden');
     } else {
       const finalPayload = { ...payload, user_id: currentUserId, email: currentUserEmail };
-      
-      const { error } = await supabase
-        .from('search_alerts')
-        .upsert(finalPayload, { onConflict: 'user_id' }); 
+      let error = null;
+
+      if (currentEditingAlertId) {
+        // Actualizar búsqueda existente por ID
+        const res = await supabase
+          .from('search_alerts')
+          .update(finalPayload)
+          .eq('id', currentEditingAlertId);
+        error = res.error;
+      } else {
+        // Insertar nueva búsqueda
+        const res = await supabase
+          .from('search_alerts')
+          .insert(finalPayload);
+        error = res.error;
+      }
         
       if (error) {
         showToast('Error guardando alerta: ' + error.message, 'error');
       } else {
-        showToast('¡Radar actualizado con éxito!', 'success');
-        updateSummary();
-        showDashboardView();
+        showToast(currentEditingAlertId ? '¡Radar actualizado con éxito!' : '¡Nueva búsqueda activada con éxito!', 'success');
+        await loadUserAlerts();
       }
       
       submitBtn.disabled = false;
@@ -1723,10 +1941,11 @@ import { supabase } from '../lib/supabase';
           data.user_id = session.user.id;
           data.email = session.user.email;
           
-          await supabase.from('search_alerts').upsert(data, { onConflict: 'user_id' });
+          await supabase.from('search_alerts').insert(data);
           localStorage.removeItem('pending_alert_save');
           
           showToast('¡Tu radar ha sido activado exitosamente!', 'success');
+          await loadUserAlerts();
         }
       }
     });
