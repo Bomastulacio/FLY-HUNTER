@@ -1,6 +1,6 @@
 # 🛫 Fly Hunter
 
-Un sistema autónomo y proactivo de rastreo, evaluación y alerta de pasajes aéreos globales, construido sobre una arquitectura de **Doble Motor: Playwright Stealth + LangGraph State Machine con Razonamiento LLM (Gemini Flash)**.
+Un sistema autónomo y proactivo de rastreo, evaluación y alerta de pasajes aéreos globales, construido sobre una arquitectura de **Doble Motor: Playwright Stealth + LangGraph State Machine con Razonamiento LLM (Gemini Flash) y Suite de Evals de Comportamiento**.
 
 ---
 
@@ -24,17 +24,44 @@ A diferencia de los buscadores comerciales tradicionales, cuenta con un **Doble 
 
 ## 🧠 Ciclos y Loops de la Ingeniería de Grafos (LangGraph)
 
-1. **Loop de Refinamiento y Auto-Corrección (Self-Correction Loop):**
-   - Si los vuelos encontrados superan el presupuesto por un margen estrecho o no hay opciones con pocas escalas, el Agente Crítico razona: *"Tarifa supera presupuesto por $120 USD. Mover salida 1 día antes suele abaratar la tarifa 25%"*.
-   - El grafo se auto-corrige mediante una arista condicional hacia `refine_search_node`, adaptando las fechas y consultando nuevamente.
-   - **Guardia de Seguridad:** Limitado a un máximo de 2 iteraciones (`max_iterations = 2`) para no quemar cuota ni tokens.
+1. **Loop de Refinamiento y Auto-Corrección Bounded (Self-Correction Loop):**
+   * **Exploración Determinista de Calendario:** Si los vuelos superan el presupuesto por un margen estrecho, el Agente Crítico genera una matriz ordenada de fechas candidatas dentro de la ventana autorizada (calculando días de semana, noches de estadía y evitando retornos caros en domingo).
+   * **Contrato Estricto con Pydantic v2 (`RefinementDecision`):** El LLM razona sobre los candidatos bajo esquema estricto (deltas acotados a $\pm 3$ días, evidencia obligatoria y declaración de incertidumbre).
+   * **Circuit Breakers de Seguridad:** Limitado a un máximo de 2 iteraciones (`max_iterations = 2`) para no quemar cuota ni tokens.
+   * **Prevención de Búsquedas Repetidas:** El estado (`searched_date_pairs`) registra las consultas realizadas para nunca repetir un par de fechas dentro de la misma alerta.
+   * **Retención de Ofertas (`retained_deals`):** Si una búsqueda refinada arroja peores tarifas o inventario vacío, el grafo preserva intacto el mejor vuelo hallado en iteraciones previas.
+
 2. **Loop Multi-Alerta (Multi-Alert Iterator):**
-   - El grafo no se detiene en la primera alerta; encola todas las alertas activas en Supabase (`alerts_queue`) y las procesa sucesivamente antes de pasar al nodo de Data Scientist.
+   * El grafo no se detiene en la primera alerta; encola todas las alertas activas en Supabase (`alerts_queue`) y las procesa sucesivamente antes de pasar al nodo de Data Scientist.
+
 3. **Escudo Híbrido de Cuota:**
-   - **Playwright** scalpea directo a costo $0.
-   - **Supabase** guarda estos hallazgos frescos.
-   - **Python LangGraph** reutiliza primero los datos de Playwright a costo $0.
-   - **SerpApi (250 búsquedas/mes, renueva el 23)** actúa como red de seguridad infalible en caso de fallo o refinamiento.
+   * **Playwright** scalpea directo a costo $0.
+   * **Supabase** guarda estos hallazgos frescos.
+   * **Python LangGraph** reutiliza primero los datos de Playwright a costo $0.
+   * **SerpApi (250 búsquedas/mes, renueva el 23)** actúa como red de seguridad infalible en caso de fallo o refinamiento.
+
+---
+
+## 🧪 Suite de Evaluación Offline (Behavioral Evals)
+
+El repositorio incluye una batería completa de pruebas unitarias y de comportamiento (`evals/test_critic_decisions.py`) para auditar las decisiones del Agente Crítico sin necesidad de conexión a internet, llamadas a APIs externas ni consumo de tokens:
+
+```bash
+# Ejecución directa con uv o python
+uv run --with pydantic python evals/test_critic_decisions.py
+# o bien
+python -B evals/test_critic_decisions.py
+```
+
+### Casos Borde Auditados (18 tests automáticos):
+* ⚡ **Detección Instantánea de Tarifa Error (< US$ 400):** Se aprueba en microsegundos mediante código determinista sin invocar al LLM.
+* 🛑 **Tolerancia Cero en Escalas:** Vuelos con $\ge 2$ escalas son rechazados automáticamente sin importar su precio.
+* 🚫 **Filtro Estricto de Aerolíneas Excluidas:** Detección de transportistas no deseados (ej: `LEVEL` o combinados `LEVEL / Iberia`) previo a la llamada a la IA.
+* ⚖️ **Dilema de Presupuesto:** Comprobación de que el modelo propone únicamente candidatos de fechas válidos dentro de la ventana de viaje.
+* 🔒 **Validación de Esquema Pydantic:** Rechazo inmediato ante payloads con deltas fuera de rango, respuestas incompletas o campos alterados.
+* 🔄 **Límite Inflexible de Iteraciones:** El loop se desactiva obligatoriamente al agotar los 2 refinamientos.
+
+> Los evals corren automáticamente en **GitHub Actions** en cada corrida del pipeline antes de cualquier interacción con la base de datos o Resend.
 
 ---
 
@@ -46,17 +73,13 @@ A diferencia de los buscadores comerciales tradicionales, cuenta con un **Doble 
 | **Gemini AI Studio** | **20 RPD** (Requests por día), **5 RPM** (Free Tier). | **Batching obligatorio:** Se envían los vuelos en lote por alerta (1 call). Consumo real: 4 a 8 calls/día. Anti-crash a reglas heurísticas en caso de HTTP 429. |
 | **Antigravity** | **100 RPD**, **60 RPM**. | Entorno de agentes de alta frecuencia. |
 
-### 🔒 Comportamiento del Auditor de Cuota de SerpApi:
-* **Hasta el 23 de Septiembre:** Dado que la cuota actual está consumida, el guardián detecta automáticamente el estado y bloquea cualquier llamada a SerpApi, delegando el 100% de la recolección en Playwright (Google Flights y Despegar) a **costo $0**.
-* **A partir del 23 de Septiembre:** Al restablecerse las **250 búsquedas mensuales**, el endpoint `/account.json` reportará `total_searches_left = 250`. El sistema detectará la renovación de inmediato y activará el muestreo híbrido y fallback inteligente de manera gradual y controlada.
-
 ---
 
 ## 🛠 Stack Tecnológico
 
 * **Automatización Web Headless:** `Playwright Extra` + `Puppeteer Stealth Plugin` + `Node.js / TypeScript`.
-* **Motor de IA y Razonamiento:** `Google Gemini API` (`gemini-3.6-flash`, `gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-1.5-flash`).
-* **Ingeniería de Grafos (Backend):** `Python 3.11` + `LangGraph` + `LangChain` + `Pandas` + `Pydantic`.
+* **Motor de IA y Razonamiento:** `Google Gemini API` (`gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-1.5-flash`) y nuevo SDK `google-genai`.
+* **Ingeniería de Grafos (Backend):** `Python 3.11` + `LangGraph` + `LangChain` + `Pandas` + `Pydantic v2`.
 * **Ciencia de Datos y Tendencias:** Regresión lineal (`numpy.polyfit`), medias móviles de 7 días, y detección automática de feriados (`holidays`).
 * **Base de Datos & Auth:** `Supabase (PostgreSQL)` con Row Level Security (RLS) y campos deduplicados mediante hash MD5 (`hash_dedupe`).
 * **Frontend Radar:** `Astro` + `TypeScript` + `Tailwind / Glassmorphism`, con despliegue en `Vercel`.
@@ -76,7 +99,8 @@ FLY-HUNTER/
 │       └── serpapi-quota-sampling.md
 ├── .github/workflows/          # Workflows serverless en GitHub Actions
 │   ├── agent-hunt.yml          # Corre el agente de Playwright (TypeScript)
-│   └── pipeline.yml            # Corre el grafo de LangGraph (Python)
+│   ├── pipeline.yml            # Corre evals offline y el grafo de LangGraph (Python)
+│   └── security.yml            # Escaneo de seguridad con Bandit y NPM Audit
 ├── agent/                      # Motor 1: Scalper Headless & Evaluador Gemini
 │   ├── src/skills/googleFlights.ts
 │   ├── src/skills/despegar.ts
@@ -84,12 +108,15 @@ FLY-HUNTER/
 │   └── src/index.ts
 ├── backend/                    # Motor 2: Grafo Cíclico en LangGraph
 │   └── src/
-│       ├── agents/             # Estratega, Recolector, Crítico LLM, Analista, Data Scientist
-│       ├── services/           # DB Supabase y Notificaciones Resend
+│       ├── agents/             # Estratega, Recolector, Crítico Pydantic, Analista, Data Scientist
+│       ├── services/           # DB Supabase, Conversión Divisas y Notificaciones Resend
 │       ├── graph.py            # Grafo de estados con loops y aristas condicionales
 │       └── main.py             # Entrypoint del pipeline
-├── frontend/                   # Radar Web en Astro
-└── schema.sql                  # Definición de tablas en Supabase
+├── evals/                      # Suite de evaluación de comportamiento de agentes
+│   └── test_critic_decisions.py # 18 tests offline para el razonamiento del Crítico
+├── frontend/                   # Radar Web en Astro con Glassmorphism y Bento Grid
+├── ARCHITECTURE_PROPOSAL.md    # Especificación formal de arquitectura y contratos
+└── schema.sql                  # Definición de tablas y políticas RLS en Supabase
 ```
 
 ---
