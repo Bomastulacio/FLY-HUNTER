@@ -30,6 +30,10 @@ jobs:
           cd backend
           pip install -r requirements.txt
           
+      - name: Run Critic Evals
+        run: |
+          python -B evals/test_critic_decisions.py
+
       - name: Run LangGraph pipeline
         run: |
           cd backend

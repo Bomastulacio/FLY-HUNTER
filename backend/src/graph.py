@@ -24,6 +24,8 @@ class GraphState(TypedDict, total=False):
     needs_refinement: bool
     refinement_reason: str
     suggested_deltas: Dict[str, int]
+    searched_date_pairs: List[Dict[str, str]]
+    retained_deals: List[Dict[str, Any]]
 
 def strategist_node(state: GraphState) -> GraphState:
     print("\n=======================================================")
@@ -58,6 +60,8 @@ def pick_alert_node(state: GraphState) -> GraphState:
     state["raw_flights"] = []
     state["analyzed_flights"] = []
     state["evaluated_deals"] = []
+    state["retained_deals"] = []
+    state["searched_date_pairs"] = []
 
     # Construir búsqueda inicial
     origen_raw = current_alert.get("origen", "EZE")
@@ -128,15 +132,31 @@ def critic_node(state: GraphState) -> GraphState:
     current_alert = state.get("current_alert", {})
     iteration = state.get("iteration_count", 0)
     max_iter = state.get("max_iterations", 2)
+    current_search = state.get("current_search")
+    searched_pairs = list(state.get("searched_date_pairs", []))
+    if current_search:
+        pair = {key: current_search[key] for key in ("dep_date", "ret_date")}
+        if pair not in searched_pairs:
+            searched_pairs.append(pair)
+    state["searched_date_pairs"] = searched_pairs
     
     evaluated, needs_refine, advice, deltas = evaluate_with_llm_critic(
         deals=analyzed,
         alert=current_alert,
         iteration=iteration,
-        max_iterations=max_iter
+        max_iterations=max_iter,
+        current_search=current_search,
+        searched_date_pairs=searched_pairs,
     )
     
-    state["evaluated_deals"] = evaluated
+    # Preserve the best informational quote if a later search is empty or worse.
+    retained = filter_and_evaluate(
+        state.get("retained_deals", []) + evaluated,
+        [current_alert] if current_alert else [],
+    )
+    retained = list({deal["hash_dedupe"]: deal for deal in retained}.values())
+    state["retained_deals"] = retained
+    state["evaluated_deals"] = retained
     state["needs_refinement"] = needs_refine
     state["refinement_reason"] = advice
     state["suggested_deltas"] = deltas
@@ -150,27 +170,29 @@ def critic_node(state: GraphState) -> GraphState:
 
 def refine_search_node(state: GraphState) -> GraphState:
     print("🔄 [Loop de Refinamiento]: Adaptando fechas de búsqueda según consejo del Agente...")
-    current_search = state.get("current_search", {})
-    deltas = state.get("suggested_deltas", {"dep_delta": 1, "ret_delta": 0})
-    dep_delta = deltas.get("dep_delta", 1)
-    ret_delta = deltas.get("ret_delta", 0)
-    
-    try:
-        cur_dep = datetime.datetime.strptime(current_search["dep_date"], "%Y-%m-%d").date()
-        cur_ret = datetime.datetime.strptime(current_search["ret_date"], "%Y-%m-%d").date()
-        
-        new_dep = cur_dep + datetime.timedelta(days=dep_delta)
-        new_ret = cur_ret + datetime.timedelta(days=ret_delta)
-        
-        # Validar lógica de viaje
-        if new_ret <= new_dep:
-            new_ret = new_dep + datetime.timedelta(days=14)
-            
-        current_search["dep_date"] = new_dep.strftime("%Y-%m-%d")
-        current_search["ret_date"] = new_ret.strftime("%Y-%m-%d")
-        print(f"📅 Nuevas fechas refinadas: {current_search['dep_date']} ✈️ {current_search['ret_date']}")
-    except Exception as e:
-        print(f"Error refinando fechas: {e}")
+    current_search = dict(state.get("current_search") or {})
+    deltas = state.get("suggested_deltas", {})
+    dep_delta, ret_delta = deltas.get("dep_delta"), deltas.get("ret_delta")
+    if (type(dep_delta) is not int or type(ret_delta) is not int
+            or not (dep_delta or ret_delta) or abs(dep_delta) > 3 or abs(ret_delta) > 3):
+        raise ValueError("Invalid refinement deltas")
+    cur_dep = datetime.date.fromisoformat(current_search["dep_date"])
+    cur_ret = datetime.date.fromisoformat(current_search["ret_date"])
+    new_dep = cur_dep + datetime.timedelta(days=dep_delta)
+    new_ret = cur_ret + datetime.timedelta(days=ret_delta)
+    if new_ret <= new_dep or new_dep < datetime.date.today():
+        raise ValueError("Invalid refinement dates")
+    alert = state.get("current_alert") or {}
+    for proposed, current, prefix in ((new_dep, cur_dep, "fecha_ida"), (new_ret, cur_ret, "fecha_vuelta")):
+        lower = datetime.date.fromisoformat(alert.get(prefix + "_min") or current.isoformat())
+        upper = datetime.date.fromisoformat(alert.get(prefix + "_max") or lower.isoformat())
+        if not lower <= proposed <= upper:
+            raise ValueError("Refinement outside authorized date window")
+    pair = {"dep_date": new_dep.isoformat(), "ret_date": new_ret.isoformat()}
+    if pair in state.get("searched_date_pairs", []):
+        raise ValueError("Refinement would repeat a search")
+    current_search.update(pair)
+    state["current_search"] = current_search
         
     state["iteration_count"] = state.get("iteration_count", 0) + 1
     state["raw_flights"] = []
