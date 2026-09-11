@@ -7,30 +7,44 @@ import { supabase } from '../lib/supabase';
   <div class="main-content card">
     <!-- DASHBOARD VIEW (Shown if active alert exists) -->
     <div id="radar-dashboard" class="hidden">
-      <!-- Selector y Gestor de Búsquedas Múltiples -->
-      <div class="radar-manager-bar" style="margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
-        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;" id="radar-alerts-list">
-          <!-- Renderizado dinámico de píldoras de cada búsqueda -->
+      <!-- Selector de Búsquedas / Alertas Múltiples -->
+      <div class="radar-manager-bar" id="radar-manager-bar" style="margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
+        <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;" id="radar-alerts-list">
+          <!-- Renderizado dinámico de píldoras cuando hay 2+ búsquedas -->
         </div>
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <button type="button" id="btn-create-new-radar" class="btn btn-outline" style="padding: 0.45rem 0.9rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem;">
-            <i class="ph ph-plus-circle"></i> + Nueva Búsqueda
-          </button>
-          <button type="button" id="btn-delete-radar" class="btn btn-outline" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3); padding: 0.45rem 0.75rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.3rem;" title="Eliminar esta búsqueda del radar">
-            <i class="ph ph-trash"></i>
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-left: auto;">
+          <button type="button" id="btn-create-new-radar" class="btn btn-outline" style="padding: 0.45rem 0.95rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.45rem; border-color: rgba(159, 219, 22, 0.4); color: var(--accent-color);">
+            <i class="ph ph-plus-circle"></i> + Rastrear otro viaje
           </button>
         </div>
       </div>
 
-      <div class="radar-status-header">
-         <div class="radar-pulse-icon">
-            <div class="pulse-ring"></div>
-            <i class="ph ph-radar"></i>
+      <!-- Tarjeta del Radar Activo -->
+      <div class="radar-status-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1.25rem 1.5rem; background: linear-gradient(145deg, rgba(159, 219, 22, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%); border: 1px solid rgba(159, 219, 22, 0.25); border-radius: var(--border-radius-lg); margin-bottom: 1.5rem;">
+         <div style="display: flex; align-items: center; gap: 1rem;">
+           <div class="radar-pulse-icon" style="width: 48px; height: 48px; border-radius: 50%; background: rgba(159, 219, 22, 0.12); border: 1.5px solid rgba(159, 219, 22, 0.4); display: flex; align-items: center; justify-content: center; color: var(--accent-color); font-size: 1.5rem; flex-shrink: 0; box-shadow: 0 0 16px rgba(159, 219, 22, 0.2);">
+              <i class="ph-bold ph-radar"></i>
+           </div>
+           <div>
+             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2px;">
+               <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: var(--accent-color); background: rgba(159, 219, 22, 0.15); padding: 2px 8px; border-radius: 9999px;">
+                 <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--accent-color); animation: pulse 1.5s infinite;"></span>
+                 Rastreo Activo
+               </span>
+             </div>
+             <h2 id="dash-radar-title" style="margin: 0; font-size: 1.35rem; font-weight: 700; color: #fff;">Mi Radar</h2>
+             <p style="margin: 3px 0 0; color: var(--text-secondary); font-size: 0.82rem; display: flex; align-items: center; gap: 4px;">
+               <i class="ph ph-clock"></i> Consultas periódicas a las 09:00 y 21:00 hs
+             </p>
+           </div>
          </div>
-         <div style="flex: 1;">
-           <h2 id="dash-radar-title" style="margin:0; font-size: 1.3rem;">Tu radar está activo</h2>
-           <p style="margin: 4px 0 0; color: var(--text-secondary); font-size: 0.85rem;">Buscando automáticamente oportunidades para vos.</p>
-           <p style="margin: 6px 0 0; color: var(--accent-color); font-size: 0.75rem; font-weight: 500; display: flex; align-items: center; gap: 4px;"><i class="ph ph-clock"></i> Monitoreo diario automático</p>
+         <div style="display: flex; align-items: center; gap: 0.5rem;">
+           <button type="button" class="btn btn-outline btn-sm" id="btn-edit-active-radar" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+             <i class="ph ph-pencil-simple"></i> Modificar
+           </button>
+           <button type="button" id="btn-delete-radar" class="btn btn-outline btn-sm" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3); padding: 0.45rem 0.75rem; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 0.35rem;" title="Eliminar este radar">
+             <i class="ph ph-trash"></i> Eliminar
+           </button>
          </div>
       </div>
 
@@ -1426,7 +1440,7 @@ import { supabase } from '../lib/supabase';
     updateRangeFill();
   }
 
-  // SUMMARY & DASHBOARD DYNAMIC LOGIC
+  // SUMMARY LIVE PREVIEW IN WIZARD
   const form = document.getElementById('search-alert-form') as HTMLFormElement;
   function updateSummary() {
     if (!form) return;
@@ -1436,17 +1450,11 @@ import { supabase } from '../lib/supabase';
     const vueltaMinEl = form.querySelector('input[name="fecha_vuelta_min"]') as HTMLInputElement;
     const vueltaMaxEl = form.querySelector('input[name="fecha_vuelta_max"]') as HTMLInputElement;
     const zoneEl = form.querySelector('input[name="destino"]:checked') as HTMLInputElement;
-    const budgetMinEl = form.querySelector('input[name="presupuesto_min"]') as HTMLInputElement;
-    const budgetMaxEl = form.querySelector('input[name="presupuesto_max"]') as HTMLInputElement;
-    const paxEl = form.querySelector('input[name="pasajeros"]:checked') as HTMLInputElement;
-    const escalasEl = form.querySelector('input[name="escalas_max"]:checked') as HTMLInputElement;
     
     if (originEl) {
-      const txt = originEl.options[originEl.selectedIndex].text;
+      const txt = originEl.options[originEl.selectedIndex]?.text || '';
       const sumOrigin = document.getElementById('summary-origin');
-      const dashOrigin = document.getElementById('dash-origen');
       if (sumOrigin) sumOrigin.textContent = txt;
-      if (dashOrigin) dashOrigin.textContent = txt;
     }
     
     const formatDate = (dStr: string) => {
@@ -1459,54 +1467,24 @@ import { supabase } from '../lib/supabase';
     };
     
     const sumIda = document.getElementById('summary-ida');
-    const dashIda = document.getElementById('dash-ida');
-    if (sumIda || dashIda) {
-      const text = (idaMinEl?.value && idaMaxEl?.value) ? `${formatDate(idaMinEl.value)} - ${formatDate(idaMaxEl.value)}` : '-';
-      if (sumIda) sumIda.textContent = text;
-      if (dashIda) dashIda.textContent = text;
+    if (sumIda) {
+      sumIda.textContent = (idaMinEl?.value && idaMaxEl?.value) ? `${formatDate(idaMinEl.value)} - ${formatDate(idaMaxEl.value)}` : '-';
     }
     
     const sumVuelta = document.getElementById('summary-vuelta');
-    const dashVuelta = document.getElementById('dash-vuelta');
-    if (sumVuelta || dashVuelta) {
-      const text = (vueltaMinEl?.value && vueltaMaxEl?.value) ? `${formatDate(vueltaMinEl.value)} - ${formatDate(vueltaMaxEl.value)}` : '-';
-      if (sumVuelta) sumVuelta.textContent = text;
-      if (dashVuelta) dashVuelta.textContent = text;
+    if (sumVuelta) {
+      sumVuelta.textContent = (vueltaMinEl?.value && vueltaMaxEl?.value) ? `${formatDate(vueltaMinEl.value)} - ${formatDate(vueltaMaxEl.value)}` : '-';
     }
     
     if (zoneEl) {
       const sumZone = document.getElementById('summary-zone');
-      const dashZone = document.getElementById('dash-zona');
       if (sumZone) sumZone.textContent = zoneEl.value;
-      if (dashZone) dashZone.textContent = zoneEl.value;
     }
     
     const sumDest = document.getElementById('summary-dest');
-    const dashPaises = document.getElementById('dash-paises');
-    if (sumDest || dashPaises) {
-      const text = selectedCountries.length > 0 ? selectedCountries.join(', ') : 'Toda la zona';
-      if (sumDest) sumDest.textContent = text;
-      if (dashPaises) dashPaises.textContent = text;
+    if (sumDest) {
+      sumDest.textContent = selectedCountries.length > 0 ? selectedCountries.join(', ') : 'Toda la zona';
     }
-
-    const formatCurrency = (val: string) => {
-      if (!val) return '';
-      return new Intl.NumberFormat('es-AR').format(Number(val));
-    };
-
-    const dashPresupuesto = document.getElementById('dash-presupuesto');
-    if (dashPresupuesto && budgetMinEl && budgetMaxEl) {
-      dashPresupuesto.textContent = `US$${formatCurrency(budgetMinEl.value)} - US$${formatCurrency(budgetMaxEl.value)}`;
-    }
-
-    const dashPax = document.getElementById('dash-pasajeros');
-    if (dashPax && paxEl) dashPax.textContent = paxEl.value;
-
-    const dashEscalas = document.getElementById('dash-escalas');
-    if (dashEscalas && escalasEl) dashEscalas.textContent = escalasEl.value;
-
-    const dashAirlines = document.getElementById('dash-aerolineas');
-    if (dashAirlines) dashAirlines.textContent = excludedAirlines.length > 0 ? excludedAirlines.join(', ') : 'Ninguna';
   }
 
   if (form) {
@@ -1569,19 +1547,27 @@ import { supabase } from '../lib/supabase';
     const listEl = document.getElementById('radar-alerts-list');
     if (!listEl) return;
     
-    if (userAlerts.length === 0) {
-      listEl.innerHTML = '';
+    if (userAlerts.length <= 1) {
+      listEl.innerHTML = userAlerts.length === 1 
+        ? `<span style="font-size: 0.85rem; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 0.45rem;">
+             <i class="ph ph-check-circle" style="color: var(--accent-color); font-size: 1rem;"></i> 1 viaje monitoreado
+           </span>`
+        : '';
       return;
     }
 
-    listEl.innerHTML = userAlerts.map((a, idx) => {
+    listEl.innerHTML = `
+      <span style="font-size: 0.82rem; color: var(--text-secondary); margin-right: 0.25rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.35rem;">
+        <i class="ph ph-airplane"></i> Tus viajes:
+      </span>
+    ` + userAlerts.map((a, idx) => {
       const isActive = idx === activeAlertIndex;
       const label = a.nombre || `${(a.origen || 'EZE').split(',')[0]} → ${a.destino || 'Europa'}`;
       const activeStyle = isActive 
-        ? 'background: var(--accent-color); color: #000; font-weight: 600; border-color: var(--accent-color); box-shadow: 0 0 12px rgba(159, 219, 22, 0.3);'
-        : 'background: rgba(255,255,255,0.05); color: var(--text-secondary); border: 1px solid rgba(255,255,255,0.1);';
+        ? 'background: var(--accent-color); color: #000; font-weight: 600; border: 1px solid var(--accent-color); box-shadow: 0 0 12px rgba(159, 219, 22, 0.3);'
+        : 'background: rgba(255,255,255,0.05); color: var(--text-secondary); border: 1px solid rgba(255,255,255,0.12);';
       return `
-        <button type="button" class="btn-alert-pill" data-idx="${idx}" style="cursor: pointer; padding: 0.4rem 0.85rem; border-radius: 9999px; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem; transition: all 0.2s; ${activeStyle}">
+        <button type="button" class="btn-alert-pill" data-idx="${idx}" style="cursor: pointer; padding: 0.35rem 0.8rem; border-radius: 9999px; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.2s; ${activeStyle}">
           <i class="ph ${isActive ? 'ph-check-circle' : 'ph-airplane-tilt'}"></i>
           <span>${label}</span>
         </button>
@@ -1611,7 +1597,7 @@ import { supabase } from '../lib/supabase';
     if (dashOrigin) dashOrigin.textContent = alert.origen || 'EZE/AEP';
 
     const formatDate = (dStr: string) => {
-      if (!dStr) return '-';
+      if (!dStr) return 'Flexible';
       try {
         const parts = dStr.split('-');
         const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
@@ -1621,13 +1607,13 @@ import { supabase } from '../lib/supabase';
 
     const dashIda = document.getElementById('dash-ida');
     if (dashIda) dashIda.textContent = (alert.fecha_ida_min && alert.fecha_ida_max) 
-      ? `${formatDate(alert.fecha_ida_min)} - ${formatDate(alert.fecha_ida_max)}` 
-      : (alert.fecha_ida_min ? formatDate(alert.fecha_ida_min) : '-');
+      ? `${formatDate(alert.fecha_ida_min)} al ${formatDate(alert.fecha_ida_max)}` 
+      : (alert.fecha_ida_min ? formatDate(alert.fecha_ida_min) : 'Flexible');
 
     const dashVuelta = document.getElementById('dash-vuelta');
     if (dashVuelta) dashVuelta.textContent = (alert.fecha_vuelta_min && alert.fecha_vuelta_max) 
-      ? `${formatDate(alert.fecha_vuelta_min)} - ${formatDate(alert.fecha_vuelta_max)}` 
-      : (alert.fecha_vuelta_min ? formatDate(alert.fecha_vuelta_min) : '-');
+      ? `${formatDate(alert.fecha_vuelta_min)} al ${formatDate(alert.fecha_vuelta_max)}` 
+      : (alert.fecha_vuelta_min ? formatDate(alert.fecha_vuelta_min) : 'Flexible');
 
     const dashZone = document.getElementById('dash-zona');
     if (dashZone) dashZone.textContent = alert.destino || 'Europa';
@@ -1799,6 +1785,19 @@ import { supabase } from '../lib/supabase';
     const wizardTitle = document.getElementById('wizard-title');
     if (wizardTitle) wizardTitle.textContent = 'Crear nueva búsqueda de vuelos';
     submitBtn.innerHTML = 'Activar Nueva Búsqueda';
+    showWizardView(1);
+  });
+
+  // Botón Modificar Búsqueda Activa (desde cabecera)
+  document.getElementById('btn-edit-active-radar')?.addEventListener('click', () => {
+    const currentAlert = userAlerts[activeAlertIndex];
+    if (currentAlert) {
+      currentEditingAlertId = currentAlert.id;
+      populateFormWithAlert(currentAlert);
+      submitBtn.innerHTML = 'Guardar Cambios';
+      const wizardTitle = document.getElementById('wizard-title');
+      if (wizardTitle) wizardTitle.textContent = 'Modificar búsqueda del radar';
+    }
     showWizardView(1);
   });
 
