@@ -35,7 +35,7 @@ export function mountRadarPicker(container: HTMLElement, alerts: any[], selected
     if (!selected) { container.replaceChildren(); return; }
     const ordered = [...alerts].sort((a, b) => Number(b.id === primary) - Number(a.id === primary));
     container.innerHTML = `<details class="radar-picker" ${open ? 'open' : ''}>
-      <summary><span class="radar-picker-icon"><i class="ph ph-broadcast" aria-hidden="true"></i></span>
+      <summary aria-label="Cambiar radar. Actual: ${e(selected.nombre || selected.destino)}"><span class="radar-picker-icon"><i class="ph ph-broadcast" aria-hidden="true"></i></span>
         <span class="radar-picker-title"><small>Tu radar${selected.id === primary ? ' · Principal' : ''}</small><strong>${e(selected.nombre || selected.destino)}</strong></span>
         <span class="radar-picker-count">${alerts.length}</span><i class="ph ph-caret-down" aria-hidden="true"></i>
       </summary>
@@ -45,7 +45,7 @@ export function mountRadarPicker(container: HTMLElement, alerts: any[], selected
             <span><strong>${e(a.nombre || a.destino)}</strong><small>${e(a.origen)} → ${e(a.destino)} · Hasta ${e(usd(a.presupuesto_max))}</small></span>
             ${a.id === selected.id ? '<i class="ph ph-check" aria-hidden="true"></i>' : ''}
           </button>
-          <button type="button" class="radar-pin" data-pin-id="${e(a.id)}" aria-pressed="${a.id === primary}" aria-label="${a.id === primary ? 'Quitar principal' : 'Hacer principal'}: ${e(a.nombre || a.destino)}" title="${a.id === primary ? 'Radar principal' : 'Mostrar primero al entrar'}"><i class="${a.id === primary ? 'ph-fill' : 'ph'} ph-star" aria-hidden="true"></i></button>
+          <button type="button" class="radar-pin" data-pin-id="${e(a.id)}" aria-pressed="${a.id === primary}" aria-label="${a.id === primary ? 'Radar principal' : 'Hacer principal'}: ${e(a.nombre || a.destino)}" title="${a.id === primary ? 'Radar principal' : 'Mostrar primero al entrar'}"><i class="${a.id === primary ? 'ph-fill' : 'ph'} ph-star" aria-hidden="true"></i><span>${a.id === primary ? 'Principal' : 'Elegir principal'}</span></button>
         </div>`).join('')}
         <p class="radar-picker-note" role="status">El principal se recuerda en este navegador.</p>
       </div>
@@ -62,11 +62,12 @@ export function mountRadarPicker(container: HTMLElement, alerts: any[], selected
       button.addEventListener('click', () => {
         const id = button.dataset.pinId!;
         try {
-          if (id === primary) localStorage.removeItem(preferenceKey(userId));
-          else localStorage.setItem(preferenceKey(userId), id);
+          localStorage.setItem(preferenceKey(userId), id);
+          selectedId = id;
           draw(true, id);
+          onSelect(id);
           container.querySelector('.radar-picker-note')!.textContent = id === primary
-            ? 'Quitaste el radar principal.' : 'Listo. Este radar aparecerá primero al entrar, en este navegador.';
+            ? 'Este ya es tu radar principal.' : 'Listo. Este radar aparecerá primero al entrar, en este navegador.';
         } catch {
           container.querySelector('.radar-picker-note')!.textContent = 'No pudimos guardar la preferencia en este navegador.';
         }

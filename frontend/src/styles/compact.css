@@ -15,7 +15,7 @@ body.compact-app { color-scheme: dark; -webkit-text-size-adjust: 100%; text-size
 .compact-app .dashboard-sidebar { position: static; gap: 10px; }
 .compact-app .dashboard-feed { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 16px; }
 .dashboard-feed > :is(.anomalies-section, .feed-empty) { grid-column: 1 / -1; }
-.compact-app .radar-tabs-nav { gap: 10px; padding: 0; margin: 0 0 12px; flex-wrap: nowrap; }
+.compact-app .radar-tabs-nav { gap: 10px; padding: 0; margin: 0 0 12px; flex-wrap: nowrap; overflow: visible; position: relative; z-index: 20; }
 .radar-select-label { display: grid; gap: 5px; flex: 1; min-width: 0; font-size: .75rem; color: var(--text-secondary); }
 .radar-select { width: 100%; min-height: 44px; border: 1px solid #515849; border-radius: 10px; background: #191c17; color: var(--text-primary); padding: 8px 12px; font: inherit; font-size: .95rem; }
 .radar-manage { display: inline-flex; align-items: center; gap: 6px; align-self: end; min-height: 44px; padding: 8px 12px; font-size: .85rem; color: var(--text-primary); text-decoration: none; }
@@ -98,6 +98,7 @@ body.compact-app { color-scheme: dark; -webkit-text-size-adjust: 100%; text-size
 .compact-app .search-widget-wrapper .sidebar-content { display: none; }
 .compact-app .search-widget-wrapper .main-content { padding: 16px; border-radius: 14px; background: #191c17; backdrop-filter: none; }
 .compact-app .search-widget-wrapper .main-content:hover { transform: none; box-shadow: none; }
+.compact-app .search-widget-wrapper .main-content::before { display: none; }
 .compact-app #radar-dashboard .radar-summary-card { gap: 12px; margin-top: 0; }
 .compact-app #radar-dashboard .summary-section { padding: 14px; border-radius: 10px; }
 .compact-app #radar-dashboard .section-header { margin-bottom: 10px; }
@@ -145,8 +146,11 @@ body.compact-app { color-scheme: dark; -webkit-text-size-adjust: 100%; text-size
 
 /* A single picker is shared by the flight feed and radar settings. */
 .home-radar-picker { flex: 1; min-width: 0; max-width: 460px; }
-.radar-picker { position: relative; width: 100%; }
-.radar-picker > summary { list-style: none; display: flex; align-items: center; gap: 12px; cursor: pointer; min-height: 64px; padding: 10px 14px; border: 1px solid #ffffff1d; border-radius: 14px; background: #ffffff05; }
+.radar-picker { position: relative; width: 100%; user-select: none; }
+.radar-picker[open] { z-index: 40; }
+.radar-picker > summary { list-style: none; display: flex; align-items: center; gap: 12px; cursor: pointer; min-height: 64px; padding: 10px 14px; border: 1px solid #ffffff1d; border-radius: 14px; background: #ffffff05; transition: border-color 160ms ease, background-color 160ms ease; }
+.radar-picker > summary:hover { border-color: #ffffff2e; background: #ffffff07; }
+.radar-picker[open] > summary { border-color: #c9ef7350; background: #c9ef7308; }
 .radar-picker > summary::-webkit-details-marker { display: none; }
 .radar-picker-icon { display: grid; place-items: center; width: 34px; height: 34px; flex-shrink: 0; border-radius: 10px; background: #c9ef7310; color: var(--accent-color); font-size: 20px; }
 .radar-picker-title { display: grid; gap: 3px; min-width: 0; flex: 1; }
@@ -165,8 +169,9 @@ body.compact-app { color-scheme: dark; -webkit-text-size-adjust: 100%; text-size
 .radar-option-select strong { font-size: .82rem; overflow-wrap: anywhere; }
 .radar-option-select small { font-size: .68rem; color: var(--text-secondary); line-height: 1.5; }
 .radar-option-select > .ph { color: var(--accent-color); }
-.radar-pin { min-height: 44px; min-width: 44px; border: 0; background: transparent; cursor: pointer; color: var(--text-secondary); font-size: 19px; border-radius: 10px; }
-.radar-pin[aria-pressed="true"] { color: var(--accent-color); }
+.radar-pin { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 10px; border: 0; background: transparent; cursor: pointer; color: var(--text-secondary); font-size: 16px; border-radius: 10px; white-space: nowrap; }
+.radar-pin span { font-size: .67rem; }
+.radar-pin[aria-pressed="true"] { color: var(--accent-color); background: #c9ef730b; }
 .radar-pin:hover, .radar-option-select:hover { background: #ffffff06; }
 .compact-app .radar-tabs-nav { align-items: center; justify-content: space-between; }
 .radar-manage { align-self: center; white-space: nowrap; }
@@ -183,12 +188,13 @@ body.compact-app { color-scheme: dark; -webkit-text-size-adjust: 100%; text-size
 .compact-app .notification-dot { display: none; }
 .compact-app .search-widget-wrapper .main-content { background: transparent; border: 0; padding: 0; box-shadow: none; overflow: visible; }
 .compact-app #radar-alerts-list { display: block !important; flex: 1; max-width: 460px; min-width: 0; }
-.compact-app .radar-manager-bar { flex-wrap: nowrap !important; border: 0 !important; padding-bottom: 4px !important; }
+.compact-app .radar-manager-bar { flex-wrap: nowrap !important; border: 0 !important; padding-bottom: 4px !important; overflow: visible; position: relative; z-index: 30; }
 .compact-app #btn-create-new-radar { min-height: 44px; margin: 0; border-radius: 10px; }
 .compact-app .radar-status-header { background: #ffffff03 !important; border: 1px solid #ffffff12 !important; padding: 18px !important; border-radius: 16px !important; margin-bottom: 16px !important; }
 .compact-app #dash-radar-title { font-size: 1.15rem !important; margin-top: 7px !important; }
 .compact-app #radar-dashboard .radar-summary-card { display: grid; grid-template-columns: 1.2fr 1fr; align-items: start; gap: 16px; }
 .compact-app #radar-dashboard .summary-section { padding: 18px; border: 1px solid #ffffff1a; border-radius: 16px; background: linear-gradient(145deg, #ffffff06, #ffffff02); }
+.compact-app #radar-dashboard .summary-section:hover { border-color: #ffffff1a; background: linear-gradient(145deg, #ffffff06, #ffffff02); }
 .compact-app #radar-dashboard .summary-section:last-child { grid-column: 1 / -1; }
 .compact-app #radar-dashboard .section-header { padding-bottom: 8px; margin-bottom: 14px; }
 .compact-app #radar-dashboard .summary-section:last-child .section-header { margin-bottom: 0; padding-bottom: 0; border-bottom: 0; }
@@ -212,6 +218,7 @@ body.compact-app { color-scheme: dark; -webkit-text-size-adjust: 100%; text-size
 .radar-overflow-menu #btn-delete-radar { color: #f5a49c; }
 .compact-app #wizard-view-container { max-width: 720px; margin-inline: auto; border: 1px solid #ffffff16; border-radius: 18px; padding: 24px; background: #ffffff03; }
 .compact-app .widget-header { margin: 0 0 22px; flex-wrap: nowrap; }
+.compact-app .widget-header > div:first-child { flex: 1; min-width: 0; }
 .compact-app .widget-header > div > div:first-child { display: none; }
 .compact-app .widget-header h2 { font-size: 1.15rem; line-height: 1.4; letter-spacing: -.025em; text-align: left; }
 .compact-app .widget-header p { font-size: .8rem; text-align: left; margin-top: 6px; line-height: 1.5; }
@@ -225,6 +232,11 @@ body.compact-app { color-scheme: dark; -webkit-text-size-adjust: 100%; text-size
 .wizard-live-preview dd { font-size: .75rem; margin: 0; overflow-wrap: anywhere; }
 .wizard-live-preview p { font-size: .68rem; padding: 0 12px 12px; color: var(--text-secondary); margin: 0; }
 .compact-app .radio-pills .pill { min-height: 44px; padding: 8px 14px; }
+.quick-save { display: none; }
+.compact-app #wizard-view-container.is-editing .quick-save { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+.compact-app #wizard-view-container.is-editing :is(.btn-next, .btn-prev) { display: none; }
+.compact-app #wizard-view-container.is-editing .wizard-actions { display: none; }
+.quick-save-top { min-height: 44px; flex-shrink: 0; padding-inline: 14px; }
 .compact-app .widget-form :is(input[type="text"], input[type="email"], input[type="number"], input[type="date"], select) { font-size: 16px; min-height: 48px; min-width: 0; max-width: 100%; scroll-margin-block: 24px; }
 .compact-app .widget-form .input-wrapper { min-width: 0; }
 .compact-app input[type="date"]::-webkit-date-and-time-value { text-align: left; min-height: 1.2em; }
@@ -257,9 +269,14 @@ body.compact-app { color-scheme: dark; -webkit-text-size-adjust: 100%; text-size
   .compact-app .widget-header { gap: 10px !important; flex-direction: column; }
   .compact-app .widget-header > div { gap: 0 !important; }
   .compact-app .widget-header h2 { font-size: 1.1rem; }
+  .compact-app #wizard-view-container.is-editing .quick-save-top { position: fixed; right: max(14px, env(safe-area-inset-right, 0px)); bottom: max(14px, env(safe-area-inset-bottom, 0px)); z-index: 60; min-height: 50px; padding-inline: 18px; border-radius: 14px; box-shadow: 0 12px 32px #0b1009cc; }
   .compact-app .widget-form .form-group { min-width: 0; }
   .compact-app .wizard-actions { gap: 8px; }
   .compact-app .wizard-actions .btn { padding: 12px 8px; font-size: .75rem; min-height: 44px; }
+}
+@media (max-width: 480px) {
+  .radar-pin:not([aria-pressed="true"]) span { display: none; }
+  .radar-pin { padding-inline: 8px; }
 }
 @media (max-width: 360px) {
   .radar-picker-icon { display: none; }

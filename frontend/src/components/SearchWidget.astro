@@ -91,6 +91,9 @@ import { supabase } from '../lib/supabase';
         <button type="button" id="btn-cancel-wizard" class="btn btn-outline" style="display: none; padding: 0.45rem 0.9rem; font-size: 0.85rem; align-items: center; gap: 0.4rem;">
           <i class="ph ph-arrow-left"></i> Volver
         </button>
+        <button type="submit" form="search-alert-form" class="btn btn-primary quick-save quick-save-top">
+          <i class="ph ph-check" aria-hidden="true"></i> Guardar
+        </button>
       </div>
 
     <form id="search-alert-form" class="widget-form">
@@ -1517,6 +1520,16 @@ import { supabase } from '../lib/supabase';
   function showWizardView(step: number = 1) {
     if (radarDashboard) radarDashboard.classList.add('hidden');
     if (wizardContainer) wizardContainer.classList.remove('hidden');
+    wizardContainer?.classList.toggle('is-editing', Boolean(currentEditingAlertId));
+    if (currentEditingAlertId) {
+      const wizardTitle = document.getElementById('wizard-title');
+      const wizardSubtitle = document.getElementById('wizard-subtitle');
+      if (wizardTitle) wizardTitle.textContent = `Editar ${titles[step - 1].toLowerCase()}`;
+      if (wizardSubtitle) wizardSubtitle.textContent = 'Hacé el cambio y guardá este bloque.';
+    } else {
+      const wizardSubtitle = document.getElementById('wizard-subtitle');
+      if (wizardSubtitle) wizardSubtitle.textContent = 'Elegí tu origen, fechas y destinos. Te avisamos cuando haya oportunidades de oro.';
+    }
     const headerP = document.querySelector('.alertas-header-text p');
     if (headerP) headerP.textContent = 'Elegí dónde y cuándo querés viajar.';
     const cancelBtn = document.getElementById('btn-cancel-wizard');
@@ -1858,8 +1871,11 @@ import { supabase } from '../lib/supabase';
   // Handle Form Submission
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = 'Procesando...';
+    const activeSubmit = (e as SubmitEvent).submitter as HTMLButtonElement | null;
+    const pendingButton = activeSubmit || submitBtn;
+    const pendingButtonHtml = pendingButton.innerHTML;
+    pendingButton.disabled = true;
+    pendingButton.innerHTML = '<i class="ph ph-spinner-gap" aria-hidden="true"></i> Guardando...';
     
     const formData = new FormData(form);
     
@@ -1897,8 +1913,8 @@ import { supabase } from '../lib/supabase';
       
       if (error) {
         showToast('Error enviando enlace: ' + error.message, 'error');
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = 'Activar Radar';
+        pendingButton.disabled = false;
+        pendingButton.innerHTML = pendingButtonHtml;
         return;
       }
       
@@ -1906,6 +1922,8 @@ import { supabase } from '../lib/supabase';
       
       form.classList.add('hidden');
       if(authMessage) authMessage.classList.remove('hidden');
+      pendingButton.disabled = false;
+      pendingButton.innerHTML = pendingButtonHtml;
     } else {
       const finalPayload = { ...payload, user_id: currentUserId, email: currentUserEmail };
       let error = null;
@@ -1927,13 +1945,14 @@ import { supabase } from '../lib/supabase';
         
       if (error) {
         showToast('Error guardando alerta: ' + error.message, 'error');
+        pendingButton.disabled = false;
+        pendingButton.innerHTML = pendingButtonHtml;
       } else {
-        showToast(currentEditingAlertId ? '¡Radar actualizado con éxito!' : '¡Nueva búsqueda activada con éxito!', 'success');
+        showToast(currentEditingAlertId ? 'Radar actualizado.' : 'Nueva búsqueda activada.', 'success');
         await loadUserAlerts();
+        pendingButton.disabled = false;
+        pendingButton.innerHTML = pendingButtonHtml;
       }
-      
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = 'Actualizar Radar';
     }
   });
 

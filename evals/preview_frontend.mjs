@@ -48,7 +48,7 @@ createServer(async (req, res) => {
     const mock = `const supabase = { auth: {
       getSession: async () => ({data:{session:{user:{id:'ui-fixture-user', email:'preview@example.test', user_metadata:{}}}}}),
       signOut: async () => {}, onAuthStateChange: () => {}
-    }, from: () => ({select(){return this},eq(){return this},order:async()=>({data:${JSON.stringify(alerts)}})})};`;
+    }, from: () => ({select(){return this},update(){return this},insert:async()=>({error:null}),eq(){return this},order:async()=>({data:${JSON.stringify(alerts)}})})};`;
     const code = `${mock}\n${client}`;
     let html = source.slice(source.indexOf('<html'))
       .replace(/<script is:inline define:vars=[\s\S]*?<\/script>/, () => `<script>window.__SERVER_DATA__=${JSON.stringify(data)}</script>`)
