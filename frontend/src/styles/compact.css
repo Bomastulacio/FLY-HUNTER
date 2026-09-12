@@ -173,6 +173,20 @@ body.compact-app { color-scheme: dark; -webkit-text-size-adjust: 100%; text-size
 .radar-pin span { font-size: .67rem; }
 .radar-pin[aria-pressed="true"] { color: var(--accent-color); background: #c9ef730b; }
 .radar-pin:hover, .radar-option-select:hover { background: #ffffff06; }
+.radar-rename-trigger { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; cursor: pointer; color: var(--text-secondary); font-size: 15px; border-radius: 10px; transition: color 150ms ease, background-color 150ms ease; flex-shrink: 0; }
+.radar-rename-trigger:hover { color: var(--accent-color); background: #ffffff0a; }
+.radar-option.is-editing { padding: 6px 8px; background: #ffffff09; border-color: #c9ef7340; width: 100%; }
+.radar-rename-form { display: flex; align-items: center; gap: 8px; width: 100%; }
+.radar-rename-input-wrap { flex: 1; display: flex; align-items: center; gap: 8px; background: #161c15; border: 1px solid #ffffff24; border-radius: 8px; padding: 6px 10px; min-width: 0; }
+.radar-rename-input-wrap:focus-within { border-color: var(--accent-color); }
+.radar-rename-input-wrap .ph { color: var(--text-secondary); font-size: 14px; flex-shrink: 0; }
+.radar-rename-input { width: 100%; border: 0; background: transparent; color: var(--text-primary); font-size: .84rem; outline: none; font-family: inherit; }
+.radar-rename-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.radar-rename-submit, .radar-rename-cancel { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; border: 0; cursor: pointer; font-size: 14px; transition: transform 120ms ease, opacity 120ms ease; }
+.radar-rename-submit { background: var(--accent-color); color: #10140e; font-weight: bold; }
+.radar-rename-submit:hover { opacity: .9; transform: scale(1.04); }
+.radar-rename-cancel { background: #ffffff12; color: var(--text-secondary); }
+.radar-rename-cancel:hover { background: #ffffff20; color: var(--text-primary); }
 .compact-app .radar-tabs-nav { align-items: center; justify-content: space-between; }
 .radar-manage { align-self: center; white-space: nowrap; }
 .destination-waiting { display: grid; grid-template-columns: 36px minmax(0, 1fr) 44px; gap: 12px; align-items: center; border: 1px solid #ffffff10; border-radius: 16px; padding: 16px; background: #ffffff02; }

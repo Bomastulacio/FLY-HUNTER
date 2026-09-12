@@ -881,6 +881,13 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
             // @ts-ignore
             window.currentActiveAlert = userAlerts[activeAlertIndex];
             renderDashboard(userAlerts[activeAlertIndex]);
+          }, (id, newName) => {
+            const target = userAlerts.find(a => a.id === id);
+            if (target) target.nombre = newName;
+            if (userAlerts[activeAlertIndex]?.id === id) {
+              renderDashboard(userAlerts[activeAlertIndex]);
+            }
+            showToast(`Radar renombrado a "${newName}"`);
           });
       };
 

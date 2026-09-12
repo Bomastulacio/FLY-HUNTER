@@ -30,6 +30,7 @@ import { supabase } from '../lib/supabase';
           <details class="radar-overflow">
             <summary aria-label="Más opciones del radar"><i class="ph ph-dots-three" aria-hidden="true"></i></summary>
             <div class="radar-overflow-menu">
+              <button type="button" id="btn-quick-rename-radar"><i class="ph ph-tag" aria-hidden="true"></i> Renombrar radar</button>
               <button type="button" id="btn-edit-active-radar"><i class="ph ph-pencil-simple" aria-hidden="true"></i> Modificar radar</button>
               <button type="button" id="btn-delete-radar"><i class="ph ph-trash" aria-hidden="true"></i> Eliminar radar</button>
             </div>
@@ -1581,6 +1582,13 @@ import { supabase } from '../lib/supabase';
     mountRadarPicker(listEl, userAlerts, userAlerts[activeAlertIndex]?.id, currentUserId || '', id => {
       activeAlertIndex = userAlerts.findIndex(a => a.id === id);
       populateDashboardWithAlert(userAlerts[activeAlertIndex]);
+    }, (id, newName) => {
+      const target = userAlerts.find(a => a.id === id);
+      if (target) target.nombre = newName;
+      if (userAlerts[activeAlertIndex]?.id === id) {
+        populateDashboardWithAlert(userAlerts[activeAlertIndex]);
+      }
+      showToast(`Radar renombrado a "${newName}"`, 'success');
     });
   }
 
@@ -1825,6 +1833,31 @@ import { supabase } from '../lib/supabase';
   document.getElementById('btn-cancel-wizard')?.addEventListener('click', () => {
     if (userAlerts.length > 0) {
       showDashboardView();
+    }
+  });
+
+  // Botón Renombrar Búsqueda Rápido
+  document.getElementById('btn-quick-rename-radar')?.addEventListener('click', async () => {
+    if (!userAlerts[activeAlertIndex]) return;
+    const currentAlert = userAlerts[activeAlertIndex];
+    const oldName = currentAlert.nombre || currentAlert.destino;
+    const newName = prompt('Ingresá el nuevo nombre para este radar:', oldName);
+    if (!newName || newName.trim() === '' || newName.trim() === oldName) return;
+
+    const trimmed = newName.trim().slice(0, 45);
+    currentAlert.nombre = trimmed;
+    populateDashboardWithAlert(currentAlert);
+    renderAlertPills();
+
+    const { error } = await supabase
+      .from('search_alerts')
+      .update({ nombre: trimmed })
+      .eq('id', currentAlert.id);
+
+    if (!error) {
+      showToast(`Radar renombrado a "${trimmed}"`, 'success');
+    } else {
+      showToast('Error al renombrar: ' + error.message, 'error');
     }
   });
 
