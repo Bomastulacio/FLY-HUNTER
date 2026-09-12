@@ -31,10 +31,10 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
   const rawOD = String(deal.ida_origen_destino || `${deal.origen || 'EZE'}-${deal.destino || 'Vuelo'}`);
   const [origin = '', destination = ''] = rawOD.split('-').map(s => s.trim());
   const city = cities[destination] || destination || country || 'Vuelo';
-  const passengers = Math.max(1, Number(deal.pasajeros || alert?.pasajeros) || 1);
-  const searchPassengers = Math.max(1, Number(alert?.pasajeros) || passengers);
+  const passengers = Math.max(1, Number(deal.pasajeros ?? alert?.pasajeros) || 1);
+  const searchPassengers = passengers;
   const pax = `${passengers} adulto${passengers === 1 ? '' : 's'}`;
-  const unitPrice = Number(deal.precio_por_pasajero_usd) || (passengers > 1 ? Math.round(Number(deal.precio_total_usd) / passengers) : null);
+  const unitPrice = passengers > 1 ? (Number(deal.precio_por_pasajero_usd) || Math.round(Number(deal.precio_total_usd) / passengers)) : null;
   const stops = Number(deal.cantidad_escalas);
   const stopText = Number.isFinite(stops) ? (stops === 0 ? 'Directo' : `${stops} escala${stops === 1 ? '' : 's'}`) : 'Escalas por confirmar';
   const gold = Boolean(deal.es_oportunidad_oro);

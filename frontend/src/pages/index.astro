@@ -465,8 +465,33 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         const renderFlightCard = (deal: any, currentAlert: any, isMain = false, countryName = '') =>
           renderCompactFlight(deal, currentAlert, isMain, countryName, savedFlights.has(String(deal.id)));
 
-        // 1. Tarjeta Principal (Vuelo más barato o destacado)
-        const mainDeal = affordableDeals.length > 0 ? affordableDeals[0] : null;
+        // Destinos de la zona del radar actual
+        const zoneCountriesMap: Record<string, string[]> = {
+          "Europa": ["España", "Reino Unido", "Francia", "Alemania", "Italia", "Portugal", "Países Bajos", "Suiza", "Grecia"],
+          "Norteamérica": ["Estados Unidos", "Canadá", "México", "Miami", "Nueva York"],
+          "Latinoamérica": ["Brasil", "Chile", "Colombia", "Perú", "Uruguay", "Río de Janeiro"],
+          "Caribe": ["República Dominicana", "Cancún", "Cuba", "Costa Rica", "Puerto Rico"],
+          "Asia": ["Japón", "Tokio", "Tailandia", "Corea del Sur", "Emiratos Árabes"],
+          "Oceanía": ["Australia", "Nueva Zelanda"]
+        };
+
+        const targetZone = alert.destino || "Europa";
+        const zoneFallback = zoneCountriesMap[targetZone] || zoneCountriesMap["Europa"];
+
+        // Priorizamos los países que el usuario eligió explícitamente o los de su zona
+        let explicitCountries = (alert.paises && alert.paises.length > 0 && !alert.paises.includes('Cualquiera')) 
+            ? [...alert.paises] 
+            : zoneFallback;
+            
+        let countriesToRender = [...explicitCountries];
+
+        // Vuelos que pertenecen específicamente a este radar
+        const radarMatchingDeals = affordableDeals.filter((d: any) =>
+          countriesToRender.some((c: string) => countryCodes[c]?.some(code => d.ida_origen_destino.includes(code)))
+        );
+
+        // 1. Tarjeta Principal (Mejor vuelo del radar activo)
+        const mainDeal = radarMatchingDeals.length > 0 ? radarMatchingDeals[0] : null;
         let mainDealCountry = '';
         if (mainDeal) {
           for (const [cName, codes] of Object.entries(countryCodes)) {
@@ -479,7 +504,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         } else {
           html += `
             <div class="card main-deal" style="text-align: left; padding: 1.25rem;">
-              <p style="color: var(--text-secondary); margin: 0; font-size: 1rem;">No encontramos vuelos que cumplan con tu presupuesto de ${usd(alert.presupuesto_max)} y filtros actuales.</p>
+              <p style="color: var(--text-secondary); margin: 0; font-size: 1rem;">No encontramos vuelos que cumplan con tu presupuesto de ${usd(alert.presupuesto_max)} y filtros actuales para ${escapeHtml(targetZone)}.</p>
             </div>
           `;
         }
@@ -487,20 +512,6 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         // Otros destinos: separar los que tienen oferta de los que siguen buscando
         let countriesWithDeals: any[] = [];
         let countriesSearching: any[] = [];
-
-        // Priorizamos los países que el usuario eligió explícitamente
-        let explicitCountries = (alert.paises && alert.paises.length > 0 && !alert.paises.includes('Cualquiera')) 
-            ? [...alert.paises] 
-            : ['España', 'Reino Unido', 'Francia', 'Alemania'];
-            
-        let countriesToRender = [...explicitCountries];
-        
-        Object.keys(countryCodes).forEach(country => {
-            const hasDeal = affordableDeals.some((d: any) => countryCodes[country].some(code => d.ida_origen_destino.includes(code)));
-            if (hasDeal && !countriesToRender.includes(country)) {
-                countriesToRender.push(country);
-            }
-        });
 
         countriesToRender.forEach((country: string) => {
           let destDeal = null;
