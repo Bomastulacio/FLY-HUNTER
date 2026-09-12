@@ -23,13 +23,14 @@ def check_serpapi_quota() -> Dict[str, Any]:
         if res.status_code == 200:
             data = res.json()
             left = data.get("total_searches_left", data.get("plan_searches_left", 0))
-            renew_date = data.get("renew_on", "23 de septiembre")
+            total = data.get("searches_per_month", 250)
+            renew_date = data.get("renew_on", "fin de ciclo de facturación")
             
             if left <= 2:
-                print(f"[SerpApi Guard] 🛑 Cuota casi agotada ({left} búsquedas restantes). Bloqueado hasta el 23 de septiembre. Preservando para que no se gaste.")
+                print(f"[SerpApi Guard] 🛑 Cuota casi agotada ({left} búsquedas restantes). Próxima renovación: {renew_date}. Preservando cuota.")
                 return {"available": False, "searches_left": left, "renew_on": renew_date}
             else:
-                print(f"[SerpApi Monitor] 🟢 ¡Cuota operativa! {left} de 250 búsquedas disponibles (Próxima renovación: {renew_date}).")
+                print(f"[SerpApi Monitor] 🟢 ¡Cuota operativa! {left} de {total} búsquedas disponibles (Próxima renovación: {renew_date}).")
                 return {"available": True, "searches_left": left, "renew_on": renew_date}
     except Exception as e:
         print(f"[SerpApi Monitor] Nota: No se pudo auditar cuota ({e}).")
@@ -121,7 +122,8 @@ def collect_flights_for_search(search: Dict, check_cache_first: bool = True) -> 
     """
     Recolector enfocado en una búsqueda específica (origen, destino, fechas, pax).
     1. Si check_cache_first es True, revisa en Supabase si Playwright ya guardó vuelos frescos ($0 cost).
-    2. Si no hay vuelos en caché o se requiere búsqueda fresca/refinada, consulta SerpApi cuidando la cuota (250/mes).
+       Exige coincidencia estricta de origen, destino, fechas y cantidad de pasajeros.
+    2. Si no hay vuelos en caché o se requiere búsqueda fresca/refinada, consulta SerpApi cuidando la cuota.
     """
     origin = search.get("origin")
     dest = search.get("dest")
@@ -133,27 +135,31 @@ def collect_flights_for_search(search: Dict, check_cache_first: bool = True) -> 
         try:
             from ..services.db import get_recent_flight_deals
             recent = get_recent_flight_deals(days=1)
-            # Filtrar si coinciden ruta y fechas
+            # Filtrar con coincidencia estricta: ruta, fechas exactas y misma cantidad de pasajeros
             matching = [
                 d for d in (recent or [])
-                if dest in d.get("ida_origen_destino", "") or dest in d.get("vuelta_origen_destino", "")
+                if (d.get("ida_origen_destino") == f"{origin}-{dest}" or (origin and origin in d.get("ida_origen_destino", "") and dest and dest in d.get("ida_origen_destino", "")))
+                and str(d.get("ida_fecha")) == str(dep_date)
+                and str(d.get("vuelta_fecha")) == str(ret_date)
+                and int(d.get("pasajeros", 1) or 1) == adults
             ]
             if matching:
-                print(f"[Recolector Híbrido] ⚡ Usando {len(matching)} vuelos frescos de Playwright en Supabase para {dest} ($0 cuota).")
+                print(f"[Recolector Híbrido] ⚡ Usando {len(matching)} vuelos frescos de Playwright en Supabase para {dest} ({adults} pax, $0 cuota).")
                 results = []
                 for d in matching:
                     pax = int(d.get("pasajeros", adults) or adults)
                     precio_total = float(d.get("precio_total_usd", 0) or 0)
+                    precio_unit = float(d.get("precio_por_pasajero_usd") or (round(precio_total / pax, 2) if pax > 0 else precio_total))
                     results.append({
                         "ida_fecha": d.get("ida_fecha", dep_date),
                         "vuelta_fecha": d.get("vuelta_fecha", ret_date),
                         "ida_origen_destino": d.get("ida_origen_destino", f"{origin}-{dest}"),
                         "vuelta_origen_destino": d.get("vuelta_origen_destino", f"{dest}-{origin}"),
-                        "precio_original": precio_total,
-                        "moneda_original": "USD",
+                        "precio_original": d.get("precio_original", precio_total),
+                        "moneda_original": d.get("moneda_original", "USD"),
                         "precio_total_usd": precio_total,
                         "pasajeros": pax,
-                        "precio_por_pasajero_usd": round(precio_total / pax, 2) if pax > 0 else precio_total,
+                        "precio_por_pasajero_usd": precio_unit,
                         "aerolinea": d.get("aerolinea", "Aerolínea"),
                         "cantidad_escalas": int(d.get("cantidad_escalas", 0) or 0),
                         "duracion_total_minutos": int(d.get("duracion_total_minutos", 720) or 720),
@@ -172,8 +178,8 @@ def collect_dynamic_flights(mission: Dict) -> List[Dict]:
     """
     Recolector Híbrido Inteligente:
     1. Primero revisa si ya existen vuelos frescos guardados por el Agente Playwright en Supabase (últimas 12 horas).
-       Si existen, los reutiliza a costo $0 y preserva al 100% la cuota de SerpApi (250 búsquedas/mes).
-    2. Si no hay vuelos frescos en Supabase, realiza la recolección estratégica con SerpApi (fallback infalible).
+       Si existen, los reutiliza a costo $0 y preserva al 100% la cuota de SerpApi.
+    2. Si no hay vuelos frescos en Supabase, realiza la recolección estratégica con SerpApi.
     """
     # 1. Intentar reutilizar vuelos frescos del Agente Playwright (Costo $0)
     try:
@@ -181,22 +187,23 @@ def collect_dynamic_flights(mission: Dict) -> List[Dict]:
         recent_deals = get_recent_flight_deals(days=1)
         if recent_deals and len(recent_deals) > 0:
             print(f"[Recolector Híbrido] ⚡ Se detectaron {len(recent_deals)} vuelos frescos guardados por el Agente Playwright en Supabase.")
-            print(f"[Recolector Híbrido] 🛡️ Cuota de SerpApi preservada intacta (250 créditos/mes).")
+            print(f"[Recolector Híbrido] 🛡️ Cuota de SerpApi preservada intacta.")
             
             raw_flights = []
             for d in recent_deals:
-                pax = int(d.get("pasajeros", 2) or 2)
+                pax = int(d.get("pasajeros", 1) or 1)
                 precio_total = float(d.get("precio_total_usd", 0) or 0)
+                precio_unit = float(d.get("precio_por_pasajero_usd") or (round(precio_total / pax, 2) if pax > 0 else precio_total))
                 raw_flights.append({
                     "ida_fecha": d.get("ida_fecha"),
                     "vuelta_fecha": d.get("vuelta_fecha"),
                     "ida_origen_destino": d.get("ida_origen_destino"),
                     "vuelta_origen_destino": d.get("vuelta_origen_destino"),
-                    "precio_original": precio_total,
-                    "moneda_original": "USD",
+                    "precio_original": d.get("precio_original", precio_total),
+                    "moneda_original": d.get("moneda_original", "USD"),
                     "precio_total_usd": precio_total,
                     "pasajeros": pax,
-                    "precio_por_pasajero_usd": round(precio_total / pax, 2) if pax > 0 else precio_total,
+                    "precio_por_pasajero_usd": precio_unit,
                     "aerolinea": d.get("aerolinea", "Aerolínea"),
                     "cantidad_escalas": int(d.get("cantidad_escalas", 0) or 0),
                     "duracion_total_minutos": int(d.get("duracion_total_minutos", 720) or 720),

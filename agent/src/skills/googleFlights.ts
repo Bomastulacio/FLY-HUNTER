@@ -111,6 +111,7 @@ export async function searchGoogleFlights(
       const durationMatch = cardText.match(/(\d+\s*h(?:\s*\d+\s*m(?:in)?)?)/i);
       const durationText = durationMatch ? durationMatch[1] : undefined;
 
+      const pax = Math.max(1, params.passengers || 1);
       results.push({
         source: 'google_flights',
         airline,
@@ -120,6 +121,8 @@ export async function searchGoogleFlights(
         stops,
         durationText,
         priceTotalUSD: priceUSD,
+        passengers: pax,
+        pricePerPaxUSD: Math.round(priceUSD / pax),
         priceRawText: priceMatch[0],
         bookingUrl: page.url(),
         collectedAt: new Date().toISOString()
@@ -164,15 +167,21 @@ async function fetchSerpApiFallback(params: FlightSearchParams): Promise<Scraped
       if (accRes.ok) {
         const accData = await accRes.json() as any;
         const left = accData.total_searches_left ?? accData.plan_searches_left ?? 0;
+        const total = accData.searches_per_month ?? 250;
+        const renew = accData.renew_on || 'fin del ciclo de facturación';
         if (left <= 2) {
-          console.log(`[Skill: Google Flights] 🛑 Cuota SerpApi casi agotada (${left} búsquedas restantes). Bloqueado hasta el 23 de septiembre. Omitiendo llamada.`);
+          console.log(`[Skill: Google Flights] 🛑 Cuota SerpApi casi agotada (${left} búsquedas restantes). Próxima renovación: ${renew}. Omitiendo llamada paga.`);
           return [];
         } else {
-          console.log(`[Skill: Google Flights] 🟢 SerpApi con cuota activa: ${left} de 250 créditos.`);
+          console.log(`[Skill: Google Flights] 🟢 SerpApi con cuota activa: ${left} de ${total} créditos (Renovación: ${renew}).`);
         }
+      } else {
+        console.warn(`[Skill: Google Flights] ⚠️ No se pudo auditar cuota SerpApi (HTTP ${accRes.status}). Omitiendo llamada paga para evitar sobrecostos.`);
+        return [];
       }
-    } catch {
-      // Ignorar error de chequeo y continuar seguro
+    } catch (e) {
+      console.warn(`[Skill: Google Flights] ⚠️ Excepción consultando cuota SerpApi. Omitiendo fallback pago.`);
+      return [];
     }
 
     const queryUrl = new URL('https://serpapi.com/search.json');
@@ -191,6 +200,7 @@ async function fetchSerpApiFallback(params: FlightSearchParams): Promise<Scraped
     const data = await res.json() as any;
     const raw = [...(data.best_flights || []), ...(data.other_flights || [])];
     const results: ScrapedFlightOption[] = [];
+    const pax = Math.max(1, params.passengers || 1);
 
     for (const item of raw.slice(0, 5)) {
       const firstLeg = item.flights?.[0];
@@ -208,6 +218,8 @@ async function fetchSerpApiFallback(params: FlightSearchParams): Promise<Scraped
           stops,
           durationText: `${item.total_duration || 0} min`,
           priceTotalUSD: priceUSD,
+          passengers: pax,
+          pricePerPaxUSD: Math.round(priceUSD / pax),
           priceRawText: `US$ ${priceUSD}`,
           bookingUrl: data.search_metadata?.google_flights_url || `https://www.google.com/travel/flights`,
           collectedAt: new Date().toISOString()

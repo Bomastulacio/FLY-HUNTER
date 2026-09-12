@@ -23,8 +23,11 @@ export async function saveFlightDeal(
     const idaOD = `${routeParts[0]}-${routeParts[1]}`;
     const vueltaOD = `${routeParts[1]}-${routeParts[0]}`;
 
-    // Hash dedupe: md5(ida_fecha || ida_od || vuelta_fecha || vuelta_od || aerolinea || round(precio))
-    const rawHash = `${deal.departureDate}_${idaOD}_${deal.returnDate}_${vueltaOD}_${deal.airline}_${Math.round(deal.priceTotalUSD)}`;
+    const pax = Math.max(1, deal.passengers || 1);
+    const unitPrice = deal.pricePerPaxUSD || Math.round(deal.priceTotalUSD / pax);
+
+    // Hash dedupe: md5(ida_fecha || ida_od || vuelta_fecha || vuelta_od || aerolinea || round(precio) || pax)
+    const rawHash = `${deal.departureDate}_${idaOD}_${deal.returnDate}_${vueltaOD}_${deal.airline}_${Math.round(deal.priceTotalUSD)}_${pax}`;
     const hashDedupe = crypto.createHash('md5').update(rawHash).digest('hex');
 
     const payload = {
@@ -33,6 +36,8 @@ export async function saveFlightDeal(
       vuelta_fecha: deal.returnDate,
       vuelta_origen_destino: vueltaOD,
       precio_total_usd: deal.priceTotalUSD,
+      pasajeros: pax,
+      precio_por_pasajero_usd: unitPrice,
       aerolinea: deal.airline,
       cantidad_escalas: deal.stops,
       fuente: deal.source,

@@ -131,6 +131,7 @@ export async function searchDespegarFlights(
     }
 
     const results: ScrapedFlightOption[] = [];
+    const pax = Math.max(1, params.passengers || 1);
     if (bestPriceUSD > 0) {
       results.push({
         source: 'despegar',
@@ -140,15 +141,17 @@ export async function searchDespegarFlights(
         returnDate: params.returnDate,
         stops: 0,
         priceTotalUSD: bestPriceUSD,
+        passengers: pax,
+        pricePerPaxUSD: Math.round(bestPriceUSD / pax),
         priceRawText: priceRaw || `US$ ${bestPriceUSD}`,
         bookingUrl: url,
         collectedAt: new Date().toISOString()
       });
-      console.log(`[Skill: Despegar] ✅ Tarifa detectada: ~US$ ${bestPriceUSD} (${priceRaw}) en ${detectedAirline}`);
+      console.log(`[Skill: Despegar] ✅ Tarifa detectada: ~US$ ${bestPriceUSD} (${priceRaw}) en ${detectedAirline} para ${pax} pax`);
     } else if (isChallenged) {
-      console.log(`[Skill: Despegar] 🛡️ Despegar activó verificación anti-bot en el runner. Link de reserva generado: ${url}`);
+      console.log(`[Skill: Despegar] 🛡️ Despegar activó verificación anti-bot (DataDome/Cloudflare). Fuente pausada para evitar bloqueos.`);
     } else {
-      console.log(`[Skill: Despegar] ℹ️ Selector inmediato no detectado en página. Generado link de reserva oficial: ${url}`);
+      console.log(`[Skill: Despegar] ℹ️ Sin cotización verificable en Despegar para esta búsqueda.`);
     }
 
     return results;

@@ -7,7 +7,9 @@ create table public.flight_deals (
     ida_origen_destino text not null, -- ej. "EZE-MAD"
     vuelta_fecha date not null,
     vuelta_origen_destino text not null, -- ej. "CDG-EZE"
-    precio_total_usd numeric(10,2) not null, -- total para 2 pasajeros (convertido a usd)
+    precio_total_usd numeric(10,2) not null, -- precio total cotizado para los pasajeros indicados
+    pasajeros int not null default 1, -- cantidad exacta de pasajeros para los que se cotizó la tarifa
+    precio_por_pasajero_usd numeric(10,2), -- precio unitario calculado por pasajero
     precio_original numeric(12,2), -- precio en moneda local devuelto por aerolínea
     moneda_original text, -- ej. 'ARS', 'EUR', 'USD'
     precio_ars_tarjeta numeric(12,2), -- precio total calculado al dolar tarjeta
@@ -19,11 +21,11 @@ create table public.flight_deals (
     es_tarifa_error boolean not null default false,
     estado_aprobacion text not null default 'no_aplica', -- no_aplica | pendiente | aprobado | rechazado
     notificado boolean not null default false, -- evita reenviar el mismo mail
-    fuente text, -- 'amadeus' | 'fli'
+    fuente text, -- 'amadeus' | 'fli' | 'google_flights' | 'despegar' | 'serpapi'
     link_reserva text,
     es_feriado_origen boolean not null default false,
     es_feriado_destino boolean not null default false,
-    hash_dedupe text unique -- md5(ida_fecha || ida_od || vuelta_fecha || vuelta_od || aerolinea || round(precio))
+    hash_dedupe text unique -- md5(ida_fecha || ida_od || vuelta_fecha || vuelta_od || aerolinea || round(precio) || pasajeros)
 );
 
 create index idx_flight_deals_precio on public.flight_deals (precio_total_usd);
@@ -108,10 +110,43 @@ create policy "Permitir full access al service role alertas"
     using (auth.jwt() ->> 'role' = 'service_role');
 
 -- =====================================================================
--- MIGRACIÓN OPCIONAL: Habilitar múltiples alertas por usuario
+-- Tabla de Vuelos Guardados (Favoritos permanentes vinculados a la cuenta)
 -- =====================================================================
--- Para permitir múltiples búsquedas/radares en paralelo por usuario:
--- 1. Quitar la restricción de unicidad:
---    ALTER TABLE public.search_alerts DROP CONSTRAINT IF EXISTS unique_user_alert;
--- 2. Agregar la columna de nombre personalizado si no existe:
---    ALTER TABLE public.search_alerts ADD COLUMN IF NOT EXISTS nombre text DEFAULT 'Mi Radar';
+create table if not exists public.saved_deals (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid references auth.users(id) on delete cascade not null,
+    flight_deal_id uuid references public.flight_deals(id) on delete set null,
+    origen text not null,
+    destino text not null,
+    ida_fecha date not null,
+    vuelta_fecha date not null,
+    pasajeros int not null default 1,
+    precio_total_usd numeric(10,2) not null,
+    precio_por_pasajero_usd numeric(10,2),
+    aerolinea text,
+    cantidad_escalas int default 0,
+    fuente text,
+    link_reserva text,
+    creado_en timestamptz not null default now(),
+    guardado_el timestamptz not null default now(),
+    unique(user_id, origen, destino, ida_fecha, vuelta_fecha, pasajeros, aerolinea)
+);
+
+create index if not exists idx_saved_deals_user on public.saved_deals (user_id);
+alter table public.saved_deals enable row level security;
+
+create policy "Usuarios gestionan sus propios guardados"
+    on public.saved_deals
+    for all
+    using (auth.uid() = user_id)
+    with check (auth.uid() = user_id);
+
+create policy "Permitir full access al service role saved_deals"
+    on public.saved_deals
+    using (auth.jwt() ->> 'role' = 'service_role');
+
+-- =====================================================================
+-- MIGRACIONES SQL RECOMENDADAS PARA BASES DE DATOS EXISTENTES
+-- =====================================================================
+-- ALTER TABLE public.flight_deals ADD COLUMN IF NOT EXISTS pasajeros int NOT NULL DEFAULT 1;
+-- ALTER TABLE public.flight_deals ADD COLUMN IF NOT EXISTS precio_por_pasajero_usd numeric(10,2);

@@ -573,6 +573,25 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
             const stored = JSON.parse(localStorage.getItem(savedStorageKey) || '[]');
             savedFlights = new Set(Array.isArray(stored) ? stored.filter((id: unknown) => typeof id === 'string').slice(-500) : []);
           } catch { savedFlights = new Set(); }
+
+          // Cargar guardados permanentes de Supabase
+          try {
+            const { data: dbSaved } = await supabase
+              .from('saved_deals')
+              .select('*')
+              .eq('user_id', session.user.id)
+              .order('guardado_el', { ascending: false });
+            if (dbSaved && dbSaved.length > 0) {
+              persistedSavedDeals = dbSaved;
+              dbSaved.forEach((s: any) => {
+                if (s.flight_deal_id) savedFlights.add(String(s.flight_deal_id));
+                savedFlights.add(String(s.id));
+              });
+            }
+          } catch (e) {
+            console.warn('Error leyendo saved_deals de Supabase:', e);
+          }
+
           // Actualizar UI para usuario logueado
           const loginBtn = document.getElementById('nav-login-btn');
           if (loginBtn) loginBtn.style.display = 'none';
@@ -681,25 +700,61 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         }, 4000);
       };
 
-      // Bookmarks are scoped to the signed-in user and this browser.
+      // Bookmarks are synced to the signed-in user in Supabase and cached locally.
       let savedFlights = new Set<string>();
+      let persistedSavedDeals: any[] = [];
       let savedStorageKey = '';
       let radarPreferenceUserId = '';
       let feedFilter = 'all';
+
       const applySavedFilter = () => {
         const grid = document.getElementById('destinations-grid');
         if (!grid) return;
         grid.querySelector('.saved-empty')?.remove();
+        grid.querySelectorAll('.extra-saved-card')?.remove();
         let visible = 0;
-        grid.querySelectorAll<HTMLElement>('.flight-item').forEach(card => {
-          card.hidden = feedFilter === 'saved' && !savedFlights.has(card.dataset.flightId || '');
-          if (!card.hidden) visible++;
+
+        grid.querySelectorAll<HTMLElement>('.flight-item:not(.extra-saved-card)').forEach(card => {
+          const isSaved = savedFlights.has(card.dataset.flightId || '');
+          card.hidden = feedFilter === 'saved' && !isSaved;
+          if (feedFilter === 'saved') {
+            if (isSaved) visible++;
+          } else {
+            if (!card.hidden) visible++;
+          }
         });
+
         grid.querySelectorAll<HTMLElement>(':scope > :not(.flight-item)').forEach(el => { el.hidden = feedFilter === 'saved'; });
+
+        // Si el filtro es 'saved', renderizar también los vuelos guardados que ya no están en el feed de las últimas 24h
+        if (feedFilter === 'saved') {
+          const renderedIds = new Set<string>();
+          grid.querySelectorAll<HTMLElement>('.flight-item').forEach(card => {
+            if (card.dataset.flightId) renderedIds.add(card.dataset.flightId);
+          });
+
+          persistedSavedDeals.forEach(sDeal => {
+            const sid = String(sDeal.flight_deal_id || sDeal.id);
+            if (!renderedIds.has(sid) && !renderedIds.has(String(sDeal.id))) {
+              const temp = document.createElement('div');
+              // @ts-ignore
+              temp.innerHTML = renderCompactFlight(sDeal, window.currentActiveAlert, false, sDeal.destino, true);
+              const card = temp.firstElementChild as HTMLElement;
+              if (card) {
+                card.classList.add('extra-saved-card');
+                grid.appendChild(card);
+                renderedIds.add(sid);
+                renderedIds.add(String(sDeal.id));
+                visible++;
+              }
+            }
+          });
+        }
+
         if (feedFilter === 'saved' && !visible) {
           const empty = document.createElement('p');
           empty.className = 'feed-empty saved-empty';
-          empty.textContent = 'No tenés vuelos guardados vigentes en esta búsqueda. Tocá el marcador de una oferta para tenerla a mano.';
+          empty.textContent = 'No tenés vuelos guardados. Tocá el marcador de una oferta para tenerla a mano siempre.';
           grid.append(empty);
         }
         const note = document.getElementById('saved-note');
@@ -708,30 +763,82 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
           btn.setAttribute('aria-pressed', String(btn.dataset.feedFilter === feedFilter));
         });
       };
+
       document.querySelectorAll<HTMLButtonElement>('[data-feed-filter]').forEach(btn => {
         btn.addEventListener('click', () => { feedFilter = btn.dataset.feedFilter || 'all'; applySavedFilter(); });
       });
-      document.getElementById('destinations-grid')?.addEventListener('click', event => {
+
+      document.getElementById('destinations-grid')?.addEventListener('click', async event => {
         const button = (event.target as Element).closest<HTMLButtonElement>('[data-save-id]');
-        if (!button || !savedStorageKey) return;
+        if (!button) return;
         const id = button.dataset.saveId!;
         const next = new Set(savedFlights);
         const saving = !next.has(id);
         if (saving) next.add(id); else next.delete(id);
-        try {
-          localStorage.setItem(savedStorageKey, JSON.stringify([...next].slice(-500)));
-          savedFlights = next;
-          button.setAttribute('aria-pressed', String(saving));
-          button.setAttribute('aria-label', saving ? 'Quitar de guardados' : 'Guardar vuelo');
-          button.title = saving ? 'Quitar de guardados' : 'Guardar en este navegador';
-          const icon = button.querySelector('i');
-          if (icon) icon.className = saving ? 'ph-fill ph-bookmark-simple' : 'ph ph-bookmark-simple';
-          showToast(saving ? 'Vuelo guardado en este navegador.' : 'Vuelo quitado de guardados.');
-          applySavedFilter();
-          if (feedFilter === 'saved' && !saving) document.querySelector<HTMLButtonElement>('[data-feed-filter="saved"]')?.focus();
-        } catch {
-          showToast('No pudimos guardar en este navegador. Revisá el almacenamiento disponible.', 'error');
+
+        if (savedStorageKey) {
+          try {
+            localStorage.setItem(savedStorageKey, JSON.stringify([...next].slice(-500)));
+          } catch {}
         }
+        savedFlights = next;
+        button.setAttribute('aria-pressed', String(saving));
+        button.setAttribute('aria-label', saving ? 'Quitar de guardados' : 'Guardar vuelo');
+        button.title = saving ? 'Quitar de guardados' : 'Guardar en tu cuenta';
+        const icon = button.querySelector('i');
+        if (icon) icon.className = saving ? 'ph-fill ph-bookmark-simple' : 'ph ph-bookmark-simple';
+
+        // Sincronizar en Supabase si el usuario tiene sesión activa
+        if (radarPreferenceUserId) {
+          try {
+            if (saving) {
+              // @ts-ignore
+              const allKnown = [...(window.__SERVER_DATA__.approvedDeals || []), ...(window.__SERVER_DATA__.allDeals || []), ...persistedSavedDeals];
+              const target = allKnown.find((d: any) => String(d.id) === id || String(d.flight_deal_id) === id);
+              if (target) {
+                const rawOD = String(target.ida_origen_destino || `${target.origen || 'EZE'}-${target.destino || 'Vuelo'}`);
+                const [orig = 'EZE', dest = 'Vuelo'] = rawOD.split('-').map((s: string) => s.trim());
+                // @ts-ignore
+                const pax = Math.max(1, Number(target.pasajeros || window.currentActiveAlert?.pasajeros) || 1);
+                const total = Number(target.precio_total_usd || 0);
+                const unit = Number(target.precio_por_pasajero_usd) || Math.round(total / pax);
+
+                const { data: savedDb } = await supabase.from('saved_deals').upsert({
+                  user_id: radarPreferenceUserId,
+                  flight_deal_id: target.flight_deal_id || target.id,
+                  origen: orig,
+                  destino: dest,
+                  ida_fecha: target.ida_fecha,
+                  vuelta_fecha: target.vuelta_fecha,
+                  pasajeros: pax,
+                  precio_total_usd: total,
+                  precio_por_pasajero_usd: unit,
+                  aerolinea: target.aerolinea || 'Aerolínea',
+                  cantidad_escalas: Number(target.cantidad_escalas || 0),
+                  fuente: target.fuente || 'google_flights',
+                  link_reserva: target.link_reserva || '',
+                  guardado_el: new Date().toISOString()
+                }, { onConflict: 'user_id,origen,destino,ida_fecha,vuelta_fecha,pasajeros,aerolinea' }).select().single();
+
+                if (savedDb) {
+                  persistedSavedDeals.unshift(savedDb);
+                  savedFlights.add(String(savedDb.id));
+                }
+              }
+            } else {
+              await supabase.from('saved_deals').delete()
+                .eq('user_id', radarPreferenceUserId)
+                .or(`flight_deal_id.eq.${id},id.eq.${id}`);
+              persistedSavedDeals = persistedSavedDeals.filter(s => String(s.id) !== id && String(s.flight_deal_id) !== id);
+            }
+          } catch (dbErr) {
+            console.warn('Error sincronizando con Supabase saved_deals:', dbErr);
+          }
+        }
+
+        showToast(saving ? (radarPreferenceUserId ? 'Vuelo guardado permanentemente en tu cuenta.' : 'Vuelo guardado en este navegador.') : 'Vuelo quitado de guardados.');
+        applySavedFilter();
+        if (feedFilter === 'saved' && !saving) document.querySelector<HTMLButtonElement>('[data-feed-filter="saved"]')?.focus();
       });
       document.getElementById('destinations-grid')?.addEventListener('toggle', event => {
         const opened = event.target;

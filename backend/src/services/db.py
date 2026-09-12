@@ -18,6 +18,8 @@ class FlightDeal(BaseModel):
     vuelta_fecha: str
     vuelta_origen_destino: str
     precio_total_usd: float
+    pasajeros: int = 1
+    precio_por_pasajero_usd: Optional[float] = None
     precio_original: Optional[float] = None
     moneda_original: Optional[str] = None
     precio_ars_tarjeta: Optional[float] = None

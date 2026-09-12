@@ -18,6 +18,8 @@ export interface ScrapedFlightOption {
   stops: number;
   durationText?: string;
   priceTotalUSD: number;       // Precio total consolidado para todos los pasajeros
+  passengers: number;          // Cantidad de pasajeros cotizados
+  pricePerPaxUSD: number;      // Precio unitario por pasajero
   priceRawText?: string;
   bookingUrl: string;
   collectedAt: string;
