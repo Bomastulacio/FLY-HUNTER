@@ -6,6 +6,7 @@ export interface FlightSearchParams {
   passengers: number;          // ej: 2
   maxStops?: number;           // ej: 1
   budgetMaxUSD?: number;       // ej: 2400
+  budgetMinUSD?: number;
   excludedAirlines?: string[]; // ej: ["LEVEL"]
 }
 
@@ -23,6 +24,13 @@ export interface ScrapedFlightOption {
   priceRawText?: string;
   bookingUrl: string;
   collectedAt: string;
+  paymentCondition?: string;
+  evidence?: {
+    priceBasis: 'party_total';
+    passengersVerified: boolean;
+    itineraryScope: 'search_result' | 'roundtrip';
+    stopsPerDirection?: number[];
+  };
 }
 
 export interface AgentEvaluation {

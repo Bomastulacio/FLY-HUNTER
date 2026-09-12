@@ -6,6 +6,13 @@ on:
     - cron: '0 9,21 * * *'
   workflow_dispatch: {} # Permite ejecutar manualmente con un clic desde GitHub Actions
 
+concurrency:
+  group: flight-hunter-scrapers
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
 jobs:
   hunt:
     runs-on: ubuntu-latest
@@ -32,6 +39,18 @@ jobs:
           cd agent
           npx playwright install chromium --with-deps
 
+      - name: Restore search coverage and provider cooldowns
+        uses: actions/cache@v4
+        with:
+          path: agent/.flight-state
+          key: flight-search-v2-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: flight-search-v2-
+
+      - name: Offline collector evals
+        run: |
+          cd agent
+          npm test
+
       - name: Run Flight Hunter Agent in loop
         run: |
           cd agent
@@ -40,7 +59,13 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || secrets.GEMINI_MODEL || 'gemini-3.6-flash' }}
-          SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || secrets.GEMINI_MODEL }}
           HEADLESS: "true"
 
+      - name: Share the exact plan with LangGraph
+        uses: actions/upload-artifact@v4
+        with:
+          name: search-plan
+          path: agent/search-plan.json
+          retention-days: 1
+          if-no-files-found: error

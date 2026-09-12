@@ -52,7 +52,7 @@ def consolidate_and_analyze(flights_data: List[Dict]) -> List[Dict]:
     
     # Limpiar duplicados exactos que pudieron venir de múltiples recolectores
     df = df.drop_duplicates(subset=[
-        'ida_fecha', 'vuelta_fecha', 'ida_origen_destino', 'aerolinea', 'precio_total_usd'
+        'ida_fecha', 'vuelta_fecha', 'ida_origen_destino', 'aerolinea', 'precio_total_usd', 'pasajeros', 'fuente'
     ])
     
     return df.to_dict('records')

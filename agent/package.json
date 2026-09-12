@@ -5,6 +5,9 @@
   "main": "src/index.ts",
   "type": "module",
   "scripts": {
+    "test": "tsx --test tests/flight-search.test.ts",
+    "check": "tsc --noEmit",
+    "plan": "tsx src/index.ts --dry-run",
     "hunt": "tsx src/index.ts",
     "test:google": "tsx src/index.ts --test-google",
     "test:despegar": "tsx src/index.ts --test-despegar",

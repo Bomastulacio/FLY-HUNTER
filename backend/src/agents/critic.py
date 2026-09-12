@@ -26,6 +26,8 @@ MAX_DATE_SHIFT = 3
 ANOMALY_DATE_MARGIN = 1
 LLM_VALUE_MARGIN = 1.25  # Semantic comparison only within 25% of the budget.
 WEEKDAYS = ("lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo")
+_gemini_calls = 0
+_gemini_circuit_open = False
 
 CRITIC_SYSTEM_PROMPT = """
 Eres el planificador de refinamientos de Flight Hunter. Las reglas deterministas
@@ -171,10 +173,11 @@ def _cost(deal: Dict, alert: Dict) -> float:
 
 
 def generate_hash(deal: Dict) -> str:
-    # Preserve the existing deduplication algorithm.
-    raw = (f"{deal.get('ida_fecha', '')}{deal.get('ida_origen_destino', '')}"
-           f"{deal.get('vuelta_fecha', '')}{deal.get('vuelta_origen_destino', '')}"
-           f"{deal.get('aerolinea', '')}{round(_number(deal.get('precio_total_usd', 0)))}")
+    evidence = deal.get('detalle_cotizacion') or {}
+    raw = (f"{deal.get('ida_fecha', '')}_{deal.get('ida_origen_destino', '')}_"
+           f"{deal.get('vuelta_fecha', '')}_{deal.get('vuelta_origen_destino', '')}_"
+           f"{deal.get('aerolinea', '')}_{_number(deal.get('precio_total_usd', 0)):.2f}_"
+           f"{deal.get('pasajeros', 1)}_{deal.get('fuente', '')}_{evidence.get('paymentCondition') or ''}")
     return hashlib.md5(raw.encode("utf-8"), usedforsecurity=False).hexdigest()  # nosec B324
 
 
@@ -185,7 +188,7 @@ def evaluate_deal(deal: Dict, alerts: List[Dict]) -> Dict:
     result.setdefault("notificado", False)
     if not _hard_eligible(deal, alerts):
         return result
-    result["hash_dedupe"] = generate_hash(deal)
+    result["hash_dedupe"] = deal.get("hash_dedupe") or generate_hash(deal)
     pending = False
     for alert in alerts or [{}]:
         try:
@@ -273,16 +276,17 @@ def _calendar_candidates(alert: Dict, current: Dict, visited: List[Dict]) -> Lis
 
 
 def _ask_gemini(context: Dict) -> Optional[RefinementDecision]:
+    global _gemini_calls, _gemini_circuit_open
     key = os.environ.get("GEMINI_API_KEY", "").strip()
-    if not key:
+    if not key or _gemini_calls >= 1 or _gemini_circuit_open:
         return None
+    _gemini_calls += 1
     try:
         from google import genai
 
         with genai.Client(api_key=key, http_options={
             "timeout": 15000,
-            "retry_options": {"attempts": 2, "initial_delay": 1.0, "max_delay": 2.0,
-                              "http_status_codes": [429, 500, 502, 503, 504]},
+            "retry_options": {"attempts": 1},
         }) as client:
             response = client.models.generate_content(
                 model=os.environ.get("GEMINI_MODEL", "").strip() or "gemini-2.5-flash",
@@ -301,6 +305,7 @@ def _ask_gemini(context: Dict) -> Optional[RefinementDecision]:
                 raise ValueError("Action outside authorized calendar candidates")
             return decision
     except Exception as exc:
+        _gemini_circuit_open = True
         # Provider boundary: don't log payloads, keys or response text.
         logger.warning("Gemini critic unavailable or invalid (%s); using calendar fallback", type(exc).__name__)
         return None

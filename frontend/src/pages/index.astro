@@ -152,7 +152,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
 
     <script>
       import { supabase } from '../lib/supabase';
-      import { renderCompactFlight, escapeHtml, usd } from '../utils/compactFlights';
+      import { renderCompactFlight, escapeHtml, usd, matchesRadar } from '../utils/compactFlights';
       import { mountRadarPicker, preferredRadarId } from '../utils/radarPicker';
 
       const formatPrice = (deal: any) => {
@@ -353,10 +353,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         if (cdDest) cdDest.innerText = alert.destino;
 
         // Filtramos TODOS los vuelos para que solo queden los que cumplen con el presupuesto y escalas
-        const affordableDeals = allDeals.filter((d: any) => 
-          d.precio_total_usd <= alert.presupuesto_max && 
-          d.cantidad_escalas <= alert.escalas_max
-        );
+        const affordableDeals = allDeals.filter((d: any) => matchesRadar(d, alert));
         
         // Helper para renderizar la sección completa de Anomalías Pendientes
         const renderAnomaliesHTML = (currentAlert: any) => {
@@ -487,7 +484,8 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
 
         // Vuelos que pertenecen específicamente a este radar
         const radarMatchingDeals = affordableDeals.filter((d: any) =>
-          countriesToRender.some((c: string) => countryCodes[c]?.some(code => d.ida_origen_destino.includes(code)))
+          /^[A-Z]{3}$/.test(targetZone) ? d.ida_origen_destino.split('-')[1] === targetZone :
+          countriesToRender.some((c: string) => countryCodes[c]?.includes(d.ida_origen_destino.split('-')[1]))
         );
 
         // 1. Tarjeta Principal (Mejor vuelo del radar activo)
@@ -504,7 +502,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         } else {
           html += `
             <div class="card main-deal" style="text-align: left; padding: 1.25rem;">
-              <p style="color: var(--text-secondary); margin: 0; font-size: 1rem;">No encontramos vuelos que cumplan con tu presupuesto de ${usd(alert.presupuesto_max)} y filtros actuales para ${escapeHtml(targetZone)}.</p>
+              <p style="color: var(--text-secondary); margin: 0; font-size: 1rem;">Todavía no hay cotizaciones recientes para ${Number(alert.pasajeros)} personas dentro de tus fechas y presupuesto de ${usd(alert.presupuesto_max)}.</p>
             </div>
           `;
         }
@@ -544,10 +542,26 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
           });
         }
 
+        // More than one flight may be useful for the same destination: preserve carrier/date choices.
+        const visibleQuotes = [mainDeal, ...countriesWithDeals.map(item => item.deal)].filter(Boolean);
+        const itineraryKey = (d: any) => [d.ida_origen_destino, d.ida_fecha, d.vuelta_fecha, d.pasajeros, d.aerolinea, d.cantidad_escalas].join('|');
+        const shownItineraries = new Set(visibleQuotes.map(itineraryKey));
+        const extraQuotes = radarMatchingDeals.filter((d: any) => {
+          const key = itineraryKey(d);
+          if (shownItineraries.has(key)) return false;
+          shownItineraries.add(key);
+          return true;
+        });
+        const availableSlots = Math.max(0, 8 - visibleQuotes.length);
+        const extras = extraQuotes.slice(0, availableSlots);
+        const arQuote = extraQuotes.find((d: any) => /aerol[ií]neas argentinas/i.test(d.aerolinea || ''));
+        if (arQuote && availableSlots && !extras.includes(arQuote)) extras.splice(availableSlots - 1, 1, arQuote);
+        for (const deal of extras) html += renderFlightCard(deal, alert);
+
         if (countriesSearching.length > 0) {
           html += countriesSearching.map(({ country }) => `<article class="destination-waiting">
             <span class="waiting-icon"><i class="ph ph-globe-hemisphere-west" aria-hidden="true"></i></span>
-            <div><h2>${escapeHtml(country)}</h2><p>Sin ofertas en tus filtros</p></div>
+            <div><h2>${escapeHtml(country)}</h2><p>Sin cotizaciones recientes en tus filtros</p></div>
             <a href="/alertas?radar=${encodeURIComponent(alert.id)}" aria-label="Ajustar búsqueda para ${escapeHtml(country)}"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i></a>
             <span class="waiting-next"><i class="ph ph-clock" aria-hidden="true"></i> Se revisa en la próxima búsqueda</span>
           </article>`).join('');
@@ -783,6 +797,9 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         const button = (event.target as Element).closest<HTMLButtonElement>('[data-save-id]');
         if (!button) return;
         const id = button.dataset.saveId!;
+        if (button.disabled) return;
+        button.disabled = true;
+        const previousSaved = new Set(savedFlights);
         const next = new Set(savedFlights);
         const saving = !next.has(id);
         if (saving) next.add(id); else next.delete(id);
@@ -806,6 +823,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
               // @ts-ignore
               const allKnown = [...(window.__SERVER_DATA__.approvedDeals || []), ...(window.__SERVER_DATA__.allDeals || []), ...persistedSavedDeals];
               const target = allKnown.find((d: any) => String(d.id) === id || String(d.flight_deal_id) === id);
+              if (!target) throw new Error('No se encontró la cotización a guardar');
               if (target) {
                 const rawOD = String(target.ida_origen_destino || `${target.origen || 'EZE'}-${target.destino || 'Vuelo'}`);
                 const [orig = 'EZE', dest = 'Vuelo'] = rawOD.split('-').map((s: string) => s.trim());
@@ -814,7 +832,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
                 const total = Number(target.precio_total_usd || 0);
                 const unit = Number(target.precio_por_pasajero_usd) || Math.round(total / pax);
 
-                const { data: savedDb } = await supabase.from('saved_deals').upsert({
+                const { data: savedDb, error: saveError } = await supabase.from('saved_deals').upsert({
                   user_id: radarPreferenceUserId,
                   flight_deal_id: target.flight_deal_id || target.id,
                   origen: orig,
@@ -828,8 +846,10 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
                   cantidad_escalas: Number(target.cantidad_escalas || 0),
                   fuente: target.fuente || 'google_flights',
                   link_reserva: target.link_reserva || '',
+                  detalle_cotizacion: target.detalle_cotizacion || null,
                   guardado_el: new Date().toISOString()
                 }, { onConflict: 'user_id,origen,destino,ida_fecha,vuelta_fecha,pasajeros,aerolinea' }).select().single();
+                if (saveError) throw saveError;
 
                 if (savedDb) {
                   persistedSavedDeals.unshift(savedDb);
@@ -837,16 +857,30 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
                 }
               }
             } else {
-              await supabase.from('saved_deals').delete()
+              const { error: deleteError } = await supabase.from('saved_deals').delete()
                 .eq('user_id', radarPreferenceUserId)
                 .or(`flight_deal_id.eq.${id},id.eq.${id}`);
+              if (deleteError) throw deleteError;
               persistedSavedDeals = persistedSavedDeals.filter(s => String(s.id) !== id && String(s.flight_deal_id) !== id);
             }
           } catch (dbErr) {
             console.warn('Error sincronizando con Supabase saved_deals:', dbErr);
+            savedFlights = previousSaved;
+            if (savedStorageKey) {
+              try { localStorage.setItem(savedStorageKey, JSON.stringify([...savedFlights].slice(-500))); } catch {}
+            }
+            button.disabled = false;
+            button.setAttribute('aria-pressed', String(!saving));
+            button.setAttribute('aria-label', !saving ? 'Quitar de guardados' : 'Guardar vuelo');
+            button.title = !saving ? 'Quitar de guardados' : 'Guardar en tu cuenta';
+            if (icon) icon.className = !saving ? 'ph-fill ph-bookmark-simple' : 'ph ph-bookmark-simple';
+            applySavedFilter();
+            showToast('No se pudo sincronizar el vuelo con tu cuenta. Intentá de nuevo.');
+            return;
           }
         }
 
+        button.disabled = false;
         showToast(saving ? (radarPreferenceUserId ? 'Vuelo guardado permanentemente en tu cuenta.' : 'Vuelo guardado en este navegador.') : 'Vuelo quitado de guardados.');
         applySavedFilter();
         if (feedFilter === 'saved' && !saving) document.querySelector<HTMLButtonElement>('[data-feed-filter="saved"]')?.focus();

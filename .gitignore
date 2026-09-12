@@ -65,6 +65,9 @@ Thumbs.db
 
 # Caché local
 .cache_vuelos/
+.flight-state/
+agent/search-plan.json
+run-plan/
 
 # Videos
 *.mp4

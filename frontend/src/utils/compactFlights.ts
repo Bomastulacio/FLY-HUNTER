@@ -26,6 +26,24 @@ const cities: Record<string, string> = {
   MIA: 'Miami', JFK: 'Nueva York', GRU: 'San Pablo', GIG: 'Río de Janeiro',
 };
 
+/** A total quoted for one adult must never be compared with a two-adult radar. */
+export function matchesRadar(deal: any, radar: any): boolean {
+  const [origin] = String(deal.ida_origen_destino || '').split('-');
+  const origins = String(radar.origen || '').split(/[,/]/).map(s => s.trim());
+  const normalize = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+  const excluded = Array.isArray(radar.aerolineas_excluidas) ? radar.aerolineas_excluidas : [];
+  const stops = deal.cantidad_escalas;
+  return origins.includes(origin) && Number(deal.pasajeros) === Number(radar.pasajeros)
+    && stops != null && Number.isInteger(Number(stops)) && Number(stops) >= 0 && Number(stops) <= Math.min(1, Number(radar.escalas_max ?? 1))
+    && Number(deal.precio_total_usd) > 0 && Number(deal.precio_total_usd) <= Number(radar.presupuesto_max)
+    && (Number(deal.precio_total_usd) < 750 * Number(radar.pasajeros) || Number(deal.precio_total_usd) >= Number(radar.presupuesto_min || 0))
+    && !excluded.some((a: string) => a.trim() && normalize(String(deal.aerolinea || '')).includes(normalize(a)))
+    && (!radar.fecha_ida_min || deal.ida_fecha >= radar.fecha_ida_min)
+    && (!(radar.fecha_ida_max || radar.fecha_ida_min) || deal.ida_fecha <= (radar.fecha_ida_max || radar.fecha_ida_min))
+    && (!radar.fecha_vuelta_min || deal.vuelta_fecha >= radar.fecha_vuelta_min)
+    && (!(radar.fecha_vuelta_max || radar.fecha_vuelta_min) || deal.vuelta_fecha <= (radar.fecha_vuelta_max || radar.fecha_vuelta_min));
+}
+
 export function renderCompactFlight(deal: any, alert: any, featured = false, country = '', saved = false) {
   const e = escapeHtml;
   const rawOD = String(deal.ida_origen_destino || `${deal.origen || 'EZE'}-${deal.destino || 'Vuelo'}`);
@@ -36,7 +54,8 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
   const pax = `${passengers} adulto${passengers === 1 ? '' : 's'}`;
   const unitPrice = passengers > 1 ? (Number(deal.precio_por_pasajero_usd) || Math.round(Number(deal.precio_total_usd) / passengers)) : null;
   const stops = Number(deal.cantidad_escalas);
-  const stopText = Number.isFinite(stops) ? (stops === 0 ? 'Directo' : `${stops} escala${stops === 1 ? '' : 's'}`) : 'Escalas por confirmar';
+  const stopText = deal.cantidad_escalas != null && Number.isFinite(stops) ?
+    `${deal.detalle_cotizacion?.itineraryScope === 'search_result' ? 'Ida: ' : ''}${stops === 0 ? 'Directo' : `${stops} escala${stops === 1 ? '' : 's'}`}` : 'Escalas por confirmar';
   const gold = Boolean(deal.es_oportunidad_oro);
   const isSavedSnapshot = Boolean(deal.guardado_el);
   const query = `Flights from ${origin} to ${destination} on ${deal.ida_fecha} through ${deal.vuelta_fecha} for ${searchPassengers} adults`;
@@ -52,7 +71,7 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
       }
     } catch { /* Fall back to a passenger-aware search. */ }
   }
-  const dateToFormat = deal.guardado_el || deal.created_at;
+  const dateToFormat = deal.detalle_cotizacion?.observedAt || deal.created_at || deal.guardado_el;
   const updated = dateToFormat ? new Date(dateToFormat) : null;
   const observation = updated && !Number.isNaN(updated.getTime())
     ? new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(updated)
@@ -88,11 +107,13 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
           <div><dt>Vuelta</dt><dd>${e(deal.vuelta_origen_destino || `${destination}-${origin}`)}<small>${e(flightDate(deal.vuelta_fecha, true))}</small></dd></div>
         </dl>
         <a class="flight-book" href="${e(bookingUrl)}" target="_blank" rel="noopener noreferrer">Ver en ${provider}<i class="ph ph-arrow-up-right" aria-hidden="true"></i><span class="sr-only"> (abre otra pestaña)</span></a>
-        <p class="flight-freshness">${isSavedSnapshot ? 'Guardado el' : 'Consulta'}: ${e(observation)}. Confirmá precio y equipaje al abrir.</p>
+        ${deal.detalle_cotizacion?.paymentCondition ? `<p class="flight-freshness"><strong>${e(deal.detalle_cotizacion.paymentCondition)}</strong></p>` : ''}
+        <p class="flight-freshness">Consulta: ${e(observation)}. Confirmá precio, horarios y equipaje al abrir.</p>
         <details class="flight-explanation">
           <summary>Sobre esta oferta</summary>
           <p>${isSavedSnapshot ? `Cotización guardada por vos a ${e(usd(deal.precio_total_usd))} para ${e(pax)}.` : (gold ? 'El radar la clasificó como Oportunidad de Oro.' : 'Oferta aprobada por el radar.')} Total registrado: ${e(usd(deal.precio_total_usd))}.</p>
           <p>${e(stopText)} · ${e(pax)}${alert?.presupuesto_max ? `. El presupuesto de tu búsqueda es ${e(usd(alert.presupuesto_max))}.` : '.'}</p>
+          ${deal.detalle_cotizacion?.itineraryScope === 'search_result' ? '<p>Precio observado en la búsqueda de ida y vuelta. Revisá los tramos de regreso antes de reservar.</p>' : ''}
         </details>
         ${alert?.id ? `<a class="flight-edit" href="/alertas?radar=${encodeURIComponent(alert.id)}"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i> Cambiar fechas o filtros</a>` : ''}
       </div>

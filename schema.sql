@@ -23,6 +23,7 @@ create table public.flight_deals (
     notificado boolean not null default false, -- evita reenviar el mismo mail
     fuente text, -- 'amadeus' | 'fli' | 'google_flights' | 'despegar' | 'serpapi'
     link_reserva text,
+    detalle_cotizacion jsonb, -- base del precio, condiciones de pago y evidencia observada
     es_feriado_origen boolean not null default false,
     es_feriado_destino boolean not null default false,
     hash_dedupe text unique -- md5(ida_fecha || ida_od || vuelta_fecha || vuelta_od || aerolinea || round(precio) || pasajeros)
@@ -129,6 +130,7 @@ create table if not exists public.saved_deals (
     link_reserva text,
     creado_en timestamptz not null default now(),
     guardado_el timestamptz not null default now(),
+    detalle_cotizacion jsonb,
     unique(user_id, origen, destino, ida_fecha, vuelta_fecha, pasajeros, aerolinea)
 );
 

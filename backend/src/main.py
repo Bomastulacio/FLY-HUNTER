@@ -20,7 +20,7 @@ def main():
     }
     
     # Ejecutar el grafo
-    for event in graph.stream(initial_state):
+    for event in graph.stream(initial_state, {"recursion_limit": 120}):
         for k, v in event.items():
             print(f"--- Completado nodo: {k} ---")
             

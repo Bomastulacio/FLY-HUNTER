@@ -1,13 +1,13 @@
 from typing import TypedDict, List, Dict, Any, Optional
 from langgraph.graph import StateGraph, END
 import datetime
-from .agents.strategist import define_daily_mission, GEO_MAP
+from .agents.strategist import define_daily_mission
 from .agents.collectors import collect_dynamic_flights, collect_flights_for_search
 from .agents.sanitizer import sanitize_flights
 from .agents.analyst import consolidate_and_analyze
 from .agents.critic import evaluate_with_llm_critic, filter_and_evaluate
 from .agents.data_scientist import data_scientist_analysis
-from .services.db import upsert_deals, FlightDeal, mark_as_notified, get_active_search_alerts
+from .services.db import upsert_deals, FlightDeal, mark_as_notified
 from .services.notifications import notify_golden_opportunity, notify_anomaly, notify_glitch_fare
 
 class GraphState(TypedDict, total=False):
@@ -33,24 +33,29 @@ def strategist_node(state: GraphState) -> GraphState:
     print("=======================================================")
     mission = define_daily_mission()
     alerts = mission.get("alerts_context", [])
-    if not alerts:
-        alerts = get_active_search_alerts()
         
     state["mission"] = mission
-    state["alerts_queue"] = list(alerts)
+    by_id = {str(a.get("id")): a for a in alerts}
+    state["alerts_queue"] = [
+        {"alert": by_id[str(s.get("alert_id"))], "search": dict(s)}
+        for s in mission.get("searches", []) if str(s.get("alert_id")) in by_id
+    ]
+    if mission.get("use_mock"):
+        state["alerts_queue"] = [{"alert": {}, "search": None}]
     state["all_evaluated_deals"] = []
     state["max_iterations"] = 2  # Límite estricto de loops de refinamiento por alerta para cuidar cuota
     print(f"📋 Alertas activas encoladas en el grafo: {len(state['alerts_queue'])}")
     return state
 
 def pick_alert_node(state: GraphState) -> GraphState:
-    queue = state.get("alerts_queue", [])
+    queue = list(state.get("alerts_queue", []))
     if not queue:
         state["current_alert"] = None
         state["current_search"] = None
         return state
 
-    current_alert = queue.pop(0)
+    job = queue.pop(0)
+    current_alert = job['alert']
     state["alerts_queue"] = queue
     state["current_alert"] = current_alert
     state["iteration_count"] = 0
@@ -63,32 +68,7 @@ def pick_alert_node(state: GraphState) -> GraphState:
     state["retained_deals"] = []
     state["searched_date_pairs"] = []
 
-    # Construir búsqueda inicial
-    origen_raw = current_alert.get("origen", "EZE")
-    origen = "EZE" if "EZE" in origen_raw else origen_raw
-    dest = current_alert.get("destino", "MAD")
-    
-    # Mapeo a IATA si es nombre de país o zona
-    if dest in GEO_MAP:
-        dest = GEO_MAP[dest][0]
-        
-    today = datetime.date.today()
-    default_dep = (today + datetime.timedelta(days=60)).strftime("%Y-%m-%d")
-    default_ret = (today + datetime.timedelta(days=75)).strftime("%Y-%m-%d")
-    
-    dep_date = current_alert.get("fecha_ida_min") or default_dep
-    ret_date = current_alert.get("fecha_vuelta_min") or default_ret
-    passengers = max(1, int(current_alert.get("pasajeros", 1) or 1))
-    
-    state["current_search"] = {
-        "origin": origen,
-        "dest": dest,
-        "dep_date": dep_date,
-        "ret_date": ret_date,
-        "passengers": passengers
-    }
-    
-    print(f"\n🎯 [Grafo Cíclico: Alerta Seleccionada] {origen} -> {dest} ({dep_date} al {ret_date}) [{passengers} pax]")
+    state["current_search"] = job["search"]
     return state
 
 def supervisor_node(state: GraphState) -> GraphState:
@@ -102,9 +82,8 @@ def supervisor_node(state: GraphState) -> GraphState:
         
     current_search = state.get("current_search")
     if current_search:
-        # En iteración 0 intenta usar la caché fresca de Supabase ($0 cuota).
-        # En iteraciones posteriores (refinamiento) consulta SerpApi fresco.
-        check_cache = (iteration == 0)
+        # Refinements also reuse exact cached quotes before spending another credit.
+        check_cache = True
         flights = collect_flights_for_search(current_search, check_cache_first=check_cache)
     else:
         flights = collect_dynamic_flights(mission)
@@ -216,10 +195,10 @@ def persistence_and_notify_node(state: GraphState) -> GraphState:
             print(f"Error parsing deal to Pydantic: {e}")
             
     # Upsert a Supabase
-    upsert_deals(db_deals)
+    stored_deals = upsert_deals(db_deals)
     
     # Notificaciones automáticas
-    for d in deals:
+    for d in stored_deals:
         if d.get("es_tarifa_error") and not d.get("notificado"):
             notify_glitch_fare(d)
             mark_as_notified(d['hash_dedupe'])
@@ -238,7 +217,8 @@ def persistence_and_notify_node(state: GraphState) -> GraphState:
 def data_scientist_node(state: GraphState) -> GraphState:
     all_deals = state.get("all_evaluated_deals", [])
     print(f"\n📈 [Data Scientist Node]: Ejecutando ML y tendencias para {len(all_deals)} vuelos totales...")
-    data_scientist_analysis(all_deals)
+    if all_deals:
+        data_scientist_analysis(all_deals)
     return state
 
 # =======================================================
@@ -253,7 +233,7 @@ def route_after_critic(state: GraphState) -> str:
 
 def route_after_persist(state: GraphState) -> str:
     """Loop 2: Procesamiento iterativo de todas las alertas activas"""
-    queue = state.get("alerts_queue", [])
+    queue = list(state.get("alerts_queue", []))
     if queue and len(queue) > 0:
         print(f"🔁 [LangGraph Edge]: Quedan {len(queue)} alertas en la cola. Continuando loop...")
         return "pick_alert"
@@ -285,7 +265,8 @@ def build_graph() -> StateGraph:
     # Definir Edges y Ciclos
     builder.set_entry_point("strategist")
     builder.add_edge("strategist", "pick_alert")
-    builder.add_edge("pick_alert", "supervisor")
+    builder.add_conditional_edges("pick_alert", lambda s: "supervisor" if s.get("current_alert") is not None else "data_scientist",
+                                  {"supervisor": "supervisor", "data_scientist": "data_scientist"})
     builder.add_edge("supervisor", "sanitizer")
     builder.add_edge("sanitizer", "analyst")
     builder.add_edge("analyst", "critic")

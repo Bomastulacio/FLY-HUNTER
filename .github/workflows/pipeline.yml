@@ -1,9 +1,6 @@
 name: flight-hunter-pipeline
 
 on:
-  schedule:
-    # Sincronizado con el radar web (15 min después del agente a las 09:15 y 21:15 UTC)
-    - cron: '15 9,21 * * *'
   workflow_run:
     workflows: ["flight-hunter-agent"]
     types:
@@ -12,9 +9,18 @@ on:
     types: [resume-after-approval]
   workflow_dispatch: {}
 
+concurrency:
+  group: flight-hunter-pipeline
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Check out repository
@@ -24,6 +30,22 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: Restore quota ledger and quote cache
+        uses: actions/cache@v4
+        with:
+          path: backend/.cache_vuelos
+          key: flight-quota-v2-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: flight-quota-v2-
+
+      - name: Download the scraper plan
+        if: github.event_name == 'workflow_run'
+        uses: actions/download-artifact@v4
+        with:
+          name: search-plan
+          path: run-plan
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
           
       - name: Install dependencies
         run: |
@@ -33,6 +55,7 @@ jobs:
       - name: Run Critic Evals
         run: |
           python -B evals/test_critic_decisions.py
+          python -B evals/test_search_orchestration.py
 
       - name: Run LangGraph pipeline
         run: |
@@ -45,3 +68,8 @@ jobs:
           ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
           SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          FLIGHT_SEARCH_PLAN_PATH: ${{ github.event_name == 'workflow_run' && '../run-plan/search-plan.json' || '' }}
+          SERPAPI_ENABLED: ${{ github.event_name != 'repository_dispatch' && 'true' || 'false' }}
+          SERPAPI_MAX_PER_RUN: '2'
+          SERPAPI_MAX_PER_DAY: '4'
+          SERPAPI_MAX_PER_CYCLE: '220'

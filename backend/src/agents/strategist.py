@@ -71,117 +71,81 @@ MOCK_FLIGHTS = [
 ]
 
 def define_daily_mission() -> Dict[str, Any]:
-    """
-    Estratega: Lee las alertas de los usuarios, mapea los destinos, 
-    elimina duplicados y devuelve las búsquedas optimizadas respetando la cuota.
-    """
-    if os.environ.get("TEST_MODE", "").lower() == "true":
-        print("--- ESTRATEGA: MODO TEST ACTIVADO. Usando datos Mock ---")
-        return {
-            "use_mock": True,
-            "mock_data": MOCK_FLIGHTS,
-            "searches": []
-        }
-        
-    print("--- ESTRATEGA: Analizando alertas de usuarios ---")
+    """Reuse the scraper's exact plan, or rotate a bounded deterministic plan."""
+    import json
+    import re
+    from pathlib import Path
+    from .collectors import flight_cache
+    if os.environ.get('TEST_MODE', '').lower() == 'true':
+        return {'use_mock': True, 'mock_data': MOCK_FLIGHTS, 'searches': [], 'alerts_context': []}
     alerts = get_active_search_alerts()
-    
-    # Defaults dinámicos a futuro en caso de que no haya fechas definidas (+60 y +75 días)
-    today = datetime.date.today()
-    default_dep = (today + datetime.timedelta(days=60)).strftime("%Y-%m-%d")
-    default_ret = (today + datetime.timedelta(days=75)).strftime("%Y-%m-%d")
-    
     if not alerts:
-        print("No hay alertas activas o hubo un error. Usando misión de fallback por defecto (Europa).")
-        alerts = [
-            {
-                "origen": "EZE",
-                "destino": "Europa",
-                "paises": ["España", "Francia", "Reino Unido", "Alemania"],
-                "fecha_ida_min": default_dep,
-                "fecha_vuelta_min": default_ret,
-                "pasajeros": 2
-            }
-        ]
-        
-    unique_searches = set()
-    
-    for alert in alerts:
-        # Obtener origen (Si es EZE,AEP tomamos EZE como primario para Google Flights)
-        origen_raw = alert.get("origen", "EZE")
-        origen = "EZE" if "EZE" in origen_raw else origen_raw
-        pasajeros = int(alert.get("pasajeros", 1) or 1)
-        
-        # Mapeo de Destino principal o Países
-        paises_interes = alert.get("paises", [])
-        destino_principal = alert.get("destino", "Europa")
-        
-        # Fechas
-        dep_date_min_str = alert.get("fecha_ida_min") or default_dep
-        dep_date_max_str = alert.get("fecha_ida_max") or dep_date_min_str
-        ret_date_min_str = alert.get("fecha_vuelta_min") or default_ret
-        ret_date_max_str = alert.get("fecha_vuelta_max") or ret_date_min_str
-        
-        # Generar lista de fechas
-        def get_date_range(start_str, end_str):
-            start = datetime.datetime.strptime(start_str, "%Y-%m-%d").date()
-            end = datetime.datetime.strptime(end_str, "%Y-%m-%d").date()
-            if end < start: end = start
-            return [start + datetime.timedelta(days=x) for x in range((end - start).days + 1)]
-            
+        return {'searches': [], 'alerts_context': [], 'use_mock': False}
+    artifact = os.environ.get('FLIGHT_SEARCH_PLAN_PATH')
+    if artifact:
+        # Missing/malformed artifact is an error, never permission to spend on another plan.
+        data = json.loads(Path(artifact).read_text(encoding='utf-8'))
+        if data.get('version') != 1 or not isinstance(data.get('searches'), list):
+            raise ValueError('Invalid search plan artifact')
+        active = {str(a['id']): a for a in alerts}
+        searches, seen = [], set()
+        for s in data['searches']:
+            alert = active.get(str(s.get('alert_id')))
+            if not alert:
+                continue
+            # Revalidate against the current alert; a user may have edited it since scraping.
+            origins = [v.strip() for v in re.split(r'[,/]', alert['origen'])]
+            targets = set()
+            countries = alert.get('paises') or [alert.get('destino')]
+            if 'Cualquiera' in countries:
+                countries = [alert.get('destino')]
+            for country in countries:
+                targets.update(GEO_MAP.get(country, [country]))
+            if (s.get('origin') not in origins or s.get('dest') not in targets
+                    or s.get('passengers') != int(alert.get('pasajeros') or 1)
+                    or not (alert['fecha_ida_min'] <= s.get('dep_date', '') <= (alert.get('fecha_ida_max') or alert['fecha_ida_min']))
+                    or not (alert['fecha_vuelta_min'] <= s.get('ret_date', '') <= (alert.get('fecha_vuelta_max') or alert['fecha_vuelta_min']))):
+                continue
+            key = tuple(s.get(k) for k in ('alert_id', 'origin', 'dest', 'dep_date', 'ret_date', 'passengers'))
+            if key not in seen:
+                seen.add(key)
+                searches.append(s)
+        return {'use_mock': False, 'searches': searches, 'alerts_context': alerts}
+
+    candidates = []
+    for alert in sorted(alerts, key=lambda a: str(a.get('id', ''))):
         try:
-            dep_dates = get_date_range(dep_date_min_str, dep_date_max_str)
-            ret_dates = get_date_range(ret_date_min_str, ret_date_max_str)
-        except Exception as e:
-            print(f"Error parseando fechas para alerta {alert.get('id')}: {e}")
-            dep_dates = [datetime.datetime.strptime(default_dep, "%Y-%m-%d").date()]
-            ret_dates = [datetime.datetime.strptime(default_ret, "%Y-%m-%d").date()]
-        
-        # Determinar a qué códigos IATA corresponde
-        targets = set()
-        
-        if paises_interes and paises_interes[0] != "Cualquiera":
-            for pais in paises_interes:
-                targets.update(GEO_MAP.get(pais, [pais])) # Si no está en el mapa, asume que es IATA válido
-        else:
-            targets.update(GEO_MAP.get(destino_principal, [destino_principal]))
-            
-        # Añadir al set de búsquedas (De-duplicación conservando cantidad de pasajeros)
-        for t in targets:
-            for d_date in dep_dates:
-                for r_date in ret_dates:
-                    if r_date > d_date: # Solo viajes lógicos donde la vuelta es después de la ida
-                        unique_searches.add((origen, t, d_date.strftime("%Y-%m-%d"), r_date.strftime("%Y-%m-%d"), pasajeros))
-            
-    # Convertir a lista de diccionarios
-    all_searches = [
-        {
-            "origin": s[0],
-            "dest": s[1],
-            "dep_date": s[2],
-            "ret_date": s[3],
-            "passengers": s[4]
-        } 
-        for s in unique_searches
-    ]
-    
-    # LÓGICA DE CUOTA: 250 búsquedas al mes.
-    # Asumiendo que el cron corre 2 veces al día = 60 ejecuciones al mes.
-    # 250 / 60 = 4.16 búsquedas por ejecución.
-    MAX_SEARCHES = 4
-    
-    # Ordenamiento por proximidad de fecha (opcional). Por ahora, seleccionamos aleatoriamente 
-    # o de manera determinística basada en el día para asegurar cobertura.
-    import secrets
-    # Seleccionamos aleatoriamente usando secrets para cumplir con los estándares de seguridad de Bandit
-    selected_searches = secrets.SystemRandom().sample(all_searches, min(MAX_SEARCHES, len(all_searches)))
-    
-    print(f"--- ESTRATEGA: De {len(all_searches)} búsquedas únicas, se ejecutarán {len(selected_searches)} para cuidar cuota API ---")
-    for s in selected_searches:
-        print(f"  -> {s['origin']} a {s['dest']} ({s['dep_date']} / {s['ret_date']}) [{s['passengers']} pax]")
-        
-    return {
-        "use_mock": False,
-        "searches": selected_searches,
-        "alerts_context": alerts # Enviamos las alertas para que el crítico sepa evaluar los presupuestos
-    }
+            dep_min = datetime.date.fromisoformat(alert['fecha_ida_min'])
+            dep_max = datetime.date.fromisoformat(alert.get('fecha_ida_max') or alert['fecha_ida_min'])
+            ret_min = datetime.date.fromisoformat(alert['fecha_vuelta_min'])
+            ret_max = datetime.date.fromisoformat(alert.get('fecha_vuelta_max') or alert['fecha_vuelta_min'])
+            if not (0 <= (dep_max - dep_min).days <= 366 and 0 <= (ret_max - ret_min).days <= 366):
+                continue
+            targets = set()
+            countries = alert.get('paises') or [alert['destino']]
+            if 'Cualquiera' in countries:
+                countries = [alert['destino']]
+            for country in countries:
+                targets.update(GEO_MAP.get(country, [country]))
+            for di in range((dep_max - dep_min).days + 1):
+                dep = dep_min + datetime.timedelta(days=di)
+                if dep < datetime.date.today():
+                    continue
+                for ri in range((ret_max - ret_min).days + 1):
+                    ret = ret_min + datetime.timedelta(days=ri)
+                    if ret <= dep:
+                        continue
+                    for origin in sorted(set(re.split(r'[,/]', alert['origen']))):
+                        for dest in sorted(targets):
+                            if not re.fullmatch(r'[A-Z]{3}', origin.strip()) or not re.fullmatch(r'[A-Z]{3}', dest):
+                                continue
+                            candidates.append({'alert_id': alert['id'], 'origin': origin.strip(), 'dest': dest,
+                                'dep_date': dep.isoformat(), 'ret_date': ret.isoformat(), 'passengers': int(alert.get('pasajeros') or 1)})
+        except (ValueError, KeyError, TypeError):
+            continue
+    count = min(4, len(candidates))
+    with flight_cache.transact():
+        cursor = flight_cache.get('planner_cursor_v2', 0)
+        searches = [candidates[(cursor + i) % len(candidates)] for i in range(count)]
+        flight_cache.set('planner_cursor_v2', cursor + count)
+    return {'use_mock': False, 'searches': searches, 'alerts_context': alerts}

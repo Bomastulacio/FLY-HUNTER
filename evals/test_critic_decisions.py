@@ -213,6 +213,8 @@ class CriticDecisionEvals(unittest.TestCase):
 
 class StructuredOutputEvals(unittest.TestCase):
     def setUp(self):
+        self.enterContext(patch.object(critic, '_gemini_calls', 0))
+        self.enterContext(patch.object(critic, '_gemini_circuit_open', False))
         self.payload = {
             "needs_refinement": True, "dep_delta": 0, "ret_delta": -1,
             "refinement_reason": "Explorar el sábado; ahorro por comprobar.",
@@ -250,12 +252,19 @@ class StructuredOutputEvals(unittest.TestCase):
                 patch.object(critic.logger, "disabled", True):
             for response_text, finish, valid in cases:
                 with self.subTest(finish=finish, text=response_text):
+                    critic._gemini_calls = 0
+                    critic._gemini_circuit_open = False
                     client.models.generate_content.return_value = SimpleNamespace(
                         text=response_text, candidates=[SimpleNamespace(finish_reason=finish)]
                     )
                     result = critic._ask_gemini(context)
                     self.assertEqual(result is not None, valid)
+                    calls = client.models.generate_content.call_count
+                    self.assertIsNone(critic._ask_gemini(context))
+                    self.assertEqual(client.models.generate_content.call_count, calls)
             client.models.generate_content.side_effect = TimeoutError("offline simulation")
+            critic._gemini_calls = 0
+            critic._gemini_circuit_open = False
             self.assertIsNone(critic._ask_gemini(context))
         config = client.models.generate_content.call_args.kwargs["config"]
         self.assertEqual(config["response_mime_type"], "application/json")

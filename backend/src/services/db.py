@@ -35,12 +35,13 @@ class FlightDeal(BaseModel):
     link_reserva: str = ""
     hash_dedupe: str
     created_at: Optional[str] = None
+    detalle_cotizacion: Optional[dict] = None
 
     model_config = {"extra": "ignore"}
 
-def upsert_deals(deals: List[FlightDeal]) -> None:
+def upsert_deals(deals: List[FlightDeal]) -> List[dict]:
     if not deals:
-        return
+        return []
     client = get_supabase_client()
     
     from datetime import datetime, timezone
@@ -48,16 +49,21 @@ def upsert_deals(deals: List[FlightDeal]) -> None:
     
     data = []
     for deal in deals:
-        deal.created_at = now_iso
+        deal.created_at = deal.created_at or now_iso
         data.append(deal.model_dump(exclude_none=True))
     try:
         # We rely on Supabase unique constraint to avoid duplicates 
         # (on conflict do nothing is the default behavior if we just use insert and catch exception or if we do an upsert ignoring updates)
         # Using upsert to be safe, assuming hash_dedupe is unique.
-        client.table('flight_deals').upsert(data, on_conflict='hash_dedupe').execute()
+        client.table('flight_deals').upsert(data, on_conflict='hash_dedupe', ignore_duplicates=True).execute()
+        for row in data:
+            observation = {k: row[k] for k in ('created_at', 'detalle_cotizacion', 'link_reserva') if k in row}
+            client.table('flight_deals').update(observation).eq('hash_dedupe', row['hash_dedupe']).lt('created_at', row['created_at']).execute()
         print(f"Successfully upserted {len(deals)} deals to Supabase.")
+        # Read persisted state before notifications: an in-memory copy may be out of date.
+        return client.table('flight_deals').select('*').in_('hash_dedupe', [d.hash_dedupe for d in deals]).execute().data
     except Exception as e:
-        print(f"Error upserting deals to Supabase: {e}")
+        raise RuntimeError('Flight persistence failed; notifications halted') from e
 
 def mark_as_notified(hash_dedupe: str) -> None:
     client = get_supabase_client()

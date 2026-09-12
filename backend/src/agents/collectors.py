@@ -1,7 +1,9 @@
 import os
+from datetime import datetime, timezone
 import requests
 from typing import List, Dict, Any
 import diskcache
+from ..services.search_budget import reserve_paid_search
 
 # Inicializar caché en el directorio del proyecto
 cache_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '.cache_vuelos')
@@ -37,17 +39,20 @@ def check_serpapi_quota() -> Dict[str, Any]:
         
     return {"available": False, "searches_left": 0, "reason": "Error al consultar estado"}
 
-@flight_cache.memoize(expire=43200) # Expira en 12 horas
 def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str, adults: int = 1) -> List[Dict]:
     """Busca vuelos usando SerpApi (Google Flights) si hay cuota habilitada"""
-    if not SERPAPI_KEY:
+    cache_key = ('quote_v2', origin, dest, dep_date, ret_date, adults, 'USD')
+    cached = flight_cache.get(cache_key)
+    if cached is not None:
+        return cached
+    if not SERPAPI_KEY or os.environ.get('SERPAPI_ENABLED', 'true').lower() != 'true':
         print("Warning: SERPAPI_KEY no encontrada. Omitiendo búsqueda.")
         return []
         
     # Verificar cuota en vivo antes de disparar la búsqueda paga
     quota = check_serpapi_quota()
-    if not quota.get("available", False):
-        print(f"[SerpApi Guard] 🛡️ Búsqueda omitida para cuidar cuota. Conmutando a modo $0 con Playwright.")
+    if not reserve_paid_search(flight_cache, quota):
+        print("[SerpApi Guard] Búsqueda pospuesta por cuota o presupuesto de llamadas.")
         return []
         
     print(f"Buscando en SerpApi: {origin} -> {dest} ({dep_date} al {ret_date}) para {adults} adultos [Restantes: {quota.get('searches_left')}]")
@@ -61,6 +66,8 @@ def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str, 
         "adults": adults,
         "currency": "USD",
         "type": "1", # Ida y vuelta
+        "sort_by": "2",
+        "stops": "2",  # All airlines, at most one stop; AR is included, not a paid extra query.
         "api_key": SERPAPI_KEY
     }
     
@@ -82,11 +89,12 @@ def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str, 
         search_link = data.get("search_metadata", {}).get("google_flights_url", "https://google.com/travel/flights")
         
         parsed_flights = []
+        observed_at = datetime.now(timezone.utc).isoformat()
         pax = max(1, adults)
         for flight in raw_flights:
             # Obtener aerolinea del primer tramo
             airlines = [leg.get("airline", "Desconocida") for leg in flight.get("flights", [])]
-            airline = airlines[0] if airlines else "Múltiples"
+            airline = ' / '.join(dict.fromkeys(airlines)) if airlines else "Múltiples"
             
             # Obtener escalas
             layovers = flight.get("layovers", [])
@@ -94,6 +102,8 @@ def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str, 
             
             # Precio total devuelto por Google Flights para los pasajeros configurados
             precio_usd = flight.get("price", 0)
+            if flight.get('price_unknown') or not isinstance(precio_usd, (int, float)) or precio_usd <= 0 or stops > 1 or not airlines:
+                continue
             precio_unitario = round(precio_usd / pax, 2) if precio_usd else 0.0
             
             parsed_flights.append({
@@ -110,12 +120,15 @@ def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str, 
                 "cantidad_escalas": stops,
                 "duracion_total_minutos": flight.get("total_duration", 0),
                 "link_reserva": search_link,
-                "fuente": "serpapi"
+                "fuente": "serpapi",
+                "created_at": observed_at,
+                "detalle_cotizacion": {"priceBasis": "party_total", "passengersVerified": True, "itineraryScope": "search_result", "observedAt": observed_at}
             })
             
+        flight_cache.set(cache_key, parsed_flights, expire=21600)
         return parsed_flights
     except Exception as e:
-        print(f"Error fetching from SerpApi: {e}")
+        print(f"Error fetching from SerpApi: {type(e).__name__}")
         return []
 
 def collect_flights_for_search(search: Dict, check_cache_first: bool = True) -> List[Dict]:
@@ -138,7 +151,8 @@ def collect_flights_for_search(search: Dict, check_cache_first: bool = True) -> 
             # Filtrar con coincidencia estricta: ruta, fechas exactas y misma cantidad de pasajeros
             matching = [
                 d for d in (recent or [])
-                if (d.get("ida_origen_destino") == f"{origin}-{dest}" or (origin and origin in d.get("ida_origen_destino", "") and dest and dest in d.get("ida_origen_destino", "")))
+                if d.get("ida_origen_destino") == f"{origin}-{dest}"
+                and d.get("vuelta_origen_destino") == f"{dest}-{origin}"
                 and str(d.get("ida_fecha")) == str(dep_date)
                 and str(d.get("vuelta_fecha")) == str(ret_date)
                 and int(d.get("pasajeros", 1) or 1) == adults
@@ -161,10 +175,14 @@ def collect_flights_for_search(search: Dict, check_cache_first: bool = True) -> 
                         "pasajeros": pax,
                         "precio_por_pasajero_usd": precio_unit,
                         "aerolinea": d.get("aerolinea", "Aerolínea"),
-                        "cantidad_escalas": int(d.get("cantidad_escalas", 0) or 0),
+                        "cantidad_escalas": d.get("cantidad_escalas"),
                         "duracion_total_minutos": int(d.get("duracion_total_minutos", 720) or 720),
                         "link_reserva": d.get("link_reserva", ""),
-                        "fuente": d.get("fuente", "agent_playwright")
+                        "fuente": d.get("fuente", "agent_playwright"),
+                        "hash_dedupe": d.get("hash_dedupe"),
+                        "notificado": d.get("notificado", False),
+                        "created_at": d.get("created_at"),
+                        "detalle_cotizacion": d.get("detalle_cotizacion")
                     })
                 return results
         except Exception as e:
@@ -228,4 +246,3 @@ def collect_dynamic_flights(mission: Dict) -> List[Dict]:
         results.extend(flights)
             
     return results
-

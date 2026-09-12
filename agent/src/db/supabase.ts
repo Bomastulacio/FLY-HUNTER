@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import type { ScrapedFlightOption, AgentEvaluation } from '../types/flight.js';
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 export const supabase = (supabaseUrl && supabaseKey) 
   ? createClient(supabaseUrl, supabaseKey) 
@@ -14,8 +14,7 @@ export async function saveFlightDeal(
   evaluation?: AgentEvaluation
 ) {
   if (!supabase) {
-    console.log(`[DB] ℹ️ Sin conexión Supabase activa. Omitiendo guardado en base de datos.`);
-    return null;
+    throw new Error('Faltan las credenciales de persistencia de Supabase');
   }
 
   try {
@@ -27,7 +26,7 @@ export async function saveFlightDeal(
     const unitPrice = deal.pricePerPaxUSD || Math.round(deal.priceTotalUSD / pax);
 
     // Hash dedupe: md5(ida_fecha || ida_od || vuelta_fecha || vuelta_od || aerolinea || round(precio) || pax)
-    const rawHash = `${deal.departureDate}_${idaOD}_${deal.returnDate}_${vueltaOD}_${deal.airline}_${Math.round(deal.priceTotalUSD)}_${pax}`;
+    const rawHash = `${deal.departureDate}_${idaOD}_${deal.returnDate}_${vueltaOD}_${deal.airline}_${deal.priceTotalUSD.toFixed(2)}_${pax}_${deal.source}_${deal.paymentCondition || ''}`;
     const hashDedupe = crypto.createHash('md5').update(rawHash).digest('hex');
 
     const payload = {
@@ -38,6 +37,8 @@ export async function saveFlightDeal(
       precio_total_usd: deal.priceTotalUSD,
       pasajeros: pax,
       precio_por_pasajero_usd: unitPrice,
+      created_at: deal.collectedAt,
+      detalle_cotizacion: { ...deal.evidence, observedAt: deal.collectedAt, paymentCondition: deal.paymentCondition || null },
       aerolinea: deal.airline,
       cantidad_escalas: deal.stops,
       fuente: deal.source,
@@ -50,40 +51,47 @@ export async function saveFlightDeal(
 
     const { data, error } = await supabase
       .from('flight_deals')
-      .upsert(payload, { onConflict: 'hash_dedupe' })
+      .upsert(payload, { onConflict: 'hash_dedupe', ignoreDuplicates: true })
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error(`[DB] ❌ Error guardando vuelo en Supabase:`, error.message);
-      return null;
+      throw new Error('No se pudo guardar la cotización');
+    }
+
+    if (!data) {
+      // A repeat observation refreshes freshness only; preserve human decisions and notification state.
+      const refreshed = await supabase.from('flight_deals').update({ created_at: deal.collectedAt,
+        detalle_cotizacion: payload.detalle_cotizacion, link_reserva: deal.bookingUrl })
+        .eq('hash_dedupe', hashDedupe).lt('created_at', deal.collectedAt);
+      if (refreshed.error) throw new Error('No se pudo actualizar la observación');
     }
 
     console.log(`[DB] 💾 Vuelo guardado con éxito en Supabase (ID: ${data?.id})`);
     return data;
   } catch (error) {
     console.error(`[DB] ❌ Excepción guardando en Supabase:`, error);
-    return null;
+    throw new Error('Persistencia de vuelos incompleta');
   }
 }
 
 export async function getActiveSearchAlerts(): Promise<any[]> {
-  if (!supabase) return [];
+  if (!supabase) throw new Error('Faltan las credenciales de Supabase');
   try {
     const { data, error } = await supabase
       .from('search_alerts')
       .select('*')
       .eq('activo', true)
-      .order('creado_en', { ascending: false })
-      .limit(5);
+      .order('id', { ascending: true });
 
     if (error) {
       console.warn(`[DB] ⚠️ No se pudieron consultar alertas de Supabase:`, error.message);
-      return [];
+      throw new Error('No se pudieron leer los radares');
     }
     return data || [];
   } catch (err) {
     console.warn(`[DB] ⚠️ Error consultando alertas en Supabase:`, err);
-    return [];
+    throw new Error('No se pudieron leer los radares');
   }
 }

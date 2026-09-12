@@ -11,3 +11,4 @@ requests
 holidays
 pytz
 diskcache
+google-genai
