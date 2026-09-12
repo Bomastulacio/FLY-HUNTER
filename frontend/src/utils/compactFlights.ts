@@ -66,9 +66,12 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
           <span class="flight-destination">${e(city)}</span>
           ${gold || featured ? `<span class="flight-badge">${gold ? 'Oportunidad de Oro' : 'Mejor precio'}</span>` : ''}
         </span>
-        <span class="flight-route-line">${e(origin)} → ${e(destination)} · Ida y vuelta</span>
+        <span class="flight-route-line">${e(country || 'Vuelo internacional')} · Ida y vuelta</span>
+        <span class="ticket-route" aria-label="${e(origin)} a ${e(destination)}">
+          <span>${e(origin)}</span><span class="ticket-route-track"><i class="ph ph-airplane-tilt" aria-hidden="true"></i></span><span>${e(destination)}</span>
+        </span>
         <span class="flight-summary-facts">
-          <span class="flight-dates">${e(flightDate(deal.ida_fecha))} → ${e(flightDate(deal.vuelta_fecha))}</span>
+          <span class="flight-dates"><small>Fechas</small>${e(flightDate(deal.ida_fecha))} — ${e(flightDate(deal.vuelta_fecha))}</span>
           <span class="flight-price">${e(usd(deal.precio_total_usd))}</span>
           <span class="flight-airline">${e(stopText)} · ${e(deal.aerolinea || 'Aerolínea por confirmar')}</span>
           <span class="flight-passengers">Total · ${e(pax)}</span>

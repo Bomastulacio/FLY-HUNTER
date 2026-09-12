@@ -28,11 +28,11 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
   <head>
     <meta charset="utf-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Flight Hunter - Mi Radar</title>
     
     <!-- PWA Config -->
-    <meta name="theme-color" content="#141419" />
+    <meta name="theme-color" content="#101310" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -153,6 +153,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
     <script>
       import { supabase } from '../lib/supabase';
       import { renderCompactFlight, escapeHtml, usd } from '../utils/compactFlights';
+      import { mountRadarPicker, preferredRadarId } from '../utils/radarPicker';
 
       const formatPrice = (deal: any) => {
         const price = deal.precio_original || deal.precio_total_usd;
@@ -533,7 +534,12 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         }
 
         if (countriesSearching.length > 0) {
-          html += `<details class="compact-searching"><summary>${countriesSearching.length} destinos sin ofertas en tus filtros</summary><p>${countriesSearching.map(({ country }) => escapeHtml(country)).join(' · ')}. Volvemos a revisar en la próxima búsqueda.</p></details>`;
+          html += countriesSearching.map(({ country }) => `<article class="destination-waiting">
+            <span class="waiting-icon"><i class="ph ph-globe-hemisphere-west" aria-hidden="true"></i></span>
+            <div><h2>${escapeHtml(country)}</h2><p>Sin ofertas en tus filtros</p></div>
+            <a href="/alertas?radar=${encodeURIComponent(alert.id)}" aria-label="Ajustar búsqueda para ${escapeHtml(country)}"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i></a>
+            <span class="waiting-next"><i class="ph ph-clock" aria-hidden="true"></i> Se revisa en la próxima búsqueda</span>
+          </article>`).join('');
         }
         grid.innerHTML = html;
         applySavedFilter();
@@ -561,6 +567,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         if (loader) loader.style.display = 'none';
 
         if (session) {
+          radarPreferenceUserId = session.user.id;
           savedStorageKey = `fh_saved_flights_v1:${session.user.id}`;
           try {
             const stored = JSON.parse(localStorage.getItem(savedStorageKey) || '[]');
@@ -632,11 +639,13 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
             
           if (alertsList && alertsList.length > 0) {
             userAlerts = alertsList;
-            activeAlertIndex = 0;
+            const requestedId = new URLSearchParams(window.location.search).get('radar');
+            const requestedIndex = userAlerts.findIndex(a => a.id === requestedId);
+            activeAlertIndex = requestedIndex >= 0 ? requestedIndex : Math.max(0, userAlerts.findIndex(a => a.id === preferredRadarId(radarPreferenceUserId)));
             // @ts-ignore
-            window.currentActiveAlert = userAlerts[0];
+            window.currentActiveAlert = userAlerts[activeAlertIndex];
             renderRadarTabs(userAlerts);
-            renderDashboard(userAlerts[0]);
+            renderDashboard(userAlerts[activeAlertIndex]);
           } else {
             // Logueado pero sin alertas
             const empty = document.getElementById('empty-state');
@@ -675,6 +684,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
       // Bookmarks are scoped to the signed-in user and this browser.
       let savedFlights = new Set<string>();
       let savedStorageKey = '';
+      let radarPreferenceUserId = '';
       let feedFilter = 'all';
       const applySavedFilter = () => {
         const grid = document.getElementById('destinations-grid');
@@ -746,21 +756,14 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
 
         tabsNav.style.display = 'flex';
         
-        tabsNav.innerHTML = `<label class="radar-select-label">Tu búsqueda<select class="radar-select" aria-label="Elegir búsqueda"></select></label><a class="radar-manage" href="/alertas"><i class="ph ph-sliders" aria-hidden="true"></i> Mis Alertas</a>`;
-        const select = tabsNav.querySelector('select')!;
-        alerts.forEach((a, idx) => {
-          const option = document.createElement('option');
-          option.value = String(idx);
-          option.textContent = a.nombre || `${a.origen || 'EZE'} → ${a.destino || 'Europa'}`;
-          option.selected = idx === activeAlertIndex;
-          select.append(option);
-        });
-        select.addEventListener('change', () => {
-          activeAlertIndex = Number(select.value);
-          // @ts-ignore
-          window.currentActiveAlert = userAlerts[activeAlertIndex];
-          renderDashboard(userAlerts[activeAlertIndex]);
-        });
+        tabsNav.innerHTML = `<div class="home-radar-picker"></div><a class="radar-manage" href="/alertas"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i> Mis radares</a>`;
+        mountRadarPicker(tabsNav.querySelector<HTMLElement>('.home-radar-picker')!, alerts,
+          alerts[activeAlertIndex].id, radarPreferenceUserId, id => {
+            activeAlertIndex = userAlerts.findIndex(a => a.id === id);
+            // @ts-ignore
+            window.currentActiveAlert = userAlerts[activeAlertIndex];
+            renderDashboard(userAlerts[activeAlertIndex]);
+          });
       };
 
       // Manejador de acciones para Anomalías (Aprobar / Descartar)

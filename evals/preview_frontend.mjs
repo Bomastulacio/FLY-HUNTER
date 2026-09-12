@@ -21,34 +21,46 @@ const deals = [['demo-mad', 'MAD', 2047, 1, 'Aeroméxico'], ['demo-cdg', 'CDG', 
 
 createServer(async (req, res) => {
   try {
-    if (req.url === '/styles.css') {
+    if (req.url?.startsWith('/styles.css')) {
       res.setHeader('Content-Type', 'text/css');
-      res.end((await read('src/styles/global.css')) + '\n' + await read('src/styles/compact.css'));
+      const widget = await read('src/components/SearchWidget.astro');
+      const settings = await read('src/pages/alertas.astro');
+      const extra = req.url.includes('settings') ? widget.match(/<style>([\s\S]*?)<\/style>/)[1] + '\n' + settings.match(/<style>([\s\S]*?)<\/style>/)[1] : '';
+      res.end((await read('src/styles/global.css')) + '\n' + extra + '\n' + await read('src/styles/compact.css'));
+      return;
+    }
+    if (['/utils/compactFlights.js', '/utils/radarPicker.js'].includes(req.url)) {
+      res.setHeader('Content-Type', 'text/javascript');
+      res.end(stripTypeScriptTypes(await read(`src${req.url.replace(/\.js$/, '.ts')}`))
+        .replace("from './compactFlights'", "from './compactFlights.js'"));
       return;
     }
     if (req.url === '/favicon.svg') {
       res.setHeader('Content-Type', 'image/svg+xml'); res.end(await read('public/favicon.svg')); return;
     }
-    if (req.url?.startsWith('/alertas')) {
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.end('<p>Destino de edición verificado en esta vista de prueba. El wizard real está en Astro.</p>'); return;
-    }
-    const source = await read('src/pages/index.astro');
-    const client = source.match(/<script>\s*([\s\S]*?)<\/script>/)[1]
+    const settingsPage = req.url?.startsWith('/alertas');
+    const source = await read(settingsPage ? 'src/pages/alertas.astro' : 'src/pages/index.astro');
+    const prepare = code => stripTypeScriptTypes(code
       .replace(/import \{ supabase \} from '..\/lib\/supabase';/, '')
-      .replace(/import \{ renderCompactFlight, escapeHtml, usd \} from '..\/utils\/compactFlights';/, '');
-    const card = stripTypeScriptTypes(await read('src/utils/compactFlights.ts')).replace(/export /g, '');
+      .replace(/from '..\/utils\/(\w+)'/g, "from '/utils/$1.js'"));
+    const client = prepare(source.match(/<script>\s*([\s\S]*?)<\/script>/)[1]);
     const data = { allDeals: deals, approvedDeals: deals, pendingDeals: [], routeInsights: [] };
     const mock = `const supabase = { auth: {
       getSession: async () => ({data:{session:{user:{id:'ui-fixture-user', email:'preview@example.test', user_metadata:{}}}}}),
       signOut: async () => {}, onAuthStateChange: () => {}
     }, from: () => ({select(){return this},eq(){return this},order:async()=>({data:${JSON.stringify(alerts)}})})};`;
-    const code = `${card}\n${mock}\n${stripTypeScriptTypes(client)}`;
+    const code = `${mock}\n${client}`;
     let html = source.slice(source.indexOf('<html'))
       .replace(/<script is:inline define:vars=[\s\S]*?<\/script>/, () => `<script>window.__SERVER_DATA__=${JSON.stringify(data)}</script>`)
       .replace(/<script>\s*import[\s\S]*?<\/script>/, () => `<script type="module">${code}</script>`)
-      .replace('</head>', '<link rel="stylesheet" href="/styles.css"></head>')
+      .replace('</head>', `<link rel="stylesheet" href="/styles.css${settingsPage ? '?settings' : ''}"></head>`)
       .replace('<body class="compact-app">', '<body class="compact-app"><div style="padding:4px;text-align:center;font-size:11px;color:#a9b0a3">Vista de prueba · datos de ejemplo</div>');
+    if (settingsPage) {
+      const widget = await read('src/components/SearchWidget.astro');
+      const markup = widget.slice(widget.indexOf('<div class="search-widget-wrapper">'), widget.indexOf('<style>'));
+      const widgetCode = prepare(widget.match(/<script>\s*([\s\S]*?)<\/script>/)[1]);
+      html = html.replace('<SearchWidget />', () => `${markup}<script type="module">${mock}\n${widgetCode}</script>`);
+    }
     res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end(html);
   } catch (error) {
     res.writeHead(500); res.end(String(error));

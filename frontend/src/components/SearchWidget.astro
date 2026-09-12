@@ -14,45 +14,34 @@ import { supabase } from '../lib/supabase';
         </div>
         <div style="display: flex; align-items: center; gap: 0.5rem; margin-left: auto;">
           <button type="button" id="btn-create-new-radar" class="btn btn-outline" style="padding: 0.45rem 0.95rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.45rem; border-color: rgba(159, 219, 22, 0.4); color: var(--accent-color);">
-            <i class="ph ph-plus-circle"></i> + Rastrear otro viaje
+            <i class="ph ph-plus-circle"></i> Nuevo radar
           </button>
         </div>
       </div>
 
-      <!-- Tarjeta del Radar Activo -->
-      <div class="radar-status-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1.25rem 1.5rem; background: linear-gradient(145deg, rgba(159, 219, 22, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%); border: 1px solid rgba(159, 219, 22, 0.25); border-radius: var(--border-radius-lg); margin-bottom: 1.5rem;">
-         <div style="display: flex; align-items: center; gap: 1rem;">
-           <div class="radar-pulse-icon" style="width: 48px; height: 48px; border-radius: 50%; background: rgba(159, 219, 22, 0.12); border: 1.5px solid rgba(159, 219, 22, 0.4); display: flex; align-items: center; justify-content: center; color: var(--accent-color); font-size: 1.5rem; flex-shrink: 0; box-shadow: 0 0 16px rgba(159, 219, 22, 0.2);">
-              <i class="ph-bold ph-radar"></i>
-           </div>
-           <div>
-             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2px;">
-               <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: var(--accent-color); background: rgba(159, 219, 22, 0.15); padding: 2px 8px; border-radius: 9999px;">
-                 <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--accent-color); animation: pulse 1.5s infinite;"></span>
-                 Rastreo Activo
-               </span>
-             </div>
-             <h2 id="dash-radar-title" style="margin: 0; font-size: 1.35rem; font-weight: 700; color: #fff;">Mi Radar</h2>
-             <p style="margin: 3px 0 0; color: var(--text-secondary); font-size: 0.82rem; display: flex; align-items: center; gap: 4px;">
-               <i class="ph ph-clock"></i> Consultas periódicas a las 09:00 y 21:00 hs
-             </p>
-           </div>
-         </div>
-         <div style="display: flex; align-items: center; gap: 0.5rem;">
-           <button type="button" class="btn btn-outline btn-sm" id="btn-edit-active-radar" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 0.35rem;">
-             <i class="ph ph-pencil-simple"></i> Modificar
-           </button>
-           <button type="button" id="btn-delete-radar" class="btn btn-outline btn-sm" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3); padding: 0.45rem 0.75rem; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 0.35rem;" title="Eliminar este radar">
-             <i class="ph ph-trash"></i> Eliminar
-           </button>
-         </div>
+      <div class="radar-status-header">
+        <div class="radar-status-copy">
+          <span class="radar-schedule-label"><span></span> Radar activo</span>
+          <h2 id="dash-radar-title" class="sr-only">Mi radar</h2>
+          <p>Consultas a las 09:00 y 21:00 hs</p>
+        </div>
+        <div class="radar-status-actions">
+          <a id="radar-view-flights" class="radar-view-flights" href="/">Ver vuelos <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
+          <details class="radar-overflow">
+            <summary aria-label="Más opciones del radar"><i class="ph ph-dots-three" aria-hidden="true"></i></summary>
+            <div class="radar-overflow-menu">
+              <button type="button" id="btn-edit-active-radar"><i class="ph ph-pencil-simple" aria-hidden="true"></i> Modificar radar</button>
+              <button type="button" id="btn-delete-radar"><i class="ph ph-trash" aria-hidden="true"></i> Eliminar radar</button>
+            </div>
+          </details>
+        </div>
       </div>
 
       <div class="radar-summary-card">
          <div class="summary-section">
             <div class="section-header">
               <h3><i class="ph ph-map-pin"></i> Destino y Fechas</h3>
-              <button type="button" class="btn btn-icon edit-step-btn" data-step="1"><i class="ph ph-pencil-simple"></i></button>
+              <button type="button" class="btn btn-icon edit-step-btn" data-step="1" aria-label="Editar destino y fechas"><i class="ph ph-pencil-simple"></i></button>
             </div>
             <div class="section-content">
               <div class="summary-row"><span>Origen</span> <strong id="dash-origen">EZE/AEP</strong></div>
@@ -65,7 +54,7 @@ import { supabase } from '../lib/supabase';
          <div class="summary-section">
             <div class="section-header">
               <h3><i class="ph ph-wallet"></i> Presupuesto y Pasajeros</h3>
-              <button type="button" class="btn btn-icon edit-step-btn" data-step="2"><i class="ph ph-pencil-simple"></i></button>
+              <button type="button" class="btn btn-icon edit-step-btn" data-step="2" aria-label="Editar presupuesto y pasajeros"><i class="ph ph-pencil-simple"></i></button>
             </div>
             <div class="section-content">
               <div class="summary-row"><span>Presupuesto</span> <strong id="dash-presupuesto">US$800 - US$2.400</strong></div>
@@ -74,9 +63,9 @@ import { supabase } from '../lib/supabase';
          </div>
 
          <div class="summary-section">
-            <div class="section-header" style="cursor: pointer;" onclick="document.getElementById('adv-options-content').classList.toggle('hidden'); document.getElementById('adv-chevron').classList.toggle('ph-caret-down'); document.getElementById('adv-chevron').classList.toggle('ph-caret-up');">
-              <h3 style="flex:1"><i class="ph ph-sliders"></i> Opciones Avanzadas <i id="adv-chevron" class="ph ph-caret-down" style="margin-left: 4px; color: var(--text-secondary); font-size: 0.9rem;"></i></h3>
-              <button type="button" class="btn btn-icon edit-step-btn" data-step="3" onclick="event.stopPropagation();"><i class="ph ph-pencil-simple"></i></button>
+            <div class="section-header">
+              <h3><button class="advanced-toggle" type="button" aria-expanded="false" aria-controls="adv-options-content"><i class="ph ph-sliders" aria-hidden="true"></i> Opciones avanzadas <i class="ph ph-caret-down" aria-hidden="true"></i></button></h3>
+              <button type="button" class="btn btn-icon edit-step-btn" data-step="3" aria-label="Editar opciones avanzadas"><i class="ph ph-pencil-simple"></i></button>
             </div>
             <div id="adv-options-content" class="section-content hidden">
               <div class="summary-row"><span>Destinos Específicos</span> <strong id="dash-paises">Toda la zona</strong></div>
@@ -111,6 +100,19 @@ import { supabase } from '../lib/supabase';
         <div class="progress-text">Paso <span id="current-step-text">1</span> de 3: <span id="current-step-title">Origen y Fechas</span></div>
       </div>
 
+      <details class="wizard-live-preview">
+        <summary><span id="summary-quick">Tu búsqueda</span><i class="ph ph-caret-down" aria-hidden="true"></i></summary>
+        <dl>
+          <div><dt>Origen</dt><dd id="summary-origin"></dd></div>
+          <div><dt>Zona</dt><dd id="summary-zone"></dd></div>
+          <div><dt>Ida</dt><dd id="summary-ida"></dd></div>
+          <div><dt>Vuelta</dt><dd id="summary-vuelta"></dd></div>
+          <div><dt>Destinos</dt><dd id="summary-dest"></dd></div>
+          <div><dt>Preferencias</dt><dd id="summary-preferences"></dd></div>
+        </dl>
+        <p>Vista previa · los cambios se aplican al guardar.</p>
+      </details>
+
       <!-- STEP 1: Origen, Fechas, Zona -->
       <div class="wizard-step" id="step-1">
         <div class="form-group full-width">
@@ -137,12 +139,12 @@ import { supabase } from '../lib/supabase';
           <div class="dual-input">
             <div class="input-wrapper">
               <span class="input-prefix">Desde</span>
-              <input type="date" name="fecha_ida_min" required />
+              <input type="date" name="fecha_ida_min" aria-label="Fecha de ida desde" required />
             </div>
             <span class="separator">-</span>
             <div class="input-wrapper">
               <span class="input-prefix">Hasta</span>
-              <input type="date" name="fecha_ida_max" required />
+              <input type="date" name="fecha_ida_max" aria-label="Fecha de ida hasta" required />
             </div>
           </div>
           <small class="hint"><i class="ph ph-check" style="color: var(--success-color);"></i> Flexibilidad en la ida: Buscamos combinaciones ideales.</small>
@@ -153,12 +155,12 @@ import { supabase } from '../lib/supabase';
           <div class="dual-input">
             <div class="input-wrapper">
               <span class="input-prefix">Desde</span>
-              <input type="date" name="fecha_vuelta_min" required />
+              <input type="date" name="fecha_vuelta_min" aria-label="Fecha de vuelta desde" required />
             </div>
             <span class="separator">-</span>
             <div class="input-wrapper">
               <span class="input-prefix">Hasta</span>
-              <input type="date" name="fecha_vuelta_max" required />
+              <input type="date" name="fecha_vuelta_max" aria-label="Fecha de vuelta hasta" required />
             </div>
           </div>
           <small class="hint"><i class="ph ph-check" style="color: var(--success-color);"></i> Flexibilidad en la vuelta.</small>
@@ -219,12 +221,12 @@ import { supabase } from '../lib/supabase';
           <div class="budget-inputs">
             <div class="input-wrapper">
               <span class="input-prefix">Mín.</span>
-              <input type="number" name="presupuesto_min" id="budget-min-input" value="800" />
+              <input type="number" name="presupuesto_min" aria-label="Presupuesto mínimo en dólares" id="budget-min-input" value="800" />
             </div>
             <span class="separator">-</span>
             <div class="input-wrapper">
               <span class="input-prefix">Máx.</span>
-              <input type="number" name="presupuesto_max" id="budget-max-input" value="2400" required />
+              <input type="number" name="presupuesto_max" aria-label="Presupuesto máximo en dólares" id="budget-max-input" value="2400" required />
             </div>
           </div>
           
@@ -1078,7 +1080,7 @@ import { supabase } from '../lib/supabase';
 
 <script>
   import { supabase } from '../lib/supabase';
-  import { showToast } from '../utils/toast';
+  import { mountRadarPicker, preferredRadarId } from '../utils/radarPicker';
   
   // WIZARD LOGIC
   let currentStep = 1;
@@ -1258,6 +1260,7 @@ import { supabase } from '../lib/supabase';
         }
       });
     });
+    updateSummary();
   }
 
   if (airlineInput && airlineDropdown) {
@@ -1374,6 +1377,7 @@ import { supabase } from '../lib/supabase';
         this.classList.add('active');
         const input = this.querySelector('input');
         if (input) input.checked = true;
+        updateSummary();
       }
     });
   });
@@ -1450,6 +1454,13 @@ import { supabase } from '../lib/supabase';
     const vueltaMinEl = form.querySelector('input[name="fecha_vuelta_min"]') as HTMLInputElement;
     const vueltaMaxEl = form.querySelector('input[name="fecha_vuelta_max"]') as HTMLInputElement;
     const zoneEl = form.querySelector('input[name="destino"]:checked') as HTMLInputElement;
+    const budget = (form.querySelector('[name="presupuesto_max"]') as HTMLInputElement)?.value;
+    const passengers = (form.querySelector('[name="pasajeros"]:checked') as HTMLInputElement)?.value || '1';
+    const stops = (form.querySelector('[name="escalas_max"]:checked') as HTMLInputElement)?.value || '0';
+    const quick = document.getElementById('summary-quick');
+    if (quick) quick.textContent = `${zoneEl?.value || 'Elegí destino'} · ${passengers} adulto${passengers === '1' ? '' : 's'} · Hasta US$${new Intl.NumberFormat('es-AR').format(Number(budget) || 0)}`;
+    const preferences = document.getElementById('summary-preferences');
+    if (preferences) preferences.textContent = `${stops === '0' ? 'Directo' : `Hasta ${stops} escala${stops === '1' ? '' : 's'}`}${excludedAirlines.length ? ` · Sin ${excludedAirlines.join(', ')}` : ''}`;
     
     if (originEl) {
       const txt = originEl.options[originEl.selectedIndex]?.text || '';
@@ -1500,14 +1511,14 @@ import { supabase } from '../lib/supabase';
     if (radarDashboard) radarDashboard.classList.remove('hidden');
     if (wizardContainer) wizardContainer.classList.add('hidden');
     const headerP = document.querySelector('.alertas-header-text p');
-    if (headerP) headerP.textContent = 'Tu Agente Estratega está buscando por vos.';
+    if (headerP) headerP.textContent = 'Tus viajes, en orden. Ajustá solo lo que necesites.';
   }
 
   function showWizardView(step: number = 1) {
     if (radarDashboard) radarDashboard.classList.add('hidden');
     if (wizardContainer) wizardContainer.classList.remove('hidden');
     const headerP = document.querySelector('.alertas-header-text p');
-    if (headerP) headerP.textContent = 'Configurá el Agente Estratega para que busque por ti.';
+    if (headerP) headerP.textContent = 'Elegí dónde y cuándo querés viajar.';
     const cancelBtn = document.getElementById('btn-cancel-wizard');
     if (cancelBtn) cancelBtn.style.display = userAlerts.length > 0 ? 'inline-flex' : 'none';
     currentStep = step;
@@ -1530,6 +1541,13 @@ import { supabase } from '../lib/supabase';
     });
   });
 
+  document.querySelector('.advanced-toggle')?.addEventListener('click', event => {
+    const button = event.currentTarget as HTMLButtonElement;
+    const expanded = button.getAttribute('aria-expanded') !== 'true';
+    button.setAttribute('aria-expanded', String(expanded));
+    document.getElementById('adv-options-content')?.classList.toggle('hidden', !expanded);
+  });
+
   // Init Form & Multi-Alerts State
   const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
   const authMessage = document.getElementById('auth-message');
@@ -1547,48 +1565,19 @@ import { supabase } from '../lib/supabase';
     const listEl = document.getElementById('radar-alerts-list');
     if (!listEl) return;
     
-    if (userAlerts.length <= 1) {
-      listEl.innerHTML = userAlerts.length === 1 
-        ? `<span style="font-size: 0.85rem; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 0.45rem;">
-             <i class="ph ph-check-circle" style="color: var(--accent-color); font-size: 1rem;"></i> 1 viaje monitoreado
-           </span>`
-        : '';
-      return;
-    }
-
-    listEl.innerHTML = `
-      <span style="font-size: 0.82rem; color: var(--text-secondary); margin-right: 0.25rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.35rem;">
-        <i class="ph ph-airplane"></i> Tus viajes:
-      </span>
-    ` + userAlerts.map((a, idx) => {
-      const isActive = idx === activeAlertIndex;
-      const label = a.nombre || `${(a.origen || 'EZE').split(',')[0]} → ${a.destino || 'Europa'}`;
-      const activeStyle = isActive 
-        ? 'background: var(--accent-color); color: #000; font-weight: 600; border: 1px solid var(--accent-color); box-shadow: 0 0 12px rgba(159, 219, 22, 0.3);'
-        : 'background: rgba(255,255,255,0.05); color: var(--text-secondary); border: 1px solid rgba(255,255,255,0.12);';
-      return `
-        <button type="button" class="btn-alert-pill" data-idx="${idx}" style="cursor: pointer; padding: 0.35rem 0.8rem; border-radius: 9999px; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.2s; ${activeStyle}">
-          <i class="ph ${isActive ? 'ph-check-circle' : 'ph-airplane-tilt'}"></i>
-          <span>${label}</span>
-        </button>
-      `;
-    }).join('');
-
-    listEl.querySelectorAll('.btn-alert-pill').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const idx = Number((btn as HTMLElement).dataset.idx);
-        if (!isNaN(idx) && userAlerts[idx]) {
-          activeAlertIndex = idx;
-          populateDashboardWithAlert(userAlerts[idx]);
-          renderAlertPills();
-        }
-      });
+    mountRadarPicker(listEl, userAlerts, userAlerts[activeAlertIndex]?.id, currentUserId || '', id => {
+      activeAlertIndex = userAlerts.findIndex(a => a.id === id);
+      populateDashboardWithAlert(userAlerts[activeAlertIndex]);
     });
   }
 
   function populateDashboardWithAlert(alert: any) {
     if (!alert) return;
     currentEditingAlertId = alert.id;
+    const flightsLink = document.getElementById('radar-view-flights') as HTMLAnchorElement | null;
+    if (flightsLink) flightsLink.href = `/?radar=${encodeURIComponent(alert.id)}`;
+    const menu = document.querySelector<HTMLDetailsElement>('.radar-overflow');
+    if (menu) menu.open = false;
 
     const titleEl = document.getElementById('dash-radar-title');
     if (titleEl) titleEl.textContent = alert.nombre || `Radar ${alert.origen} → ${alert.destino}`;
@@ -1659,7 +1648,17 @@ import { supabase } from '../lib/supabase';
 
     // Origen
     const origen = form.querySelector('[name="origen"]') as HTMLSelectElement;
-    if (origen) origen.value = alertData.origen || 'EZE,AEP';
+    if (origen) {
+      const originValue = String(alertData.origen || 'EZE,AEP').split(',').map(code => code.trim()).join(',');
+      // Preserve existing origins even when the current preset list is narrower.
+      if (![...origen.options].some(option => option.value === originValue)) {
+        const option = document.createElement('option');
+        option.value = originValue;
+        option.textContent = originValue;
+        origen.append(option);
+      }
+      origen.value = originValue;
+    }
     
     // Fechas
     if (alertData.fecha_ida_min) (form.querySelector('[name="fecha_ida_min"]') as HTMLInputElement).value = alertData.fecha_ida_min;
@@ -1766,7 +1765,9 @@ import { supabase } from '../lib/supabase';
       .order('creado_en', { ascending: false });
 
     if (!error && alertsList && alertsList.length > 0) {
+      const previousId = currentEditingAlertId;
       userAlerts = alertsList;
+      activeAlertIndex = Math.max(0, userAlerts.findIndex(a => a.id === (previousId || preferredRadarId(currentUserId))));
       if (requestedRadarId) {
         const requestedIndex = userAlerts.findIndex((alert: any) => alert.id === requestedRadarId);
         if (requestedIndex >= 0) activeAlertIndex = requestedIndex;

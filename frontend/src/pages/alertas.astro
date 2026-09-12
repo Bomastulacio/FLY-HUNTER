@@ -9,11 +9,11 @@ import '../styles/compact.css';
   <head>
     <meta charset="utf-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Mis Alertas - Flight Hunter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Mis radares - Flight Hunter</title>
     
     <!-- PWA Config -->
-    <meta name="theme-color" content="#141419" />
+    <meta name="theme-color" content="#101310" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -32,13 +32,13 @@ import '../styles/compact.css';
     <main>
       <header class="alertas-header">
         <div class="alertas-header-text">
-          <a href="/" class="back-link"><i class="ph ph-arrow-left"></i> Volver al Radar</a>
-          <h1>Mis Alertas</h1>
+          <a href="/" class="back-link"><i class="ph ph-arrow-left"></i> Volver a vuelos</a>
+          <h1>Mis radares</h1>
           <p>Elegí tu viaje. Ajustá solo lo que necesites.</p>
         </div>
         <div class="alertas-header-actions">
           <div class="profile-menu-container">
-            <button id="avatar-btn" class="avatar-btn">
+            <button id="avatar-btn" class="avatar-btn" aria-label="Cuenta de usuario" aria-expanded="false" aria-controls="profile-dropdown">
               <span id="user-initials">US</span>
               <span class="notification-dot"></span>
             </button>
@@ -100,11 +100,13 @@ import '../styles/compact.css';
         avatarBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           profileDropdown.classList.toggle('hidden');
+          avatarBtn.setAttribute('aria-expanded', String(!profileDropdown.classList.contains('hidden')));
         });
 
         document.addEventListener('click', (e) => {
           if (!avatarBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
             profileDropdown.classList.add('hidden');
+            avatarBtn.setAttribute('aria-expanded', 'false');
           }
         });
       }
