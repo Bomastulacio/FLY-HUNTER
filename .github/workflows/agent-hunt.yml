@@ -4,7 +4,13 @@ on:
   schedule:
     # Corre dos veces al día: a las 09:00 y a las 21:00 UTC (ajustable)
     - cron: '0 9,21 * * *'
-  workflow_dispatch: {} # Permite ejecutar manualmente con un clic desde GitHub Actions
+  workflow_dispatch:
+    inputs:
+      focus:
+        description: 'Opcional: priorizar origen,destino,ida,vuelta,adultos (EZE,MAD,2027-04-18,2027-05-01,2)'
+        required: false
+        default: ''
+        type: string
 
 concurrency:
   group: flight-hunter-scrapers
@@ -62,6 +68,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL || secrets.GEMINI_MODEL }}
           HEADLESS: "true"
+          FLIGHT_FOCUS: ${{ inputs.focus || '' }}
 
       - name: Preserve consumed searches even after a failed run
         if: always() && steps.search-state.outputs.cache-primary-key != '' && hashFiles('agent/.flight-state/state.json') != ''

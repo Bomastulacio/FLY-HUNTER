@@ -7,7 +7,13 @@ on:
       - completed
   repository_dispatch:
     types: [resume-after-approval]
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      focus:
+        description: 'Opcional: priorizar origen,destino,ida,vuelta,adultos (EZE,MAD,2027-04-18,2027-05-01,2)'
+        required: false
+        default: ''
+        type: string
 
 concurrency:
   group: flight-hunter-pipeline
@@ -18,10 +24,33 @@ permissions:
   actions: read
 
 jobs:
+  request-full-search:
+    name: Solicitar búsqueda completa en Google y Despegar
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      actions: write
+    steps:
+      - name: Start the existing scraper workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              ...context.repo,
+              workflow_id: 'agent-hunt.yml',
+              ref: context.ref.replace(/^refs\/heads\//, ''),
+              inputs: { focus: context.payload.inputs?.focus || '' }
+            });
+            await core.summary.addHeading('Búsqueda completa solicitada')
+              .addRaw('Se inició flight-hunter-agent con los límites y pausas habituales. Este job confirma la solicitud; las cotizaciones se verifican en la corrida del scraper. LangGraph continúa después.\n')
+              .addLink('Ver corrida del scraper', `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/workflows/agent-hunt.yml`)
+              .write();
+
   run-pipeline:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'repository_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4

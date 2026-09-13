@@ -736,6 +736,8 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
       let feedFilter = 'all';
       let latestChecks = new Map<string, any>();
       let sourceStatuses: any[] = [];
+      let sourceStatusesLoaded = false;
+      let sourceStatusesFailed = false;
       let refreshInFlight = false;
       let lastRefresh = 0;
       let bookmarkRevision = 0;
@@ -745,10 +747,17 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         const content = document.getElementById('source-status-content');
         if (!container || !content) return;
         const rows = sourceStatuses.filter(row => row.radar_id === radarId);
-        container.hidden = !rows.length;
+        container.hidden = false;
+        if (!sourceStatusesLoaded || sourceStatusesFailed) {
+          content.textContent = sourceStatusesFailed ? 'No pudimos leer el estado de las fuentes. No podemos confirmar si el radar ya buscó.' : 'Consultando el estado de las fuentes…';
+          return;
+        }
         const labels: Record<string, string> = { ok: 'Consultada', empty: 'Sin resultados en la combinación consultada',
           unverified: 'No se pudo verificar', blocked: 'En pausa por bloqueo', error: 'Error de consulta', deferred: 'Pendiente por cuota o turno' };
-        content.innerHTML = rows.map(row => {
+        content.innerHTML = ['google_flights', 'despegar'].map(provider => {
+          const name = provider === 'despegar' ? 'Despegar' : 'Google Flights';
+          const row = rows.find(row => row.provider === provider);
+          if (!row) return `<p><strong>${name}</strong> · Todavía no hay una consulta registrada para este radar. No significa que no existan vuelos.</p>`;
           const when = new Date(row.checked_at);
           const old = Date.now() - when.getTime() >= 86400000;
           const date = Number.isFinite(when.getTime()) ? new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(when) : 'Sin fecha';
@@ -788,6 +797,8 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
             try { localStorage.setItem(savedStorageKey, JSON.stringify([...savedFlights])); } catch {}
           }
           if (!checks.error && checks.data) latestChecks = new Map(checks.data.map(c => [c.saved_deal_id, c]));
+          sourceStatusesLoaded = true;
+          sourceStatusesFailed = !!statuses.error;
           if (!statuses.error && statuses.data) sourceStatuses = statuses.data;
           const grid = document.getElementById('destinations-grid');
           const openId = grid?.querySelector('.flight-disclosure[open]')?.closest<HTMLElement>('[data-flight-id]')?.dataset.flightId;

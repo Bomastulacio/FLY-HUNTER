@@ -63,6 +63,25 @@ export function searchKey(params: FlightSearchParams): string {
     params.passengers, params.maxStops ?? 1, [...(params.excludedAirlines || [])].map(normalize).sort(), 'USD', 'economy']);
 }
 
+export type SearchFocus = Pick<FlightSearchParams, 'origin' | 'destination' | 'departureDate' | 'returnDate' | 'passengers'>;
+
+/** One-run priority, never permission to leave an active radar or increase provider limits. */
+export function parseSearchFocus(value: string): SearchFocus | undefined {
+  if (!value.trim()) return undefined;
+  const fields = value.split(',').map(v => v.trim());
+  const [origin, destination, departureDate, returnDate, passengers] = fields;
+  if (fields.length !== 5 || ![origin, destination].every(v => /^[A-Z]{3}$/.test(v))
+    || !dates(departureDate).length || !dates(returnDate).length || returnDate <= departureDate || !/^[1-9]$/.test(passengers)) {
+    throw new Error('Foco inválido: usá origen,destino,ida,vuelta,adultos con fechas YYYY-MM-DD');
+  }
+  return { origin, destination, departureDate, returnDate, passengers: Number(passengers) };
+}
+
+export function matchesFocus(p: FlightSearchParams, focus: SearchFocus): boolean {
+  return p.origin === focus.origin && p.destination === focus.destination && p.departureDate === focus.departureDate
+    && p.returnDate === focus.returnDate && p.passengers === focus.passengers;
+}
+
 export function roundRobin<T>(items: readonly T[], cursor: number, limit: number): T[] {
   if (!items.length) return [];
   return Array.from({ length: Math.min(items.length, Math.max(0, limit)) }, (_, i) => items[(Math.max(0, cursor) + i) % items.length]);
