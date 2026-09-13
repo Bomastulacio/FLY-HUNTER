@@ -71,7 +71,7 @@ jobs:
           key: ${{ steps.search-state.outputs.cache-primary-key }}
 
       - name: Share the exact plan with LangGraph
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: search-plan
           path: agent/search-plan.json
