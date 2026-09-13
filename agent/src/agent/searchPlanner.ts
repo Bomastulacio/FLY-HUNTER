@@ -1,7 +1,7 @@
 import type { FlightSearchParams } from '../types/flight.js';
 
 export interface SearchAlert {
-  id?: string; origen: string; destino: string; paises?: string[];
+  id?: string; user_id?: string; origen: string; destino: string; paises?: string[];
   fecha_ida_min?: string; fecha_ida_max?: string;
   fecha_vuelta_min?: string; fecha_vuelta_max?: string;
   pasajeros?: number; escalas_max?: number; presupuesto_min?: number;

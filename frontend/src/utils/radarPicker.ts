@@ -3,6 +3,24 @@ import { supabase } from '../lib/supabase';
 
 const preferenceKey = (userId: string) => `fh_primary_radar_v1:${userId}`;
 let dismissHandlersInstalled = false;
+const accountPreferences = new Map<string, string | null>();
+
+export async function loadRadarPreference(userId: string): Promise<void> {
+  if (!userId || userId.startsWith('demo')) return;
+  const { data, error } = await supabase.from('radar_preferences').select('primary_radar_id').eq('user_id', userId).maybeSingle();
+  if (error) return; // The existing local preference still works before the migration.
+  const local = preferredRadarId(userId);
+  if (!data && local) {
+    const result = await supabase.from('radar_preferences').upsert({ user_id: userId, primary_radar_id: local }, { onConflict: 'user_id' });
+    if (!result.error) accountPreferences.set(userId, local);
+    return;
+  }
+  accountPreferences.set(userId, data?.primary_radar_id || null);
+  try {
+    if (data?.primary_radar_id) localStorage.setItem(preferenceKey(userId), data.primary_radar_id);
+    else localStorage.removeItem(preferenceKey(userId));
+  } catch { /* Account state remains usable when local storage is unavailable. */ }
+}
 
 function installDismissHandlers() {
   if (dismissHandlersInstalled) return;
@@ -23,6 +41,7 @@ function installDismissHandlers() {
 
 /** Presentation preference only: never changes the search schedule or API budget. */
 export function preferredRadarId(userId: string): string | null {
+  if (accountPreferences.has(userId)) return accountPreferences.get(userId) || null;
   try { return localStorage.getItem(preferenceKey(userId)); } catch { return null; }
 }
 
@@ -77,7 +96,7 @@ export function mountRadarPicker(
             <button type="button" class="radar-pin" data-pin-id="${e(a.id)}" aria-pressed="${a.id === primary}" aria-label="${a.id === primary ? 'Radar principal' : 'Hacer principal'}: ${e(a.nombre || a.destino)}" title="${a.id === primary ? 'Radar principal' : 'Mostrar primero al entrar'}"><i class="${a.id === primary ? 'ph-fill' : 'ph'} ph-star" aria-hidden="true"></i><span>${a.id === primary ? 'Principal' : 'Elegir principal'}</span></button>
           </div>`;
         }).join('')}
-        <p class="radar-picker-note" role="status">El principal se recuerda en este navegador.</p>
+        <p class="radar-picker-note" role="status">${accountPreferences.has(userId) ? 'Tu radar principal se sincroniza con tu cuenta.' : 'El principal se recuerda en este navegador.'}</p>
       </div>
     </details>`;
 
@@ -158,18 +177,26 @@ export function mountRadarPicker(
 
     // Fijar principal
     container.querySelectorAll<HTMLButtonElement>('[data-pin-id]').forEach(button => {
-      button.addEventListener('click', () => {
+      button.addEventListener('click', async () => {
         const id = button.dataset.pinId!;
         try {
-          localStorage.setItem(preferenceKey(userId), id);
+          button.disabled = true;
+          if (userId && !userId.startsWith('demo')) {
+            const { error } = await supabase.from('radar_preferences').upsert({ user_id: userId, primary_radar_id: id }, { onConflict: 'user_id' });
+            if (error) throw error;
+            accountPreferences.set(userId, id);
+          }
+          try { localStorage.setItem(preferenceKey(userId), id); }
+          catch { if (!accountPreferences.has(userId)) throw new Error('No se pudo guardar la preferencia'); }
           selectedId = id;
           editingAlertId = null;
           draw(true, id);
           onSelect(id);
           container.querySelector('.radar-picker-note')!.textContent = id === primary
-            ? 'Este ya es tu radar principal.' : 'Listo. Este radar aparecerá primero al entrar, en este navegador.';
+            ? 'Este ya es tu radar principal.' : 'Listo. Este radar aparecerá primero al entrar.';
         } catch {
-          container.querySelector('.radar-picker-note')!.textContent = 'No pudimos guardar la preferencia en este navegador.';
+          button.disabled = false;
+          container.querySelector('.radar-picker-note')!.textContent = 'No pudimos sincronizar el principal. Intentá de nuevo.';
         }
       });
       if (button.dataset.pinId === focusId) button.focus();

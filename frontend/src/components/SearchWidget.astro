@@ -23,7 +23,7 @@ import { supabase } from '../lib/supabase';
         <div class="radar-status-copy">
           <span class="radar-schedule-label"><span></span> Radar activo</span>
           <h2 id="dash-radar-title" class="sr-only">Mi radar</h2>
-          <p>Consultas a las 09:00 y 21:00 hs</p>
+          <p id="radar-schedule-label">Dos consultas diarias programadas</p>
         </div>
         <div class="radar-status-actions">
           <a id="radar-view-flights" class="radar-view-flights" href="/">Ver vuelos <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
@@ -1084,7 +1084,8 @@ import { supabase } from '../lib/supabase';
 
 <script>
   import { supabase } from '../lib/supabase';
-  import { mountRadarPicker, preferredRadarId } from '../utils/radarPicker';
+  import { mountRadarPicker, preferredRadarId, loadRadarPreference } from '../utils/radarPicker';
+  import { nextSearchAt, scheduleLabel } from '../utils/searchSchedule';
   
   // WIZARD LOGIC
   let currentStep = 1;
@@ -1164,17 +1165,9 @@ import { supabase } from '../lib/supabase';
   // COUNTDOWN LOGIC
   function updateCountdown() {
     const now = new Date();
-    // Definimos la próxima actualización a las 09:00 o 21:00 hs (sistema de 12hs)
-    let target = new Date(now);
-    
-    if (now.getHours() < 9) {
-      target.setHours(9, 0, 0, 0);
-    } else if (now.getHours() < 21) {
-      target.setHours(21, 0, 0, 0);
-    } else {
-      target.setDate(target.getDate() + 1);
-      target.setHours(9, 0, 0, 0);
-    }
+    const target = nextSearchAt(now);
+    const schedule = document.getElementById('radar-schedule-label');
+    if (schedule) schedule.textContent = `Consultas estimadas a las ${scheduleLabel()} hs (tu horario)`;
     
     const diff = target.getTime() - now.getTime();
     
@@ -1779,6 +1772,7 @@ import { supabase } from '../lib/supabase';
   let requestedRadarId = new URLSearchParams(window.location.search).get('radar');
   async function loadUserAlerts() {
     if (!currentUserId) return;
+    await loadRadarPreference(currentUserId);
     const { data: alertsList, error } = await supabase
       .from('search_alerts')
       .select('*')

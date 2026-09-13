@@ -132,6 +132,19 @@ class OrchestrationEvals(TestCase):
                 graph.persistence_and_notify_node({'evaluated_deals': [deal]})
             notify.assert_not_called()
 
+    def test_cache_uses_latest_price_even_when_it_exceeds_budget(self):
+        old = {'ida_fecha': SEARCH['dep_date'], 'vuelta_fecha': SEARCH['ret_date'], 'ida_origen_destino': 'EZE-MAD',
+               'vuelta_origen_destino': 'MAD-EZE', 'precio_total_usd': 1884, 'pasajeros': 2,
+               'aerolinea': 'Aeroméxico', 'cantidad_escalas': 1, 'fuente': 'despegar',
+               'created_at': '2026-09-12T09:00:00Z', 'estado_aprobacion': 'aprobado'}
+        newer = {**old, 'aerolinea': 'Aeromexico', 'precio_total_usd': 2800,
+                 'created_at': '2026-09-12T12:00:00Z', 'estado_aprobacion': 'no_aplica'}
+        with patch('src.services.db.get_recent_flight_deals', return_value=[old, newer]), patch.object(collectors, 'fetch_serpapi_flights', side_effect=AssertionError('No paid lookup')):
+            self.assertEqual([d['precio_total_usd'] for d in collectors.collect_flights_for_search(SEARCH)], [2800])
+            self.assertEqual([d['precio_total_usd'] for d in collectors.collect_dynamic_flights({})], [2800])
+        self.assertEqual(len(collectors.latest_quotes([old, newer, {**newer, 'pasajeros': 1}])), 2)
+        self.assertEqual(collectors.latest_quotes([newer, {**newer, 'precio_total_usd': 2700}])[0]['precio_total_usd'], 2700)
+
 
 if __name__ == '__main__':
     main(verbosity=2)

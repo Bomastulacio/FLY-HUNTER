@@ -1,5 +1,6 @@
 ---
 import { supabase } from '../lib/supabase';
+import { latestQuotes, feedCandidate } from '../utils/latestQuotes';
 import '../styles/global.css';
 import '../styles/compact.css';
 
@@ -13,14 +14,14 @@ const { data: deals, error } = await supabase
   .from('flight_deals')
   .select('*')
   .gte('created_at', yesterday.toISOString())
-  .order('precio_total_usd', { ascending: true });
+  .order('created_at', { ascending: false }).limit(500);
 
 const { data: insightsData } = await supabase.from('route_insights').select('*');
 const routeInsights = insightsData || [];
 
 // Procesar datos para enviarlos completos al cliente
-const allDeals = deals || [];
-const approvedDeals = allDeals.filter(d => d.estado_aprobacion === 'aprobado' || (d.es_oportunidad_oro && !['pendiente', 'rechazado'].includes(d.estado_aprobacion)));
+const allDeals = latestQuotes(deals || []);
+const approvedDeals = allDeals.filter(feedCandidate);
 const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' || (d.es_anomalia && d.estado_aprobacion !== 'rechazado' && d.estado_aprobacion !== 'aprobado'));
 ---
 
@@ -116,6 +117,10 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
             <span class="countdown-strip-label">Próxima búsqueda estimada · <strong id="cd-target-dest">Europa</strong></span>
             <span class="countdown-strip-timer"><i class="ph ph-clock" aria-hidden="true"></i> <span id="compact-cd-val">Calculando...</span></span>
           </div>
+          <details class="saved-note" id="source-status" hidden>
+            <summary>Estado de las fuentes</summary>
+            <div id="source-status-content"></div>
+          </details>
         </aside>
         <div class="feed-toolbar">
           <h1>Tus vuelos</h1>
@@ -124,7 +129,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
             <button type="button" data-feed-filter="saved" aria-pressed="false"><i class="ph ph-bookmark-simple" aria-hidden="true"></i> Guardados</button>
           </div>
         </div>
-        <p class="saved-note" id="saved-note" hidden>Guardados en este navegador. Se muestran las ofertas vigentes de esta búsqueda.</p>
+        <p class="saved-note" id="saved-note" hidden>Conservamos tu precio guardado y seguimos combinaciones que coincidan con tus radares activos.</p>
         <!-- Feed Principal Columna Derecha (Desktop: ancho consistente; Mobile: debajo de sidebar) -->
         <section class="dashboard-feed" id="destinations-grid">
            <!-- Renderizado por JS: Card destacada + Destinos -->
@@ -153,7 +158,10 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
     <script>
       import { supabase } from '../lib/supabase';
       import { renderCompactFlight, escapeHtml, usd, matchesRadar } from '../utils/compactFlights';
-      import { mountRadarPicker, preferredRadarId } from '../utils/radarPicker';
+      import { mountRadarPicker, preferredRadarId, loadRadarPreference } from '../utils/radarPicker';
+      import { nextSearchAt } from '../utils/searchSchedule';
+      import { monitoredSavedDeal, meaningfulDrop } from '../utils/monitoringView';
+      import { latestQuotes, feedCandidate } from '../utils/latestQuotes';
 
       const formatPrice = (deal: any) => {
         const price = deal.precio_original || deal.precio_total_usd;
@@ -242,7 +250,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
       };
 
       // @ts-ignore
-      const allDeals = window.__SERVER_DATA__.approvedDeals || [];
+      let allDeals = window.__SERVER_DATA__.approvedDeals || [];
       let cdInterval: any;
       
       const renderDashboard = (alert: any) => {
@@ -321,15 +329,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         
         const updateCountdown = () => {
           const now = new Date();
-          let target = new Date(now);
-          if (now.getHours() < 9) {
-            target.setHours(9, 0, 0, 0);
-          } else if (now.getHours() < 21) {
-            target.setHours(21, 0, 0, 0);
-          } else {
-            target.setDate(target.getDate() + 1);
-            target.setHours(9, 0, 0, 0);
-          }
+          const target = nextSearchAt(now);
           const distance = target.getTime() - now.getTime();
           
           const timerVal = document.getElementById('compact-cd-val');
@@ -563,11 +563,12 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
             <span class="waiting-icon"><i class="ph ph-globe-hemisphere-west" aria-hidden="true"></i></span>
             <div><h2>${escapeHtml(country)}</h2><p>Sin cotizaciones recientes en tus filtros</p></div>
             <a href="/alertas?radar=${encodeURIComponent(alert.id)}" aria-label="Ajustar búsqueda para ${escapeHtml(country)}"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i></a>
-            <span class="waiting-next"><i class="ph ph-clock" aria-hidden="true"></i> Se revisa en la próxima búsqueda</span>
+            <span class="waiting-next"><i class="ph ph-clock" aria-hidden="true"></i> Se revisa por turnos, según cobertura</span>
           </article>`).join('');
         }
         grid.innerHTML = html;
         applySavedFilter();
+        renderSourceStatus(alert.id);
         updateCountdown();
       };
 
@@ -583,6 +584,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         } else {
           await loadUserData();
         }
+        await refreshLiveData(true);
       };
 
       const loadUserData = async () => {
@@ -593,6 +595,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
 
         if (session) {
           radarPreferenceUserId = session.user.id;
+          await loadRadarPreference(radarPreferenceUserId);
           savedStorageKey = `fh_saved_flights_v1:${session.user.id}`;
           try {
             const stored = JSON.parse(localStorage.getItem(savedStorageKey) || '[]');
@@ -731,6 +734,90 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
       let savedStorageKey = '';
       let radarPreferenceUserId = '';
       let feedFilter = 'all';
+      let latestChecks = new Map<string, any>();
+      let sourceStatuses: any[] = [];
+      let refreshInFlight = false;
+      let lastRefresh = 0;
+      let bookmarkRevision = 0;
+
+      const renderSourceStatus = (radarId: string) => {
+        const container = document.getElementById('source-status');
+        const content = document.getElementById('source-status-content');
+        if (!container || !content) return;
+        const rows = sourceStatuses.filter(row => row.radar_id === radarId);
+        container.hidden = !rows.length;
+        const labels: Record<string, string> = { ok: 'Consultada', empty: 'Sin resultados en la combinación consultada',
+          unverified: 'No se pudo verificar', blocked: 'En pausa por bloqueo', error: 'Error de consulta', deferred: 'Pendiente por cuota o turno' };
+        content.innerHTML = rows.map(row => {
+          const when = new Date(row.checked_at);
+          const old = Date.now() - when.getTime() >= 86400000;
+          const date = Number.isFinite(when.getTime()) ? new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(when) : 'Sin fecha';
+          return `<p><strong>${row.provider === 'despegar' ? 'Despegar' : 'Google Flights'}</strong> · ${escapeHtml(labels[row.outcome] || 'Pendiente')} · ${escapeHtml(date)}<br>${old ? 'Estado sin actualizar.' : `${Number(row.checked_combinations)} de ${Number(row.total_combinations)} combinaciones verificadas en las 24 h anteriores a esa consulta.`}</p>`;
+        }).join('');
+      };
+
+      // Refresh database snapshots only. Opening/focusing the app never starts a provider search.
+      const refreshLiveData = async (force = false) => {
+        const userId = radarPreferenceUserId;
+        if (!userId || refreshInFlight || document.hidden || (!force && Date.now() - lastRefresh < 60000)) return;
+        if (document.querySelector('[data-save-id][disabled]')) return;
+        refreshInFlight = true;
+        const revision = bookmarkRevision;
+        lastRefresh = Date.now();
+        try {
+          const [flights, bookmarks, checks, statuses] = await Promise.all([
+            supabase.from('flight_deals').select('*').gte('created_at', new Date(Date.now() - 86400000).toISOString()).order('created_at', { ascending: false }).limit(500),
+            supabase.from('saved_deals').select('*').eq('user_id', userId).order('guardado_el', { ascending: false }),
+            supabase.from('saved_deal_latest').select('*'),
+            supabase.from('radar_scan_status').select('*'),
+          ]);
+          if (radarPreferenceUserId !== userId || revision !== bookmarkRevision || document.querySelector('[data-save-id][disabled]')) return;
+          if (!flights.error && flights.data) {
+            const latest = latestQuotes(flights.data);
+            allDeals = latest.filter(feedCandidate);
+            // @ts-ignore
+            window.__SERVER_DATA__.allDeals = latest;
+            // @ts-ignore
+            window.__SERVER_DATA__.approvedDeals = allDeals;
+            // @ts-ignore
+            window.__SERVER_DATA__.pendingDeals = latest.filter(d => d.estado_aprobacion === 'pendiente');
+          }
+          if (!bookmarks.error && bookmarks.data) {
+            persistedSavedDeals = bookmarks.data;
+            savedFlights = new Set(bookmarks.data.flatMap(d => [String(d.id), ...(d.flight_deal_id ? [String(d.flight_deal_id)] : [])]));
+            try { localStorage.setItem(savedStorageKey, JSON.stringify([...savedFlights])); } catch {}
+          }
+          if (!checks.error && checks.data) latestChecks = new Map(checks.data.map(c => [c.saved_deal_id, c]));
+          if (!statuses.error && statuses.data) sourceStatuses = statuses.data;
+          const grid = document.getElementById('destinations-grid');
+          const openId = grid?.querySelector('.flight-disclosure[open]')?.closest<HTMLElement>('[data-flight-id]')?.dataset.flightId;
+          const focused = document.activeElement as HTMLElement;
+          const focusId = focused?.closest<HTMLElement>('[data-flight-id]')?.dataset.flightId;
+          const focusSave = focused?.matches('[data-save-id]');
+          // @ts-ignore
+          if (window.currentActiveAlert) renderDashboard(window.currentActiveAlert);
+          if (openId) grid?.querySelector<HTMLDetailsElement>(`[data-flight-id="${CSS.escape(openId)}"] .flight-disclosure`)?.setAttribute('open', '');
+          if (focusId) grid?.querySelector<HTMLElement>(`[data-flight-id="${CSS.escape(focusId)}"] ${focusSave ? '.flight-save' : '.flight-summary'}`)?.focus({ preventScroll: true });
+          for (const saved of persistedSavedDeals) {
+            const check = latestChecks.get(saved.id);
+            if (!meaningfulDrop(saved, check)) continue;
+            const amount = Number((check.last_quote || check.quote).precio_total_usd);
+            const key = `fh_drop_seen:${userId}:${saved.id}`;
+            try {
+              const previous = Number(localStorage.getItem(key)) || Number(saved.precio_total_usd);
+              if (previous - amount < Math.max(50, previous * .05)) continue;
+              localStorage.setItem(key, String(amount));
+              showToast(`Bajó un guardado a ${usd(amount)}. Revisalo en Guardados.`);
+              break; // One unobtrusive notice per refresh; the rest remain in the saved view.
+            } catch { /* No repeating notification if its acknowledgement cannot be stored. */ }
+          }
+        } catch { /* Preserve the last readable snapshot on network failure. */ }
+        finally { refreshInFlight = false; }
+      };
+      const refreshTimer = window.setInterval(() => { void refreshLiveData(); }, 120000);
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) void refreshLiveData(); });
+      window.addEventListener('focus', () => { void refreshLiveData(); });
+      window.addEventListener('pagehide', event => { if (!event.persisted) window.clearInterval(refreshTimer); });
 
       const applySavedFilter = () => {
         const grid = document.getElementById('destinations-grid');
@@ -753,6 +840,20 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
 
         // Si el filtro es 'saved', renderizar también los vuelos guardados que ya no están en el feed de las últimas 24h
         if (feedFilter === 'saved') {
+          // Account bookmarks are stable cards, regardless of changing flight_deal ids/prices.
+          if (radarPreferenceUserId) {
+            grid.querySelectorAll<HTMLElement>('.flight-item').forEach(card => { card.hidden = true; });
+            visible = 0;
+            for (const sDeal of persistedSavedDeals) {
+              const temp = document.createElement('div');
+              // @ts-ignore
+              temp.innerHTML = renderCompactFlight(monitoredSavedDeal(sDeal, latestChecks.get(sDeal.id)), window.currentActiveAlert, false, sDeal.destino, true);
+              const card = temp.firstElementChild as HTMLElement;
+              card.classList.add('extra-saved-card');
+              grid.appendChild(card);
+              visible++;
+            }
+          } else {
           const renderedIds = new Set<string>();
           grid.querySelectorAll<HTMLElement>('.flight-item').forEach(card => {
             if (card.dataset.flightId) renderedIds.add(card.dataset.flightId);
@@ -774,6 +875,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
               }
             }
           });
+          }
         }
 
         if (feedFilter === 'saved' && !visible) {
@@ -798,6 +900,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         if (!button) return;
         const id = button.dataset.saveId!;
         if (button.disabled) return;
+        bookmarkRevision++;
         button.disabled = true;
         const previousSaved = new Set(savedFlights);
         const next = new Set(savedFlights);

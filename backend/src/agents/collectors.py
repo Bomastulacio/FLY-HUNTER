@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 import requests
 from typing import List, Dict, Any
 import diskcache
+import unicodedata
 from ..services.search_budget import reserve_paid_search
 
 # Inicializar caché en el directorio del proyecto
@@ -142,6 +143,33 @@ def reusable_quote(deal: Dict) -> bool:
             and evidence.get('searchView') == 'cheapest')
 
 
+def latest_quotes(deals: List[Dict]) -> List[Dict]:
+    """Keep the newest comparable observation before evaluating any radar's budget."""
+    def observed(deal):
+        value = (deal.get('detalle_cotizacion') or {}).get('observedAt') or deal.get('created_at')
+        try:
+            stamp = datetime.fromisoformat(str(value).replace('Z', '+00:00'))
+            return stamp.replace(tzinfo=stamp.tzinfo or timezone.utc).timestamp()
+        except (TypeError, ValueError):
+            return 0
+
+    selected = {}
+    for deal in deals:
+        if not reusable_quote(deal):
+            continue
+        airline = ''.join(c for c in unicodedata.normalize('NFD', str(deal.get('aerolinea') or ''))
+                          if not unicodedata.combining(c))
+        key = tuple(deal.get(k) for k in ('ida_origen_destino', 'vuelta_origen_destino', 'ida_fecha',
+                                         'vuelta_fecha', 'pasajeros', 'cantidad_escalas', 'fuente')) + (
+            ' '.join(airline.lower().split()), (deal.get('detalle_cotizacion') or {}).get('paymentCondition') or None)
+        previous = selected.get(key)
+        if (previous is None or observed(deal) > observed(previous)
+                or (observed(deal) == observed(previous)
+                    and float(deal.get('precio_total_usd') or 0) < float(previous.get('precio_total_usd') or 0))):
+            selected[key] = deal
+    return sorted(selected.values(), key=lambda d: float(d.get('precio_total_usd') or 0))
+
+
 def collect_flights_for_search(search: Dict, check_cache_first: bool = True) -> List[Dict]:
     """
     Recolector enfocado en una búsqueda específica (origen, destino, fechas, pax).
@@ -161,7 +189,7 @@ def collect_flights_for_search(search: Dict, check_cache_first: bool = True) -> 
             recent = get_recent_flight_deals(days=1)
             # Filtrar con coincidencia estricta: ruta, fechas exactas y misma cantidad de pasajeros
             matching = [
-                d for d in (recent or [])
+                d for d in latest_quotes(recent or [])
                 if reusable_quote(d) and d.get("ida_origen_destino") == f"{origin}-{dest}"
                 and d.get("vuelta_origen_destino") == f"{dest}-{origin}"
                 and str(d.get("ida_fecha")) == str(dep_date)
@@ -213,7 +241,7 @@ def collect_dynamic_flights(mission: Dict) -> List[Dict]:
     # 1. Intentar reutilizar vuelos frescos del Agente Playwright (Costo $0)
     try:
         from ..services.db import get_recent_flight_deals
-        recent_deals = [d for d in (get_recent_flight_deals(days=1) or []) if reusable_quote(d)]
+        recent_deals = latest_quotes(get_recent_flight_deals(days=1) or [])
         if recent_deals and len(recent_deals) > 0:
             print(f"[Recolector Híbrido] ⚡ Se detectaron {len(recent_deals)} vuelos frescos guardados por el Agente Playwright en Supabase.")
             print(f"[Recolector Híbrido] 🛡️ Cuota de SerpApi preservada intacta.")

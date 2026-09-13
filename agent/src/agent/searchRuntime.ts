@@ -5,12 +5,13 @@ import type { FlightSearchParams, ScrapedFlightOption } from '../types/flight.js
 import { searchKey } from './searchPlanner.js';
 
 export type Provider = ScrapedFlightOption['source'];
-export interface ProviderResult { status: 'ok' | 'empty' | 'blocked' | 'error' | 'unverified'; options: ScrapedFlightOption[]; reason?: string }
+export interface ProviderResult { status: 'ok' | 'empty' | 'blocked' | 'error' | 'unverified'; options: ScrapedFlightOption[]; reason?: string; checkedAt?: string }
 interface State {
   cursors: Record<string, number>;
   cooldown: Partial<Record<Provider, number>>;
   cache: Record<string, { expires: number; result: ProviderResult }>;
   daily: Record<string, number>;
+  coverage?: Record<string, Record<string, number>>;
 }
 export const logEvent = (event: string, fields: Record<string, unknown> = {}) => console.log(JSON.stringify({ timestamp: new Date().toISOString(), event, ...fields }));
 
@@ -29,7 +30,26 @@ export class SearchRuntime {
     for (const [key, entry] of Object.entries(this.state.cache)) if (entry.expires <= Date.now()) delete this.state.cache[key];
   }
   cursor(key: string) { const n = this.state.cursors[key]; return Number.isSafeInteger(n) && n >= 0 ? n : 0; }
-  async advance(key: string) { this.state.cursors[key] = this.cursor(key) + 1; await this.save(); }
+  coverageCount(key: string, now = Date.now()) {
+    return Object.values(this.state.coverage?.[key] || {}).filter(time => time > now - 86400000).length;
+  }
+  async recordCoverage(key: string, params: FlightSearchParams, result: ProviderResult) {
+    if (!['ok', 'empty'].includes(result.status)) return;
+    const at = Date.parse(result.checkedAt || '');
+    if (!Number.isFinite(at)) return;
+    this.state.coverage ??= {};
+    for (const [group, entries] of Object.entries(this.state.coverage)) {
+      for (const [query, time] of Object.entries(entries)) if (time <= Date.now() - 86400000) delete entries[query];
+      if (!Object.keys(entries).length) delete this.state.coverage[group];
+    }
+    const entries = this.state.coverage[key] ??= {};
+    entries[createHash('sha256').update(searchKey(params)).digest('hex')] = at;
+    await this.save();
+  }
+  async advance(key: string, steps = 1) {
+    if (!Number.isSafeInteger(steps) || steps < 1) throw new Error('Invalid cursor advance');
+    this.state.cursors[key] = this.cursor(key) + steps; await this.save();
+  }
   available(provider: Provider) {
     return this.used[provider] < this.limits[provider]
       && (this.state.daily[this.dayKey(provider)] || 0) < this.limits[provider] * 2
@@ -59,6 +79,7 @@ export class SearchRuntime {
     const start = Date.now();
     let result: ProviderResult;
     try { result = await run(); } catch { result = { status: 'error', options: [] }; }
+    result = { ...result, checkedAt: new Date().toISOString() };
     if (result.status === 'blocked') this.state.cooldown[provider] = Date.now() + 24 * 3600000;
     if (result.status === 'error') this.state.cooldown[provider] = Date.now() + 3600000;
     // Unverified markup is not evidence that there are no flights.

@@ -40,7 +40,8 @@ jobs:
           npx playwright install chromium --with-deps
 
       - name: Restore search coverage and provider cooldowns
-        uses: actions/cache@v4
+        id: search-state
+        uses: actions/cache/restore@v4
         with:
           path: agent/.flight-state
           key: flight-search-v2-${{ github.run_id }}-${{ github.run_attempt }}
@@ -61,6 +62,13 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL || secrets.GEMINI_MODEL }}
           HEADLESS: "true"
+
+      - name: Preserve consumed searches even after a failed run
+        if: always() && steps.search-state.outputs.cache-primary-key != '' && hashFiles('agent/.flight-state/state.json') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: agent/.flight-state
+          key: ${{ steps.search-state.outputs.cache-primary-key }}
 
       - name: Share the exact plan with LangGraph
         uses: actions/upload-artifact@v4

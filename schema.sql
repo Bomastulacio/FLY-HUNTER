@@ -1,4 +1,5 @@
 create extension if not exists pgcrypto;
+-- Complete a fresh installation with schema_monitoring.sql (private monitoring tables).
 
 create table public.flight_deals (
     id uuid primary key default gen_random_uuid(),

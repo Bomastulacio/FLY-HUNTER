@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import type { ScrapedFlightOption, AgentEvaluation } from '../types/flight.js';
+import type { SavedDeal } from '../agent/monitoring.js';
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -11,7 +12,8 @@ export const supabase = (supabaseUrl && supabaseKey)
 
 export async function saveFlightDeal(
   deal: ScrapedFlightOption,
-  evaluation?: AgentEvaluation
+  evaluation?: AgentEvaluation,
+  observationOnly = false
 ) {
   if (!supabase) {
     throw new Error('Faltan las credenciales de persistencia de Supabase');
@@ -38,14 +40,16 @@ export async function saveFlightDeal(
       pasajeros: pax,
       precio_por_pasajero_usd: unitPrice,
       created_at: deal.collectedAt,
-      detalle_cotizacion: { ...deal.evidence, observedAt: deal.collectedAt, paymentCondition: deal.paymentCondition || null },
+      detalle_cotizacion: { ...deal.evidence, observedAt: deal.collectedAt, paymentCondition: deal.paymentCondition || null,
+        budgetScope: 'radar' },
       aerolinea: deal.airline,
       cantidad_escalas: deal.stops,
       fuente: deal.source,
       link_reserva: deal.bookingUrl,
       es_oportunidad_oro: evaluation?.isGoldenOpportunity ?? false,
       es_anomalia: evaluation?.isAnomaly ?? false,
-      estado_aprobacion: evaluation?.approvalStatus ?? 'aprobado',
+      // Budget differs between radars. A valid observation is not a global rejection or human approval.
+      estado_aprobacion: observationOnly ? 'no_aplica' : evaluation?.approvalStatus ?? 'aprobado',
       hash_dedupe: hashDedupe
     };
 
@@ -94,4 +98,31 @@ export async function getActiveSearchAlerts(): Promise<any[]> {
     console.warn(`[DB] ⚠️ Error consultando alertas en Supabase:`, err);
     throw new Error('No se pudieron leer los radares');
   }
+}
+
+export async function getMonitoringSavedDeals(): Promise<SavedDeal[]> {
+  if (!supabase) throw new Error('Faltan las credenciales de Supabase');
+  // Validate deployment before spending provider quota. Missing migration is actionable.
+  for (const table of ['saved_deal_checks', 'radar_scan_status']) {
+    const { error } = await supabase.from(table).select('*').limit(1);
+    if (error) throw new Error('Aplicá schema_monitoring.sql antes de ejecutar el seguimiento');
+  }
+  const rows: SavedDeal[] = [];
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await supabase.from('saved_deals').select('*')
+      .gte('ida_fecha', new Date().toISOString().slice(0, 10)).order('id').range(offset, offset + 499);
+    if (error) throw new Error('No se pudieron leer los vuelos seguidos');
+    rows.push(...(data || []) as SavedDeal[]);
+    if (!data || data.length < 500) return rows;
+  }
+}
+
+export async function persistMonitoring(checks: Record<string, unknown>[], status: Record<string, unknown>) {
+  if (!supabase) throw new Error('Faltan las credenciales de Supabase');
+  if (checks.length) {
+    const { error } = await supabase.from('saved_deal_checks').upsert(checks, { onConflict: 'event_id', ignoreDuplicates: true });
+    if (error) throw new Error('No se pudo guardar el seguimiento');
+  }
+  const { error } = await supabase.from('radar_scan_status').upsert(status, { onConflict: 'radar_id,provider' });
+  if (error) throw new Error('No se pudo guardar el estado del radar');
 }

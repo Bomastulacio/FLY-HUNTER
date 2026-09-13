@@ -1,5 +1,8 @@
 # Búsquedas verificables y cobertura por fuente
 
+Documento de soporte del diagnóstico de extracción. La operación vigente y el seguimiento
+se describen en `agents.md` y `MONITORING.md`; esas reglas reemplazan decisiones históricas incompatibles.
+
 El vuelo de la captura es EZE–MAD, 18/04/2027–01/05/2027, Aeroméxico, una escala por tramo, US$1.884 final para dos personas **con débito**. La captura demuestra una observación del usuario, no disponibilidad actual. La tarjeta de la app mostraba otra fecha de vuelta y un adulto.
 
 ## Cambios
@@ -19,7 +22,7 @@ Solo Python puede consumir SerpApi: 2 intentos por corrida, 4 por día, 220 por 
 
 GitHub Actions conserva cursores/cooldowns y el registro de cuota en caché y serializa cada workflow. El pipeline automático corre al finalizar el scraper y recibe su plan mediante un artefacto del run, evitando la segunda ejecución por cron. El `repository_dispatch` mantiene SerpApi deshabilitada. La caché de Actions puede perderse: para múltiples runners fuera de estos workflows o una aplicación de mayor escala, el siguiente paso es trasladar cursores, reservas y leases a Postgres con operaciones atómicas. Estos límites locales no reemplazan un contador global distribuido.
 
-Las observaciones repetidas actualizan solo fecha de consulta, evidencia y enlace, conservando aprobación humana y notificación. Python lee el estado persistido antes de notificar. El historial existente no se borra ni se interpreta retroactivamente como evidencia verificada.
+Las observaciones repetidas en `flight_deals` actualizan solo fecha de consulta, evidencia y enlace, conservando aprobación humana y notificación. Los guardados tienen un historial separado (`saved_deal_checks`) y no se sobrescriben con cada búsqueda. Python lee el estado persistido antes de notificar. El historial existente no se borra ni se interpreta retroactivamente como evidencia verificada.
 
 ## Despliegue
 
@@ -28,7 +31,7 @@ Las observaciones repetidas actualizan solo fecha de consulta, evidencia y enlac
 3. Publicar código y workflows. Las credenciales de escritura requieren `SUPABASE_SERVICE_ROLE_KEY` en Actions.
 4. Revisar el primer run: `search.completed` distingue `ok`, `empty`, `unverified`, `blocked` y `error`. Un selector que cambia no demuestra ausencia de vuelos.
 
-La migración está preparada, pero no aplicada ni probada contra una base remota desde esta sesión. No se hicieron búsquedas en vivo ni se verificó que la tarifa de la captura siga disponible. Los selectores de sitios externos requieren observar el primer run: los tests sintéticos verifican el contrato y la extracción con fixtures, no la estabilidad del DOM del proveedor.
+La primera auditoría preparó `schema_quote_evidence.sql` sin aplicarla remotamente. Una auditoría posterior observó Google Flights en vivo y verificó la diferencia entre Mejores opciones y Los más bajos: el extractor ahora selecciona la segunda pestaña, espera la carga, cruza el precio visible con la descripción accesible y valida la consulta. Los datos Google del parser anterior se excluyen del feed/caché. Las pruebas offline no garantizan estabilidad futura del DOM ni disponibilidad de una tarifa.
 
 ## Verificación sin consumo
 

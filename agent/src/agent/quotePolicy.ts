@@ -3,9 +3,8 @@ import type { AgentEvaluation, FlightSearchParams, ScrapedFlightOption } from '.
 export const normalizedAirline = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 export const isAerolineasArgentinas = (s: string) => /\baerolineas argentinas\b/.test(normalizedAirline(s));
 
-export function rejectionReason(p: FlightSearchParams, q: ScrapedFlightOption): string | undefined {
-  const maxBudget = p.budgetMaxUSD ?? 1200 * p.passengers;
-  if (!Number.isFinite(maxBudget) || maxBudget <= 0 || ![0, 1].includes(p.maxStops ?? 1)) return 'Configuración de radar inválida';
+export function quoteIntegrityReason(p: FlightSearchParams, q: ScrapedFlightOption): string | undefined {
+  if (![0, 1].includes(p.maxStops ?? 1)) return 'Configuración de radar inválida';
   if (!Number.isFinite(q.priceTotalUSD) || q.priceTotalUSD <= 0) return 'Precio desconocido o inválido';
   if (!Number.isInteger(q.passengers) || q.passengers !== p.passengers) return 'La cotización corresponde a otros pasajeros';
   if (!q.evidence?.passengersVerified || q.evidence.priceBasis !== 'party_total') return 'Falta verificar el total para el grupo';
@@ -18,6 +17,14 @@ export function rejectionReason(p: FlightSearchParams, q: ScrapedFlightOption): 
   if (!q.airline.trim() || /^(aerolinea|desconocida|multiples)$/.test(normalizedAirline(q.airline))) return 'Aerolínea sin verificar';
   if (p.excludedAirlines?.some(a => a.trim() && ` ${normalizedAirline(q.airline)} `.includes(` ${normalizedAirline(a)} `))) return 'Aerolínea excluida';
   if (!Number.isFinite(Date.parse(q.collectedAt))) return 'Fecha de observación inválida';
+  return undefined;
+}
+
+export function rejectionReason(p: FlightSearchParams, q: ScrapedFlightOption): string | undefined {
+  const invalid = quoteIntegrityReason(p, q);
+  if (invalid) return invalid;
+  const maxBudget = p.budgetMaxUSD ?? 1200 * p.passengers;
+  if (!Number.isFinite(maxBudget) || maxBudget <= 0) return 'Configuración de radar inválida';
   if (q.priceTotalUSD > maxBudget) return 'Supera el presupuesto';
   if (q.priceTotalUSD >= 750 * p.passengers && q.priceTotalUSD < (p.budgetMinUSD ?? 0)) return 'Debajo del mínimo configurado: requiere revisión';
   return undefined;
