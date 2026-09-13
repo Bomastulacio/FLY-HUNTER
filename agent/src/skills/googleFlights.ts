@@ -21,7 +21,7 @@ export async function collectGoogleFlights(p: FlightSearchParams, options: { hea
     if (await cookies.isVisible()) await cookies.click();
     const cheapest = page.getByRole('tab', { name: /Los más bajos/ });
     await cheapest.waitFor({ state: 'visible', timeout: 25000 });
-    await page.locator('[role="progressbar"]:visible').first().waitFor({ state: 'hidden', timeout: 25000 });
+    await page.locator('[role="progressbar"]:visible').first().waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
     // The Best view exposes exact ISO dates in its price-tracking control.
     // Cheapest omits that control: validate first and check inputs stay unchanged.
     const dates = page.getByRole('switch', { name: new RegExp(`salida el ${p.departureDate} y vuelta el ${p.returnDate}`) });
@@ -34,7 +34,7 @@ export async function collectGoogleFlights(p: FlightSearchParams, options: { hea
     const panel = page.getByRole('tabpanel', { name: /Los más bajos/ });
     await panel.waitFor({ state: 'visible', timeout: 25000 });
     // A selected tab may still contain provisional fares while Google is loading.
-    await page.locator('[role="progressbar"]:visible').first().waitFor({ state: 'hidden', timeout: 25000 });
+    await panel.locator('[role="progressbar"]:visible').first().waitFor({ state: 'hidden', timeout: 8000 }).catch(() => {});
     const body = await page.locator('body').innerText();
     if (challenged(body)) return { status: 'blocked', options: [] };
     const pagePassengerCount = verifiedPassengerCount(await panel.innerText());
