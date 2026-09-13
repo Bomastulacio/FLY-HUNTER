@@ -28,6 +28,10 @@ const cities: Record<string, string> = {
 
 /** A total quoted for one adult must never be compared with a two-adult radar. */
 export function matchesRadar(deal: any, radar: any): boolean {
+  // Historical rows from the old scraper must not compete with verified fares.
+  if (deal.fuente === 'google_flights' && (deal.detalle_cotizacion?.googleParserVersion !== 2
+    || !deal.detalle_cotizacion?.priceVerified || !deal.detalle_cotizacion?.queryVerified
+    || deal.detalle_cotizacion?.searchView !== 'cheapest')) return false;
   const [origin] = String(deal.ida_origen_destino || '').split('-');
   const origins = String(radar.origen || '').split(/[,/]/).map(s => s.trim());
   const normalize = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
@@ -57,6 +61,9 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
   const stopText = deal.cantidad_escalas != null && Number.isFinite(stops) ?
     `${deal.detalle_cotizacion?.itineraryScope === 'search_result' ? 'Ida: ' : ''}${stops === 0 ? 'Directo' : `${stops} escala${stops === 1 ? '' : 's'}`}` : 'Escalas por confirmar';
   const gold = Boolean(deal.es_oportunidad_oro);
+  const googleSearch = deal.fuente === 'google_flights';
+  const unverifiedGoogle = googleSearch && (deal.detalle_cotizacion?.googleParserVersion !== 2
+    || !deal.detalle_cotizacion?.priceVerified || !deal.detalle_cotizacion?.queryVerified);
   const isSavedSnapshot = Boolean(deal.guardado_el);
   const query = `Flights from ${origin} to ${destination} on ${deal.ida_fecha} through ${deal.vuelta_fecha} for ${searchPassengers} adults`;
   let bookingUrl = `https://www.google.com/travel/flights?q=${encodeURIComponent(query)}&curr=USD&hl=es`;
@@ -87,7 +94,7 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
       <summary class="flight-summary">
         <span class="flight-summary-top">
           <span class="flight-destination">${e(city)}</span>
-          ${isSavedSnapshot ? `<span class="flight-badge" style="background:#4ade8022;color:#86efac;border-color:#4ade8044;"><i class="ph-fill ph-bookmark-simple"></i> Guardado</span>` : (gold || featured ? `<span class="flight-badge">${gold ? 'Oportunidad de Oro' : 'Mejor precio'}</span>` : '')}
+          ${isSavedSnapshot ? `<span class="flight-badge" style="background:#4ade8022;color:#86efac;border-color:#4ade8044;"><i class="ph-fill ph-bookmark-simple"></i> Guardado</span>` : (gold || featured ? `<span class="flight-badge">${gold ? 'Oportunidad de Oro' : 'Menor precio encontrado'}</span>` : '')}
         </span>
         <span class="flight-route-line">${e(country || 'Vuelo internacional')} · Ida y vuelta</span>
         <span class="ticket-route" aria-label="${e(origin)} a ${e(destination)}">
@@ -95,8 +102,8 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
         </span>
         <span class="flight-summary-facts">
           <span class="flight-dates"><small>Fechas</small>${e(flightDate(deal.ida_fecha))} — ${e(flightDate(deal.vuelta_fecha))}</span>
-          <span class="flight-price">${e(usd(deal.precio_total_usd))}</span>
-          <span class="flight-airline">${e(stopText)} · ${e(deal.aerolinea || 'Aerolínea por confirmar')}</span>
+          <span class="flight-price">${googleSearch ? '<small>Desde </small>' : ''}${e(usd(deal.precio_total_usd))}</span>
+          <span class="flight-airline">${e(stopText)} · ${e(unverifiedGoogle ? 'Aerolínea por verificar' : deal.aerolinea || 'Aerolínea por confirmar')}</span>
           <span class="flight-passengers">Total · ${e(pax)}${unitPrice ? ` (${e(usd(unitPrice))}/u)` : ''}</span>
         </span>
         <span class="flight-expand"><span class="when-closed">Ver vuelo</span><span class="when-open">Cerrar detalle</span><i class="ph ph-caret-down" aria-hidden="true"></i></span>
@@ -107,6 +114,7 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
           <div><dt>Vuelta</dt><dd>${e(deal.vuelta_origen_destino || `${destination}-${origin}`)}<small>${e(flightDate(deal.vuelta_fecha, true))}</small></dd></div>
         </dl>
         <a class="flight-book" href="${e(bookingUrl)}" target="_blank" rel="noopener noreferrer">Ver en ${provider}<i class="ph ph-arrow-up-right" aria-hidden="true"></i><span class="sr-only"> (abre otra pestaña)</span></a>
+        ${googleSearch ? `<p class="flight-freshness">${unverifiedGoogle ? 'Cotización anterior pendiente de verificación.' : `Al abrir, elegí <strong>Los más bajos</strong> y buscá ${e(deal.aerolinea)}. El enlace abre la búsqueda para ${e(pax)}; el precio final depende del regreso que elijas.`}</p>` : ''}
         ${deal.detalle_cotizacion?.paymentCondition ? `<p class="flight-freshness"><strong>${e(deal.detalle_cotizacion.paymentCondition)}</strong></p>` : ''}
         <p class="flight-freshness">Consulta: ${e(observation)}. Confirmá precio, horarios y equipaje al abrir.</p>
         <details class="flight-explanation">

@@ -3,7 +3,9 @@ import { normalizedAirline } from '../agent/quotePolicy.js';
 
 /** USD only. Never guess an ARS exchange rate or erase decimal cents. */
 export function parseUsd(text: string): number | undefined {
-  const matches = [...text.matchAll(/(?:US\$|USD)\s*([\d][\d.,\s]*\d|\d)|([\d][\d.,\s]*\d|\d)\s*(?:US\$|USD)/gi)];
+  // Whitespace may group thousands, never unrelated values (e.g. "USD 1925 1 escala").
+  const amount = String.raw`(?:\d{1,3}(?:[ \u00a0\u202f]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d+)*)`;
+  const matches = [...text.matchAll(new RegExp(`(?:US\\$|USD)\\s*(${amount})|(${amount})\\s*(?:US\\$|USD)`, 'gi'))];
   if (matches.length !== 1) return undefined;
   let value = (matches[0][1] || matches[0][2]).replace(/\s/g, '');
   if (!/^\d+(?:[.,]\d+)*$/.test(value)) return undefined;

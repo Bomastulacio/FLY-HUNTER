@@ -5,7 +5,7 @@ import type { FlightSearchParams, ScrapedFlightOption } from '../types/flight.js
 import { searchKey } from './searchPlanner.js';
 
 export type Provider = ScrapedFlightOption['source'];
-export interface ProviderResult { status: 'ok' | 'empty' | 'blocked' | 'error' | 'unverified'; options: ScrapedFlightOption[] }
+export interface ProviderResult { status: 'ok' | 'empty' | 'blocked' | 'error' | 'unverified'; options: ScrapedFlightOption[]; reason?: string }
 interface State {
   cursors: Record<string, number>;
   cooldown: Partial<Record<Provider, number>>;
@@ -43,7 +43,9 @@ export class SearchRuntime {
     await rename(temp, this.path);
   }
   async search(provider: Provider, params: FlightSearchParams, run: () => Promise<ProviderResult>): Promise<ProviderResult | undefined> {
-    const key = createHash('sha256').update(provider + searchKey(params)).digest('hex');
+    // Retire old extracted quotes without resetting quota reservations or cooldowns.
+    const version = provider === 'google_flights' ? ':verified-dom-v2:' : '';
+    const key = createHash('sha256').update(provider + version + searchKey(params)).digest('hex');
     const cached = this.state.cache[key];
     if (cached && cached.expires > Date.now()) { logEvent('search.cache_hit', { provider, key }); return cached.result; }
     if (!this.available(provider)) { logEvent('search.deferred', { provider, reason: 'budget_or_cooldown' }); return undefined; }
@@ -62,7 +64,7 @@ export class SearchRuntime {
     // Unverified markup is not evidence that there are no flights.
     if (result.status === 'ok' || result.status === 'empty') this.state.cache[key] = { expires: Date.now() + (result.status === 'ok' ? 6 : 1) * 3600000, result };
     await this.save();
-    logEvent('search.completed', { provider, key, status: result.status, quotes: result.options.length, latency_ms: Date.now() - start, api_credits: 0, searches_used: this.used[provider] });
+    logEvent('search.completed', { provider, key, status: result.status, reason: result.reason, quotes: result.options.length, latency_ms: Date.now() - start, api_credits: 0, searches_used: this.used[provider] });
     return result;
   }
 }

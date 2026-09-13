@@ -131,6 +131,17 @@ def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str, 
         print(f"Error fetching from SerpApi: {type(e).__name__}")
         return []
 
+def reusable_quote(deal: Dict) -> bool:
+    """Retire pre-fix Google DOM quotes without deleting historical/saved flights."""
+    if deal.get('fuente') != 'google_flights':
+        return True
+    evidence = deal.get('detalle_cotizacion') or {}
+    return (evidence.get('googleParserVersion') == 2
+            and evidence.get('priceVerified') is True
+            and evidence.get('queryVerified') is True
+            and evidence.get('searchView') == 'cheapest')
+
+
 def collect_flights_for_search(search: Dict, check_cache_first: bool = True) -> List[Dict]:
     """
     Recolector enfocado en una búsqueda específica (origen, destino, fechas, pax).
@@ -151,7 +162,7 @@ def collect_flights_for_search(search: Dict, check_cache_first: bool = True) -> 
             # Filtrar con coincidencia estricta: ruta, fechas exactas y misma cantidad de pasajeros
             matching = [
                 d for d in (recent or [])
-                if d.get("ida_origen_destino") == f"{origin}-{dest}"
+                if reusable_quote(d) and d.get("ida_origen_destino") == f"{origin}-{dest}"
                 and d.get("vuelta_origen_destino") == f"{dest}-{origin}"
                 and str(d.get("ida_fecha")) == str(dep_date)
                 and str(d.get("vuelta_fecha")) == str(ret_date)
@@ -202,7 +213,7 @@ def collect_dynamic_flights(mission: Dict) -> List[Dict]:
     # 1. Intentar reutilizar vuelos frescos del Agente Playwright (Costo $0)
     try:
         from ..services.db import get_recent_flight_deals
-        recent_deals = get_recent_flight_deals(days=1)
+        recent_deals = [d for d in (get_recent_flight_deals(days=1) or []) if reusable_quote(d)]
         if recent_deals and len(recent_deals) > 0:
             print(f"[Recolector Híbrido] ⚡ Se detectaron {len(recent_deals)} vuelos frescos guardados por el Agente Playwright en Supabase.")
             print(f"[Recolector Híbrido] 🛡️ Cuota de SerpApi preservada intacta.")
@@ -226,7 +237,9 @@ def collect_dynamic_flights(mission: Dict) -> List[Dict]:
                     "cantidad_escalas": int(d.get("cantidad_escalas", 0) or 0),
                     "duracion_total_minutos": int(d.get("duracion_total_minutos", 720) or 720),
                     "link_reserva": d.get("link_reserva", ""),
-                    "fuente": d.get("fuente", "agent_playwright")
+                    "fuente": d.get("fuente", "agent_playwright"),
+                    "detalle_cotizacion": d.get("detalle_cotizacion"),
+                    "created_at": d.get("created_at")
                 })
             return raw_flights
     except Exception as e:

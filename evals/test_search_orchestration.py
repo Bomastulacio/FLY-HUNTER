@@ -106,6 +106,19 @@ class OrchestrationEvals(TestCase):
             self.assertEqual(collectors.collect_flights_for_search(SEARCH), [])
             paid.assert_called_once_with('EZE', 'MAD', '2027-04-18', '2027-05-01', adults=2)
 
+    def test_old_google_dom_quotes_are_not_reused_as_fresh_results(self):
+        deal = {'ida_origen_destino': 'EZE-MAD', 'vuelta_origen_destino': 'MAD-EZE',
+                'ida_fecha': SEARCH['dep_date'], 'vuelta_fecha': SEARCH['ret_date'],
+                'pasajeros': 2, 'precio_total_usd': 2014, 'fuente': 'google_flights'}
+        evidence = {'googleParserVersion': 2, 'priceVerified': True, 'queryVerified': True, 'searchView': 'cheapest'}
+        with patch('src.services.db.get_recent_flight_deals', return_value=[deal]), patch.object(collectors, 'fetch_serpapi_flights', return_value=[]) as paid:
+            self.assertEqual(collectors.collect_flights_for_search(SEARCH), [])
+            paid.assert_called_once()
+        with patch('src.services.db.get_recent_flight_deals', return_value=[{**deal, 'detalle_cotizacion': evidence}]), patch.object(collectors, 'fetch_serpapi_flights', side_effect=AssertionError('Paid lookup forbidden')):
+            self.assertEqual(collectors.collect_flights_for_search(SEARCH)[0]['detalle_cotizacion'], evidence)
+        self.assertTrue(collectors.reusable_quote({'fuente': 'despegar'}))
+        self.assertFalse(collectors.reusable_quote({**deal, 'detalle_cotizacion': {**evidence, 'priceVerified': False}}))
+
     def test_notifications_follow_persisted_state_and_stop_on_write_failure(self):
         deal = {'ida_fecha': SEARCH['dep_date'], 'vuelta_fecha': SEARCH['ret_date'], 'ida_origen_destino': 'EZE-MAD',
                 'vuelta_origen_destino': 'MAD-EZE', 'precio_total_usd': 1400, 'pasajeros': 2,

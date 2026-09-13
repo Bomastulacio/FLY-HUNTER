@@ -30,6 +30,11 @@ export interface ScrapedFlightOption {
     passengersVerified: boolean;
     itineraryScope: 'search_result' | 'roundtrip';
     stopsPerDirection?: number[];
+    googleParserVersion?: number;
+    searchView?: 'cheapest';
+    priceVerified?: boolean;
+    queryVerified?: boolean;
+    fareType?: 'from_price';
   };
 }
 

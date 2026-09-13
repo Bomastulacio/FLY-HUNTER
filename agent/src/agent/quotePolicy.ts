@@ -9,6 +9,8 @@ export function rejectionReason(p: FlightSearchParams, q: ScrapedFlightOption): 
   if (!Number.isFinite(q.priceTotalUSD) || q.priceTotalUSD <= 0) return 'Precio desconocido o inválido';
   if (!Number.isInteger(q.passengers) || q.passengers !== p.passengers) return 'La cotización corresponde a otros pasajeros';
   if (!q.evidence?.passengersVerified || q.evidence.priceBasis !== 'party_total') return 'Falta verificar el total para el grupo';
+  if (q.source === 'google_flights' && (q.evidence.googleParserVersion !== 2
+    || !q.evidence.priceVerified || !q.evidence.queryVerified || q.evidence.searchView !== 'cheapest')) return 'Cotización de Google sin verificar';
   if (Math.abs(q.pricePerPaxUSD * q.passengers - q.priceTotalUSD) > 0.02 * q.passengers) return 'Total y precio por persona inconsistentes';
   if (q.route.replace(/\s/g, '') !== `${p.origin}-${p.destination}` || q.departureDate !== p.departureDate || q.returnDate !== p.returnDate) return 'La cotización corresponde a otra ruta o fechas';
   if (!Number.isInteger(q.stops) || q.stops < 0 || q.stops > Math.min(1, p.maxStops ?? 1)) return 'Escalas no permitidas o desconocidas';
