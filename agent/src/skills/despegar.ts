@@ -26,14 +26,24 @@ export async function collectDespegar(p: FlightSearchParams, options: { headless
     const results: ScrapedFlightOption[] = [];
     const passengerCount = verifiedPassengerCount(body);
     for (const card of await page.locator(selector).all()) {
+      if (!await card.isVisible()) continue;
       const snapshot = await card.evaluate(element => {
         const clone = element.cloneNode(true) as HTMLElement;
-        clone.querySelectorAll('s, del, [class*="old-price"], [class*="original-price"], [class*="strik"], script, style').forEach(n => n.remove());
-        const airlineNames = [...element.querySelectorAll('.airline-name, [class*="airline-name"], img[alt]')]
+        // Responsive alternatives and collapsed itineraries are not observed quotes.
+        // Inspect computed styles on the live nodes before reading the detached clone.
+        const originalNodes = [...element.querySelectorAll('*')];
+        const clonedNodes = [...clone.querySelectorAll('*')];
+        originalNodes.forEach((node, index) => {
+          const style = getComputedStyle(node);
+          if (node.matches('s, del, [class*="old-price"], [class*="original-price"], [class*="strik"], script, style')
+            || style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse'
+            || style.textDecorationLine.includes('line-through')) clonedNodes[index].remove();
+        });
+        const airlineNames = [...clone.querySelectorAll('.airline-name, [class*="airline-name"], img[alt]')]
           .map(n => n instanceof HTMLImageElement ? n.alt : n.textContent || '')
           .filter(s => /aerom[eé]xico|aerol[ií]neas argentinas|iberia|air europa|latam|plus ultra|level|lufthansa|air france|klm|british|turkish|avianca|copa|ita air|american air|delta|united|arajet|jetsmart|flybondi|gol\b|azul|emirates|qatar|etihad|ethiopian|air canada|swiss|tap\b/i.test(s));
         // Trust labelled carrier fields for airlines beyond the image-logo fallback list.
-        element.querySelectorAll('.airline-name, [class*="airline-name"]').forEach(n => {
+        clone.querySelectorAll('.airline-name, [class*="airline-name"]').forEach(n => {
           if (n.textContent?.trim()) airlineNames.push(n.textContent.trim());
         });
         const walker = document.createTreeWalker(clone, NodeFilter.SHOW_TEXT);

@@ -96,15 +96,26 @@ create table public.search_alerts (
 -- Habilitar RLS
 alter table public.search_alerts enable row level security;
 
--- Política para que los usuarios puedan ver y editar SUS propias alertas
+-- Política para que los usuarios puedan ver y gestionar SUS propias alertas de forma segura
 create policy "Usuarios ven sus alertas"
     on public.search_alerts
     for select
     using (auth.uid() = user_id);
 
-create policy "Usuarios editan sus alertas"
+create policy "Usuarios insertan sus alertas"
     on public.search_alerts
-    for all
+    for insert
+    with check (auth.uid() = user_id);
+
+create policy "Usuarios actualizan sus alertas"
+    on public.search_alerts
+    for update
+    using (auth.uid() = user_id)
+    with check (auth.uid() = user_id);
+
+create policy "Usuarios eliminan sus alertas"
+    on public.search_alerts
+    for delete
     using (auth.uid() = user_id);
 
 create policy "Permitir full access al service role alertas"

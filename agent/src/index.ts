@@ -1,12 +1,11 @@
 import 'dotenv/config';
-import { createHash } from 'node:crypto';
 import { writeFile, appendFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { collectGoogleFlights } from './skills/googleFlights.js';
 import { collectDespegar } from './skills/despegar.js';
 import { evaluateDealWithGemini } from './agent/geminiEvaluator.js';
 import { evaluateQuote, quoteIntegrityReason } from './agent/quotePolicy.js';
-import { buildSearchSpace, roundRobin, searchKey, parseSearchFocus, matchesFocus, type SearchAlert } from './agent/searchPlanner.js';
+import { buildSearchSpace, roundRobin, searchKey, searchSpaceSignature, parseSearchFocus, matchesFocus, type SearchAlert } from './agent/searchPlanner.js';
 import { SearchRuntime, logEvent, type Provider, type ProviderResult } from './agent/searchRuntime.js';
 import { saveFlightDeal, getActiveSearchAlerts, getMonitoringSavedDeals, persistMonitoring } from './db/supabase.js';
 import { savedChecks, watchTargets, pickMonitoringSearch } from './agent/monitoring.js';
@@ -48,7 +47,7 @@ export async function runHunt(args = process.argv.slice(2), io = huntIO, runtime
   // Fill existing caps (Google 4 / Despegar 2), alternating exploration and monitoring.
   // Rotating alerts preserves fairness; duplicate searches are shared within this run.
   for (let pass = 0; pass < 4; pass++) for (const { alert, searches } of plans) for (const provider of sources) {
-    const signature = createHash('sha256').update(JSON.stringify(searches)).digest('hex').slice(0, 16);
+    const signature = searchSpaceSignature(searches);
     const cursorKey = `${alert.id}:${provider}:${signature}`;
     const watches = watchTargets(alert, searches, saved, provider);
     const priority = focus && searches.find(p => matchesFocus(p, focus) && !visited.has(`${alert.id}:${provider}:${searchKey(p)}`));
@@ -108,9 +107,10 @@ export async function runHunt(args = process.argv.slice(2), io = huntIO, runtime
   if (!dryRun) {
     for (const { alert, searches } of plans) for (const provider of sources) {
       if (reported.has(`${alert.id}:${provider}`)) continue;
-      const signature = createHash('sha256').update(JSON.stringify(searches)).digest('hex').slice(0, 16);
+      const signature = searchSpaceSignature(searches);
       await io.persistMonitoring([], { radar_id: alert.id, provider, checked_at: new Date().toISOString(), outcome: 'deferred',
-        checked_combinations: runtime.coverageCount(`${alert.id}:${provider}:${signature}`), total_combinations: searches.length });
+        checked_combinations: runtime.coverageCount(`${alert.id}:${provider}:${signature}`), total_combinations: searches.length,
+        ...runtime.pauseStatus(provider) });
     }
     await runtime.advance('alerts');
     // A run-scoped artifact lets LangGraph reuse the exact plan rather than inventing different dates.

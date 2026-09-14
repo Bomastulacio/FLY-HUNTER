@@ -17,7 +17,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'backend'))
 import diskcache
 from src.services import search_budget as budget
-from src.agents import collectors, strategist
+from src.agents import collectors, strategist, analyst, sanitizer
 from src import graph
 
 ALERT = {'id': 'radar', 'origen': 'EZE', 'destino': 'Europa', 'paises': ['España'], 'pasajeros': 2,
@@ -144,6 +144,44 @@ class OrchestrationEvals(TestCase):
             self.assertEqual([d['precio_total_usd'] for d in collectors.collect_dynamic_flights({})], [2800])
         self.assertEqual(len(collectors.latest_quotes([old, newer, {**newer, 'pasajeros': 1}])), 2)
         self.assertEqual(collectors.latest_quotes([newer, {**newer, 'precio_total_usd': 2700}])[0]['precio_total_usd'], 2700)
+
+    def test_long_connection_reaches_critic_without_an_unconfigured_duration_cap(self):
+        deal = {'ida_fecha': SEARCH['dep_date'], 'vuelta_fecha': SEARCH['ret_date'], 'ida_origen_destino': 'EZE-MAD',
+                'vuelta_origen_destino': 'MAD-EZE', 'precio_total_usd': 1884, 'pasajeros': 2,
+                'aerolinea': 'Aeroméxico', 'cantidad_escalas': 1, 'fuente': 'despegar',
+                'duracion_total_minutos': 2150, 'detalle_cotizacion': {'paymentCondition': 'Con débito'}}
+        with ExitStack() as stack:
+            stack.enter_context(patch.object(graph, 'define_daily_mission', return_value={'searches': [SEARCH], 'alerts_context': [ALERT]}))
+            stack.enter_context(patch.object(graph, 'collect_flights_for_search', return_value=[deal]))
+            stack.enter_context(patch.object(analyst, 'fetch_dolar_tarjeta', return_value=0))
+            save = stack.enter_context(patch.object(graph, 'upsert_deals', return_value=[]))
+            stack.enter_context(patch.object(graph, 'data_scientist_analysis', return_value=None))
+            result = graph.build_graph().invoke({}, {'recursion_limit': 120})
+            self.assertEqual(result['all_evaluated_deals'][0]['precio_total_usd'], 1884)
+            saved = save.call_args.args[0][0]
+            self.assertEqual(saved.estado_aprobacion, 'aprobado')
+            self.assertEqual(saved.duracion_total_minutos, 2150)
+            self.assertEqual(saved.pasajeros, 2)
+
+    def test_sanitizer_rejects_unknown_stops_and_prices_without_crashing_batch(self):
+        valid = {'precio_total_usd': 1884, 'cantidad_escalas': 1, 'duracion_total_minutos': 3625}
+        invalid = [{**valid, 'cantidad_escalas': value} for value in (None, True, 2, -1, 'unknown')]
+        invalid += [{**valid, 'precio_total_usd': value} for value in (None, False, float('nan'), float('inf'), 0)]
+        invalid.append({**valid, 'price_unknown': True})
+        self.assertEqual(sanitizer.sanitize_flights(invalid + [valid]), [valid])
+
+    def test_analyst_preserves_distinct_payment_and_stop_conditions(self):
+        deal = {'ida_fecha': SEARCH['dep_date'], 'vuelta_fecha': SEARCH['ret_date'], 'ida_origen_destino': 'EZE-MAD',
+                'vuelta_origen_destino': 'MAD-EZE', 'precio_total_usd': 1884, 'pasajeros': 2,
+                'aerolinea': 'Aeroméxico', 'cantidad_escalas': 1, 'fuente': 'despegar',
+                'detalle_cotizacion': {'paymentCondition': 'Con débito'}}
+        unrestricted = {**deal, 'detalle_cotizacion': {'paymentCondition': 'Cualquier medio de pago'}}
+        nonstop = {**deal, 'cantidad_escalas': 0}
+        with patch.object(analyst, 'fetch_dolar_tarjeta', return_value=0):
+            result = analyst.consolidate_and_analyze([deal, unrestricted, nonstop, deepcopy(deal)])
+        self.assertEqual(len(result), 3)
+        self.assertEqual([d['precio_total_usd'] for d in result], [1884] * 3)
+        self.assertEqual([d['precio_por_pasajero_usd'] for d in result], [942] * 3)
 
 
 if __name__ == '__main__':

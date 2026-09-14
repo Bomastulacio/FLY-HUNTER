@@ -68,11 +68,11 @@ import '../styles/compact.css';
              }
            });
         } else {
-           const { data: { session } } = await supabase.auth.getSession();
-           if (!session) {
+           const { data: { user }, error: userError } = await supabase.auth.getUser();
+           if (userError || !user) {
              window.location.href = '/login';
            } else {
-             const metadata = session.user.user_metadata || {};
+             const metadata = user.user_metadata || {};
              const avatarUrl = metadata.avatar_url || metadata.picture;
              const avatarBtn = document.getElementById('avatar-btn');
              const initialsEl = document.getElementById('user-initials');
@@ -84,7 +84,7 @@ import '../styles/compact.css';
                avatarBtn.style.backgroundPosition = 'center';
                avatarBtn.style.border = '1px solid rgba(255,255,255,0.2)';
              } else {
-               const email = session.user.email || '';
+               const email = user.email || '';
                const initials = email.substring(0, 2).toUpperCase() || 'US';
                if (initialsEl) initialsEl.innerText = initials;
              }

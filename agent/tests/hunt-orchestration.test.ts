@@ -56,7 +56,7 @@ test('Screenshot scenario: Despegar alone reaches persistence and the feed when 
     // The same persisted quota/cooldown ledger applies to a manual focus; it cannot force a blocked source.
     await runHunt([], io, new SearchRuntime(join(directory, 'state.json'), { google_flights: 4, despegar: 2 }, 0), focus);
     assert.equal(googleCalls, 1); assert.equal(despegarCalls, 1); // Despegar reuses its exact cache.
-    assert.equal(scans.at(-2).outcome, 'ok'); assert.equal(scans.at(-1).outcome, 'deferred');
+    assert.equal(scans.at(-2).outcome, 'ok'); assert.equal(scans.at(-1).outcome, 'blocked');
     await assert.rejects(runHunt([], io, new SearchRuntime(join(directory, 'state.json')), 'EZE,MAD,2027-04-16,2027-05-01,2'), /radar activo/);
     assert.equal(googleCalls, 1); assert.equal(despegarCalls, 1);
   } finally {

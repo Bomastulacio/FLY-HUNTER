@@ -202,6 +202,41 @@ class CriticDecisionEvals(unittest.TestCase):
         self.assertEqual((deal, self.alert, self.search), before)
         self.assertTrue(result[0][0]["notificado"])
 
+    def test_quotes_for_other_passenger_counts_are_never_scaled_or_notified(self):
+        for total in (600, 1100, 2600):
+            with self.subTest(total=total):
+                deal = self.deal(total, pasajeros=1, precio_por_pasajero_usd=total)
+                result = self.evaluate([deal])
+                self.assertEqual(result[0], [])
+                self.assertFalse(result[1])
+        self.planner.assert_not_called()
+
+    def test_all_price_rises_survive_an_affordable_carrier(self):
+        evidence = {"paymentCondition": "Con débito", "observedAt": "2026-09-14T09:00:00Z"}
+        rising = self.deal(2800, aerolinea="Aeroméxico", detalle_cotizacion=evidence)
+        other_rise = self.deal(3100, aerolinea="Lufthansa")
+        before = deepcopy(rising)
+        result = self.evaluate([self.deal(2376, aerolinea="Aerolíneas Argentinas"), rising, other_rise])
+        self.assertFalse(result[1])
+        self.assertEqual(len(result[0]), 3)
+        for deal in result[0][1:]:
+            self.assertEqual(deal['estado_aprobacion'], 'no_aplica')
+            self.assertEqual(deal['detalle_cotizacion']['budgetScope'], 'radar')
+            self.assertFalse(deal['es_oportunidad_oro'])
+        self.assertEqual(result[0][1]['detalle_cotizacion']['paymentCondition'], 'Con débito')
+        self.assertEqual(rising, before)
+        self.planner.assert_not_called()
+
+    def test_hard_rejections_never_become_budget_observations(self):
+        rejected = [self.deal(2800, cantidad_escalas=2), self.deal(2800, aerolinea="LEVEL"),
+                    self.deal(2800, ida_fecha="2027-04-10")]
+        self.assertEqual(critic.filter_and_evaluate(rejected, [self.alert]), [])
+
+    def test_hash_distinguishes_stop_count_and_payment_condition(self):
+        variants = [self.deal(cantidad_escalas=0), self.deal(cantidad_escalas=1),
+                    self.deal(detalle_cotizacion={"paymentCondition": "Con débito"})]
+        self.assertEqual(len({critic.generate_hash(d) for d in variants}), 3)
+
     @unittest.expectedFailure
     def test_target_empty_success_should_explore_once_without_llm(self):
         # Known gap: critic conflates empty success with exhausted search.

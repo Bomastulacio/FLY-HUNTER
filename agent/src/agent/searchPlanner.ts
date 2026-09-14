@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { FlightSearchParams } from '../types/flight.js';
 
 export interface SearchAlert {
@@ -35,21 +36,49 @@ function dates(min?: string, max = min): string[] {
   return Array.from({ length: (end - start) / 86400000 + 1 }, (_, i) => new Date(start + i * 86400000).toISOString().slice(0, 10));
 }
 
-/** Stable Cartesian coverage: no hidden 10–20 day rule, random sampling, or first-country fallback. */
+/** Visit the middle of each remaining interval, then its halves: stable, bounded and exhaustive. */
+function spread<T>(items: readonly T[]): T[] {
+  const result: T[] = [];
+  const ranges: Array<[number, number]> = [[0, items.length - 1]];
+  for (let cursor = 0; cursor < ranges.length; cursor++) {
+    const [start, end] = ranges[cursor];
+    if (start > end) continue;
+    const middle = Math.floor((start + end) / 2);
+    result.push(items[middle]);
+    if (start < middle) ranges.push([start, middle - 1]);
+    if (middle < end) ranges.push([middle + 1, end]);
+  }
+  return result;
+}
+
+/** Stable Cartesian coverage: distribute dates/routes early without dropping any valid combination. */
 export function buildSearchSpace(alert: SearchAlert, now = new Date()): FlightSearchParams[] {
   const origins = [...new Set(alert.origen.split(/[,/]/).map(normalize).filter(c => /^[A-Z]{3}$/.test(c)))];
   const targets = alert.paises?.length && !alert.paises.some(p => normalize(p) === 'CUALQUIERA')
     ? alert.paises : [alert.destino];
-  const airports = [...new Set(targets.flatMap(t => destinations[normalize(t)] || (/^[A-Z]{3}$/.test(normalize(t)) ? [normalize(t)] : [])))];
+  const targetAirports = targets.map(t => destinations[normalize(t)] || (/^[A-Z]{3}$/.test(normalize(t)) ? [normalize(t)] : []));
+  // Take one airport per requested country before its secondary airports.
+  const airports = [...new Set(Array.from({ length: Math.max(0, ...targetAirports.map(a => a.length)) },
+    (_, index) => targetAirports.flatMap(a => a[index] ? [a[index]] : [])).flat())];
   const pax = Number(alert.pasajeros);
   if (!Number.isInteger(pax) || pax < 1 || pax > 9) return [];
   const departures = dates(alert.fecha_ida_min, alert.fecha_ida_max || alert.fecha_ida_min);
   const returns = dates(alert.fecha_vuelta_min, alert.fecha_vuelta_max || alert.fecha_vuelta_min);
-  const searches: FlightSearchParams[] = [];
-  // Interleave destinations so one large date window cannot monopolize the source.
+  const datePairs: Array<{ departureDate: string; returnDate: string }> = [];
+  const today = now.toISOString().slice(0, 10);
   for (const departureDate of departures) for (const returnDate of returns) {
-    if (returnDate <= departureDate || departureDate < now.toISOString().slice(0, 10)) continue;
-    for (const origin of origins) for (const destination of airports) {
+    if (returnDate <= departureDate || departureDate < today) continue;
+    datePairs.push({ departureDate, returnDate });
+  }
+  const balancedDates = spread(datePairs);
+  const routes = airports.flatMap(destination => origins.map(origin => ({ origin, destination })));
+  const searches: FlightSearchParams[] = [];
+  // Every route receives every valid date pair exactly once. The phase per route
+  // avoids spending an entire early pass on the same departure/return dates.
+  // A changed order has a new signature; quota reservations/cooldowns remain intact.
+  for (let dateRound = 0; dateRound < balancedDates.length; dateRound++) {
+    for (const [routeIndex, { origin, destination }] of routes.entries()) {
+      const { departureDate, returnDate } = balancedDates[(dateRound + routeIndex) % balancedDates.length];
       searches.push({ origin, destination, departureDate, returnDate, passengers: pax,
         maxStops: Math.min(1, alert.escalas_max ?? 1), budgetMinUSD: Number(alert.presupuesto_min ?? 0),
         budgetMaxUSD: Number(alert.presupuesto_max ?? 1200 * pax), excludedAirlines: alert.aerolineas_excluidas || [] });
@@ -61,6 +90,11 @@ export function buildSearchSpace(alert: SearchAlert, now = new Date()): FlightSe
 export function searchKey(params: FlightSearchParams): string {
   return JSON.stringify([params.origin, params.destination, params.departureDate, params.returnDate,
     params.passengers, params.maxStops ?? 1, [...(params.excludedAirlines || [])].map(normalize).sort(), 'USD', 'economy']);
+}
+
+/** Budget affects eligibility, not supplier I/O: editing it must not reset the exploration cursor. */
+export function searchSpaceSignature(searches: FlightSearchParams[]): string {
+  return createHash('sha256').update(JSON.stringify(searches.map(searchKey))).digest('hex').slice(0, 16);
 }
 
 export type SearchFocus = Pick<FlightSearchParams, 'origin' | 'destination' | 'departureDate' | 'returnDate' | 'passengers'>;

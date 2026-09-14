@@ -28,12 +28,16 @@ export function readStops(text: string): number[] {
     .map(m => m[1] ? Number(m[1]) : 0);
 }
 
-export function verifiedPassengerCount(text: string): number | undefined {
+function passengerCounts(text: string): number[] {
   const normalized = normalizedAirline(text);
   const counts = [...normalized.matchAll(/\b(?:final|total|para|for)\s+(\d+)\s+(?:personas?|adultos?|adults?|pasajeros?|passengers?)\b/g)].map(m => Number(m[1]));
   const included = normalized.match(/precio incluye.*?correspondientes a\s+(\d+)\s+adultos/);
   if (included) counts.push(Number(included[1]));
-  const unique = [...new Set(counts)];
+  return [...new Set(counts)];
+}
+
+export function verifiedPassengerCount(text: string): number | undefined {
+  const unique = passengerCounts(text);
   return unique.length === 1 ? unique[0] : undefined;
 }
 
@@ -53,17 +57,38 @@ export interface CardSnapshot {
   collectedAt: string;
 }
 
+export function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Each direction must supply its own date, ordered route and stop count. */
+function despegarDirectionStops(text: string, p: FlightSearchParams): number[] | undefined {
+  const markers = [...text.matchAll(/\b(ida|vuelta)\b/gi)];
+  const directions = ['ida', 'vuelta'].map(direction => {
+    const matches = markers.flatMap((marker, index) => {
+      if (marker[1].toLowerCase() !== direction) return [];
+      const segment = text.slice(marker.index! + marker[0].length, markers[index + 1]?.index);
+      const outbound = direction === 'ida';
+      const route = outbound ? [p.origin, p.destination] : [p.destination, p.origin];
+      const safeOrig = escapeRegex(route[0]);
+      const safeDest = escapeRegex(route[1]);
+      if (!containsDate(segment, outbound ? p.departureDate : p.returnDate)
+        || !new RegExp(`\\b${safeOrig}\\b[\\s\\S]*?\\b${safeDest}\\b`).test(segment)) return [];
+      const stops = [...new Set(readStops(segment))];
+      return stops.length === 1 ? [stops[0]] : [];
+    });
+    return matches.length === 1 ? matches[0] : undefined;
+  });
+  return directions.every(s => s !== undefined) ? directions as number[] : undefined;
+}
+
 export function parseCard(source: ScrapedFlightOption['source'], card: CardSnapshot, p: FlightSearchParams): ScrapedFlightOption | undefined {
   const total = parseUsd(card.text);
-  const pax = verifiedPassengerCount(card.text) ?? card.pagePassengerCount;
-  const stops = readStops(card.text);
-  if (!total || pax !== p.passengers || !stops.length || stops.some(s => s > Math.min(1, p.maxStops ?? 1))) return undefined;
-  if (source === 'despegar') {
-    // A whole return ticket must contain both directions, both dates and the requested airports.
-    if (stops.length < 2 || !/\bida\b/i.test(card.text) || !/\bvuelta\b/i.test(card.text)) return undefined;
-    if (![p.origin, p.destination].every(code => new RegExp(`\\b${code}\\b`).test(card.text))) return undefined;
-    if (!containsDate(card.text, p.departureDate) || !containsDate(card.text, p.returnDate)) return undefined;
-  }
+  // Conflicting evidence inside a card must never fall back to a page-wide count.
+  const cardPassengers = passengerCounts(card.text);
+  const pax = cardPassengers.length ? verifiedPassengerCount(card.text) : card.pagePassengerCount;
+  const stops = source === 'despegar' ? despegarDirectionStops(card.text, p) : readStops(card.text);
+  if (!total || pax !== p.passengers || !stops?.length || stops.some(s => s > Math.min(1, p.maxStops ?? 1))) return undefined;
   const airlineNames = [...new Set(card.airlineNames.map(a => a.replace(/^(?:logo(?:tipo)?(?: de)?|imagen de)\s+/i, '').trim()).filter(a => a.length > 2 && a.length < 80))];
   if (!airlineNames.length) return undefined;
   const airline = airlineNames.join(' / ');

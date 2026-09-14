@@ -1876,13 +1876,13 @@ import { supabase } from '../lib/supabase';
     // Render initial zone
     renderCountries('Europa');
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      currentUserId = session.user.id;
-      currentUserEmail = session.user.email || null;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      currentUserId = user.id;
+      currentUserEmail = user.email || null;
       if (emailAuthSection) emailAuthSection.classList.add('hidden');
       if (emailInput) {
-        emailInput.value = session.user.email || '';
+        emailInput.value = user.email || '';
         emailInput.removeAttribute('required');
       }
       

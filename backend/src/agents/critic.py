@@ -131,6 +131,8 @@ def _hard_eligible(deal: Dict, alerts: List[Dict]) -> bool:
         pax = _integer(deal.get("pasajeros") if deal.get("pasajeros") is not None else 1)
         if total <= 0 or pax < 1:
             return False
+        if alerts and not any(pax == _integer(a.get("pasajeros") or 1) for a in alerts):
+            return False
         unit = deal.get("precio_por_pasajero_usd")
         if unit is not None and abs(_number(unit) * pax - total) > 0.02 * pax:
             return False
@@ -167,9 +169,11 @@ def _date_distance(deal: Dict, alert: Dict) -> int:
 
 
 def _cost(deal: Dict, alert: Dict) -> float:
-    # Preserve the existing per-passenger comparison contract. Never rewrite a
-    # quoted total or original currencies into an unverified group quote.
-    return _number(_number(deal["precio_total_usd"]) / _integer(deal.get("pasajeros") or 1) * _budget(alert)[0])
+    # A one-adult fare does not verify availability for two adults. Preserve
+    # the provider's party total and require the radar's exact passenger count.
+    if _integer(deal.get("pasajeros") or 1) != _budget(alert)[0]:
+        raise ValueError("Quote passenger count does not match the radar")
+    return _number(deal["precio_total_usd"])
 
 
 def generate_hash(deal: Dict) -> str:
@@ -177,7 +181,8 @@ def generate_hash(deal: Dict) -> str:
     raw = (f"{deal.get('ida_fecha', '')}_{deal.get('ida_origen_destino', '')}_"
            f"{deal.get('vuelta_fecha', '')}_{deal.get('vuelta_origen_destino', '')}_"
            f"{deal.get('aerolinea', '')}_{_number(deal.get('precio_total_usd', 0)):.2f}_"
-           f"{deal.get('pasajeros', 1)}_{deal.get('fuente', '')}_{evidence.get('paymentCondition') or ''}")
+           f"{deal.get('pasajeros', 1)}_{deal.get('fuente', '')}_{deal.get('cantidad_escalas')}_"
+           f"{evidence.get('paymentCondition') or ''}")
     return hashlib.md5(raw.encode("utf-8"), usedforsecurity=False).hexdigest()  # nosec B324
 
 
@@ -217,32 +222,28 @@ def evaluate_deal(deal: Dict, alerts: List[Dict]) -> Dict:
 
 def filter_and_evaluate(deals: List[Dict], alerts: Optional[List[Dict]] = None) -> List[Dict]:
     alerts = alerts or []
-    groups: Dict[str, List[Dict]] = {}
-    for deal in deals:
-        if _hard_eligible(deal, alerts):
-            groups.setdefault(deal["vuelta_origen_destino"].split("-")[0], []).append(
-                evaluate_deal(deal, alerts))
     output = []
-    for group in groups.values():
-        valid = [d for d in group if d["estado_aprobacion"] != "rechazado"]
-        if valid:
-            output.extend(valid)
+    for deal in deals:
+        if not _hard_eligible(deal, alerts):
             continue
-        rescue = []
-        for deal in group:
-            for alert in alerts or [{}]:
-                try:
-                    if (_hard_eligible(deal, [alert]) and _date_distance(deal, alert) == 0
-                            and _cost(deal, alert) > _budget(alert)[2]):
-                        rescue.append(deal)
-                        break
-                except (ValueError, TypeError, OverflowError):
-                    continue
-        if rescue:
-            cheapest = dict(min(rescue, key=lambda d: _number(d["precio_total_usd"])))
-            # Schema-compatible informational status; exceeding budget is not approval.
-            cheapest["estado_aprobacion"] = "no_aplica"
-            output.append(cheapest)
+        evaluated = evaluate_deal(deal, alerts)
+        if evaluated["estado_aprobacion"] != "rechazado":
+            output.append(evaluated)
+            continue
+        for alert in alerts or [{}]:
+            try:
+                if (_hard_eligible(deal, [alert]) and _date_distance(deal, alert) == 0
+                        and _cost(deal, alert) > _budget(alert)[2]):
+                    # Persist every valid price rise, even when another carrier
+                    # is affordable. Otherwise yesterday's low quote stays best.
+                    evaluated["estado_aprobacion"] = "no_aplica"
+                    evaluated["detalle_cotizacion"] = {
+                        **(deal.get("detalle_cotizacion") or {}), "budgetScope": "radar",
+                    }
+                    output.append(evaluated)
+                    break
+            except (ValueError, TypeError, OverflowError):
+                continue
     return output
 
 

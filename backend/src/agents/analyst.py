@@ -50,9 +50,17 @@ def consolidate_and_analyze(flights_data: List[Dict]) -> List[Dict]:
     else:
         df['precio_ars_tarjeta'] = None
     
-    # Limpiar duplicados exactos que pudieron venir de múltiples recolectores
+    # Payment conditions and stops define different comparable quotes. Equal
+    # prices do not make a debit fare and an unrestricted fare interchangeable.
+    df['_payment_condition'] = [
+        (d.get('detalle_cotizacion') or {}).get('paymentCondition') or ''
+        for d in flights_data
+    ]
     df = df.drop_duplicates(subset=[
-        'ida_fecha', 'vuelta_fecha', 'ida_origen_destino', 'aerolinea', 'precio_total_usd', 'pasajeros', 'fuente'
+        'ida_fecha', 'vuelta_fecha', 'ida_origen_destino', 'vuelta_origen_destino',
+        'aerolinea', 'precio_total_usd', 'pasajeros', 'fuente',
+        'cantidad_escalas', '_payment_condition'
     ])
+    df = df.drop(columns=['_payment_condition'])
     
     return df.to_dict('records')

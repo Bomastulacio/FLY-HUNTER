@@ -23,7 +23,7 @@ const observed = '2026-09-12T12:00:00Z';
 const snapshot = { text: 'Final 2 personas US$ 1.884 Con Débito IDA dom. 18 abr. 2027 EZE MAD Aeroméxico 1 escala VUELTA sáb. 1 may. 2027 MAD EZE Aeroméxico 1 escala',
   airlineNames: ['Aeroméxico'], bookingUrl: 'https://www.despegar.com.ar/shop/flights/results/', collectedAt: observed };
 const quote = () => parseCard('despegar', snapshot, params)!;
-const googleLabel = 'A partir de 1925 dólares estadounidenses (precio total de ida y vuelta). Vuelo con 1 escala de Aeromexico. Sale de Aeropuerto Internacional Ezeiza el sábado, abril 17 a las 23:25. Llega a Madrid el lunes, abril 19 a las 5:00. Duración total: 24 h 35 min. Seleccionar vuelo';
+const googleLabel = 'A partir de 1925 dólares estadounidenses (precio total de ida y vuelta). Vuelo con 1 escala de Aeromexico. Sale de Aeropuerto Internacional Ezeiza el domingo, abril 18 a las 23:25. Llega a Madrid el martes, abril 20 a las 5:00. Duración total: 24 h 35 min. Seleccionar vuelo';
 const googleInput = { label: googleLabel, visiblePrices: ['1.925 US$'], passengers: 2, bookingUrl: 'https://www.google.com/travel/flights/search', collectedAt: observed };
 
 test('Google cross-checks visible USD price with the accessible itinerary, not unrelated DOM', () => {

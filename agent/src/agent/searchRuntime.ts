@@ -5,10 +5,12 @@ import type { FlightSearchParams, ScrapedFlightOption } from '../types/flight.js
 import { searchKey } from './searchPlanner.js';
 
 export type Provider = ScrapedFlightOption['source'];
+export type DeferralReason = 'run_budget_exhausted' | 'daily_budget_exhausted' | 'provider_blocked' | 'provider_error' | 'provider_cooldown';
 export interface ProviderResult { status: 'ok' | 'empty' | 'blocked' | 'error' | 'unverified'; options: ScrapedFlightOption[]; reason?: string; checkedAt?: string }
 interface State {
   cursors: Record<string, number>;
   cooldown: Partial<Record<Provider, number>>;
+  pauses?: Partial<Record<Provider, { outcome: 'blocked' | 'error'; checked_at: string }>>;
   cache: Record<string, { expires: number; result: ProviderResult }>;
   daily: Record<string, number>;
   coverage?: Record<string, Record<string, number>>;
@@ -31,7 +33,7 @@ export class SearchRuntime {
   }
   cursor(key: string) { const n = this.state.cursors[key]; return Number.isSafeInteger(n) && n >= 0 ? n : 0; }
   coverageCount(key: string, now = Date.now()) {
-    return Object.values(this.state.coverage?.[key] || {}).filter(time => time > now - 86400000).length;
+    return Object.values(this.state.coverage?.[key] || {}).filter(time => time > now - 86400000 && time <= now).length;
   }
   async recordCoverage(key: string, params: FlightSearchParams, result: ProviderResult) {
     if (!['ok', 'empty'].includes(result.status)) return;
@@ -39,7 +41,9 @@ export class SearchRuntime {
     if (!Number.isFinite(at)) return;
     this.state.coverage ??= {};
     for (const [group, entries] of Object.entries(this.state.coverage)) {
-      for (const [query, time] of Object.entries(entries)) if (time <= Date.now() - 86400000) delete entries[query];
+      // A paused source can display its actual last attempt for up to 24 h. Keep
+      // enough history to reconstruct the 24 h coverage window at that timestamp.
+      for (const [query, time] of Object.entries(entries)) if (time <= Date.now() - 2 * 86400000) delete entries[query];
       if (!Object.keys(entries).length) delete this.state.coverage[group];
     }
     const entries = this.state.coverage[key] ??= {};
@@ -51,9 +55,23 @@ export class SearchRuntime {
     this.state.cursors[key] = this.cursor(key) + steps; await this.save();
   }
   available(provider: Provider) {
-    return this.used[provider] < this.limits[provider]
-      && (this.state.daily[this.dayKey(provider)] || 0) < this.limits[provider] * 2
-      && !(this.state.cooldown[provider]! > Date.now());
+    return this.deferralReason(provider) === undefined;
+  }
+  deferralReason(provider: Provider): DeferralReason | undefined {
+    if (this.state.cooldown[provider]! > Date.now()) {
+      const pause = this.pauseStatus(provider);
+      return pause?.outcome === 'blocked' ? 'provider_blocked' : pause?.outcome === 'error' ? 'provider_error' : 'provider_cooldown';
+    }
+    if (this.used[provider] >= this.limits[provider]) return 'run_budget_exhausted';
+    if ((this.state.daily[this.dayKey(provider)] || 0) >= this.limits[provider] * 2) return 'daily_budget_exhausted';
+    return undefined;
+  }
+  /** A skipped run does not turn yesterday's block into a new provider consultation. */
+  pauseStatus(provider: Provider): { outcome: 'blocked' | 'error'; checked_at: string } | undefined {
+    const pause = this.state.pauses?.[provider];
+    if (!(this.state.cooldown[provider]! > Date.now()) || !pause
+      || !['blocked', 'error'].includes(pause.outcome) || !Number.isFinite(Date.parse(pause.checked_at))) return undefined;
+    return { ...pause };
   }
   private dayKey(provider: Provider) { return `${new Date().toISOString().slice(0, 10)}:${provider}`; }
   private async save() {
@@ -68,7 +86,7 @@ export class SearchRuntime {
     const key = createHash('sha256').update(provider + version + searchKey(params)).digest('hex');
     const cached = this.state.cache[key];
     if (cached && cached.expires > Date.now()) { logEvent('search.cache_hit', { provider, key }); return cached.result; }
-    if (!this.available(provider)) { logEvent('search.deferred', { provider, reason: 'budget_or_cooldown' }); return undefined; }
+    if (!this.available(provider)) { logEvent('search.deferred', { provider, reason: this.deferralReason(provider) }); return undefined; }
     const wait = this.intervalMs - (Date.now() - (this.last[provider] || 0));
     if (wait > 0) await new Promise(resolve => setTimeout(resolve, wait));
     this.used[provider]++;
@@ -80,8 +98,11 @@ export class SearchRuntime {
     let result: ProviderResult;
     try { result = await run(); } catch { result = { status: 'error', options: [] }; }
     result = { ...result, checkedAt: new Date().toISOString() };
-    if (result.status === 'blocked') this.state.cooldown[provider] = Date.now() + 24 * 3600000;
-    if (result.status === 'error') this.state.cooldown[provider] = Date.now() + 3600000;
+    if (result.status === 'blocked' || result.status === 'error') {
+      this.state.cooldown[provider] = Date.now() + (result.status === 'blocked' ? 24 : 1) * 3600000;
+      this.state.pauses ??= {};
+      this.state.pauses[provider] = { outcome: result.status, checked_at: result.checkedAt! };
+    }
     // Unverified markup is not evidence that there are no flights.
     if (result.status === 'ok' || result.status === 'empty') this.state.cache[key] = { expires: Date.now() + (result.status === 'ok' ? 6 : 1) * 3600000, result };
     await this.save();
