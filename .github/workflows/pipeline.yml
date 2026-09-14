@@ -62,7 +62,7 @@ jobs:
 
       - name: Restore quota ledger and quote cache
         id: quota-state
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: backend/.cache_vuelos
           key: flight-quota-v2-${{ github.run_id }}-${{ github.run_attempt }}
@@ -106,7 +106,7 @@ jobs:
 
       - name: Preserve reserved API credits even after a failed run
         if: always() && steps.quota-state.outputs.cache-primary-key != '' && hashFiles('backend/.cache_vuelos/**') != ''
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: backend/.cache_vuelos
           key: ${{ steps.quota-state.outputs.cache-primary-key }}

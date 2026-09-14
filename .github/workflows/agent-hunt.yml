@@ -47,7 +47,7 @@ jobs:
 
       - name: Restore search coverage and provider cooldowns
         id: search-state
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: agent/.flight-state
           key: flight-search-v3-${{ github.run_id }}-${{ github.run_attempt }}
@@ -72,7 +72,7 @@ jobs:
 
       - name: Preserve consumed searches even after a failed run
         if: always() && steps.search-state.outputs.cache-primary-key != '' && hashFiles('agent/.flight-state/state.json') != ''
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: agent/.flight-state
           key: ${{ steps.search-state.outputs.cache-primary-key }}
