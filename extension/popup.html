@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flight Hunter - Captura</title>
+  <style>
+    :root {
+      --bg: #101410;
+      --card-bg: rgba(25, 30, 25, 0.95);
+      --accent: #4ade80;
+      --text: #f0fdf4;
+      --text-muted: #9ca3af;
+      --border: rgba(255, 255, 255, 0.12);
+      --error: #f87171;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 380px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 14px;
+      font-size: 13px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--accent);
+    }
+    .badge-status {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      background: rgba(74, 222, 128, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(74, 222, 128, 0.3);
+    }
+    .badge-status.warning {
+      background: rgba(251, 191, 36, 0.15);
+      color: #fbbf24;
+      border-color: rgba(251, 191, 36, 0.3);
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      padding: 9px 12px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #052e16;
+    }
+    .btn-primary:hover {
+      background: #86efac;
+    }
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-outline {
+      background: transparent;
+      border-color: var(--border);
+      color: var(--text);
+      margin-top: 8px;
+    }
+    .btn-outline:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .info-box {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 10px 0;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .form-group.full {
+      grid-column: span 2;
+    }
+    label {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    input, select {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      color: #fff;
+      font-size: 12px;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .errors {
+      color: var(--error);
+      background: rgba(248, 113, 113, 0.1);
+      border: 1px solid rgba(248, 113, 113, 0.3);
+      border-radius: 6px;
+      padding: 8px;
+      margin: 8px 0;
+      font-size: 11px;
+      line-height: 1.3;
+      display: none;
+    }
+    .success-msg {
+      color: var(--accent);
+      background: rgba(74, 222, 128, 0.1);
+      border: 1px solid rgba(74, 222, 128, 0.3);
+      border-radius: 6px;
+      padding: 8px;
+      margin: 8px 0;
+      font-size: 11px;
+      display: none;
+    }
+    .links-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 12px;
+      font-size: 11px;
+    }
+    .links-row a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .links-row a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">
+      <span>✈️</span> Flight Hunter
+    </div>
+    <div id="site-badge" class="badge-status">Detectando sitio...</div>
+  </div>
+
+  <div id="status-info" class="info-box">
+    Abrí el resultado o detalle del vuelo en <strong>Despegar</strong> o <strong>Aerolíneas Argentinas</strong> y tocá el botón para extraer la cotización.
+  </div>
+
+  <button type="button" id="btn-capture" class="btn btn-primary">
+    📷 Capturar cotización visible
+  </button>
+
+  <div id="capture-form" style="display: none;">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Origen (IATA)</label>
+        <input type="text" id="f-origin" maxlength="3" placeholder="EZE" style="text-transform: uppercase;" />
+      </div>
+      <div class="form-group">
+        <label>Destino (IATA)</label>
+        <input type="text" id="f-destination" maxlength="3" placeholder="MAD" style="text-transform: uppercase;" />
+      </div>
+      <div class="form-group">
+        <label>Fecha de Ida</label>
+        <input type="date" id="f-dep-date" />
+      </div>
+      <div class="form-group">
+        <label>Fecha de Vuelta</label>
+        <input type="date" id="f-ret-date" />
+      </div>
+      <div class="form-group">
+        <label>Pasajeros (Adultos)</label>
+        <input type="number" id="f-pax" min="1" max="9" value="2" />
+      </div>
+      <div class="form-group">
+        <label>Total USD (Grupo)</label>
+        <input type="number" id="f-total-usd" step="0.01" min="1" placeholder="1884.00" />
+      </div>
+      <div class="form-group full">
+        <label>Aerolínea(s)</label>
+        <input type="text" id="f-airline" placeholder="Ej: Iberia / Aeroméxico" />
+      </div>
+      <div class="form-group">
+        <label>Escalas Ida</label>
+        <select id="f-out-stops">
+          <option value="0">Directo</option>
+          <option value="1" selected>1 escala</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Escalas Vuelta</label>
+        <select id="f-ret-stops">
+          <option value="0">Directo</option>
+          <option value="1" selected>1 escala</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Pago</label>
+        <input type="text" id="f-payment" value="Con débito" />
+      </div>
+      <div class="form-group">
+        <label>Equipaje</label>
+        <input type="text" id="f-baggage" value="Por confirmar" />
+      </div>
+    </div>
+
+    <div id="form-errors" class="errors"></div>
+    <div id="form-success" class="success-msg">¡Cotización lista para exportar!</div>
+
+    <button type="button" id="btn-download" class="btn btn-primary">
+      💾 Descargar JSON para Flight Hunter
+    </button>
+  </div>
+
+  <div class="links-row">
+    <a href="#" id="link-open-capturas">Abrir /capturas en Flight Hunter</a>
+    <span style="color: var(--text-muted);">Sin cookies ni HTML</span>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

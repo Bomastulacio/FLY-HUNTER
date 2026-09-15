@@ -1,0 +1,371 @@
+---
+import '../styles/global.css';
+import '../styles/compact.css';
+
+export const prerender = false;
+---
+
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Capturas Personales - Flight Hunter</title>
+    
+    <meta name="theme-color" content="#101310" />
+    <link rel="manifest" href="/manifest.json" />
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  </head>
+  <body class="compact-app">
+    <div class="bg-3d-scene">
+      <div class="radar-circles" style="opacity: 0.5;">
+        <div class="circle c1"></div>
+        <div class="circle c2"></div>
+      </div>
+    </div>
+    
+    <main style="max-width: 860px; margin: 0 auto; padding: 1.5rem 1rem 4rem;">
+      <header class="alertas-header" style="margin-bottom: 2rem;">
+        <div class="alertas-header-text">
+          <a href="/" class="back-link"><i class="ph ph-arrow-left"></i> Volver a vuelos</a>
+          <h1 style="display: flex; align-items: center; gap: 0.6rem; font-size: 1.8rem; margin: 0.5rem 0 0.25rem;">
+            <i class="ph ph-camera" style="color: var(--accent-color, #4ade80);"></i>
+            Capturas Personales
+          </h1>
+          <p style="color: var(--text-secondary); margin: 0; font-size: 0.95rem;">
+            Guardá cotizaciones reales observadas personalmente en Despegar, Aerolíneas o Turismocity con verificación de pasajero y escalas.
+          </p>
+        </div>
+      </header>
+
+      <!-- Panel de Carga -->
+      <section class="card" style="padding: 1.5rem; margin-bottom: 2rem; background: rgba(20,24,20,0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;">
+        <div style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.75rem;">
+          <button type="button" id="tab-file-btn" class="btn btn-outline" style="border-color: var(--accent-color, #4ade80); color: var(--accent-color, #4ade80);">
+            <i class="ph ph-file-arrow-up"></i> Importar archivo JSON
+          </button>
+          <button type="button" id="tab-manual-btn" class="btn btn-outline" style="opacity: 0.7;">
+            <i class="ph ph-pencil-simple"></i> Carga manual / texto
+          </button>
+        </div>
+
+        <!-- Opción Archivo -->
+        <div id="section-file">
+          <div style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; padding: 2.5rem 1.5rem; text-align: center; cursor: pointer; transition: border-color 0.2s;" id="dropzone">
+            <i class="ph ph-upload-simple" style="font-size: 2.5rem; color: var(--accent-color, #4ade80); margin-bottom: 0.5rem; display: block;"></i>
+            <p style="margin: 0 0 0.5rem; font-weight: 500;">Arrastrá tu archivo de captura JSON o hacé click para seleccionar</p>
+            <span style="color: var(--text-secondary); font-size: 0.85rem;">Generado por la extensión de Flight Hunter o exportado manualmente</span>
+            <input type="file" id="capture-file-input" accept=".json,application/json" style="display: none;" />
+          </div>
+        </div>
+
+        <!-- Opción Manual -->
+        <div id="section-manual" style="display: none;">
+          <form id="manual-capture-form">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+              <div>
+                <label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.3rem;">Proveedor</label>
+                <select id="m-provider" class="form-input" style="width: 100%; padding: 0.6rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff;">
+                  <option value="despegar">Despegar</option>
+                  <option value="aerolineas">Aerolíneas Argentinas</option>
+                  <option value="turismocity">Turismocity</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.3rem;">Ruta (Origen - Destino)</label>
+                <div style="display: flex; gap: 0.5rem;">
+                  <input type="text" id="m-origin" placeholder="EZE" maxlength="3" class="form-input" style="width: 50%; text-transform: uppercase; padding: 0.6rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff;" />
+                  <input type="text" id="m-destination" placeholder="MAD" maxlength="3" class="form-input" style="width: 50%; text-transform: uppercase; padding: 0.6rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff;" />
+                </div>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+              <div>
+                <label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.3rem;">Fecha de ida</label>
+                <input type="date" id="m-dep-date" class="form-input" style="width: 100%; padding: 0.6rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff;" />
+              </div>
+              <div>
+                <label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.3rem;">Fecha de vuelta</label>
+                <input type="date" id="m-ret-date" class="form-input" style="width: 100%; padding: 0.6rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff;" />
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+              <div>
+                <label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.3rem;">Pasajeros adultos</label>
+                <input type="number" id="m-pax" min="1" max="9" value="2" class="form-input" style="width: 100%; padding: 0.6rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff;" />
+              </div>
+              <div>
+                <label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.3rem;">Precio Total USD (Grupo)</label>
+                <input type="number" id="m-total" min="1" step="0.01" placeholder="Ej: 1884.00" class="form-input" style="width: 100%; padding: 0.6rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff;" />
+              </div>
+              <div>
+                <label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.3rem;">Aerolínea</label>
+                <input type="text" id="m-airline" placeholder="Ej: Iberia / Aeroméxico" class="form-input" style="width: 100%; padding: 0.6rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff;" />
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+              <div>
+                <label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.3rem;">Escalas (Ida / Vuelta)</label>
+                <div style="display: flex; gap: 0.5rem;">
+                  <select id="m-out-stops" class="form-input" style="width: 50%; padding: 0.6rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff;">
+                    <option value="0">Ida: Directo</option>
+                    <option value="1" selected>Ida: 1 escala</option>
+                  </select>
+                  <select id="m-ret-stops" class="form-input" style="width: 50%; padding: 0.6rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff;">
+                    <option value="0">Vuelta: Directo</option>
+                    <option value="1" selected>Vuelta: 1 escala</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.3rem;">Condición de pago</label>
+                <input type="text" id="m-payment" placeholder="Con débito / Tarjeta" value="Con débito" class="form-input" style="width: 100%; padding: 0.6rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff;" />
+              </div>
+              <div>
+                <label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.3rem;">Equipaje</label>
+                <input type="text" id="m-baggage" placeholder="Mochila + carry-on" value="Por confirmar" class="form-input" style="width: 100%; padding: 0.6rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff;" />
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Vista Previa / Live Summary -->
+        <div id="preview-container" style="display: none; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.08);">
+          <h3 style="font-size: 1.05rem; margin: 0 0 0.75rem; color: var(--accent-color, #4ade80); display: flex; align-items: center; gap: 0.5rem;">
+            <i class="ph ph-check-circle"></i> Resumen de la cotización detectada
+          </h3>
+          <div id="preview-card" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
+            <!-- Contenido dinámico -->
+          </div>
+          <div id="preview-errors" style="color: #f87171; font-size: 0.9rem; margin-bottom: 1rem; display: none;"></div>
+          <button type="button" id="btn-save-capture" class="btn btn-primary" style="width: 100%; padding: 0.75rem;">
+            <i class="ph ph-bookmark-simple"></i> Guardar en mis vuelos personales
+          </button>
+        </div>
+      </section>
+
+      <!-- Lista de Capturas Guardadas -->
+      <section>
+        <h2 style="font-size: 1.3rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+          <i class="ph ph-bookmarks"></i> Tus capturas guardadas
+        </h2>
+        <div id="saved-captures-list">
+          <p style="color: var(--text-secondary);">Cargando tus capturas...</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Toast container -->
+    <div id="toast-container" class="toast-container" role="status" aria-live="polite"></div>
+
+    <script>
+      import { supabase } from '../lib/supabase';
+      import { readCaptureFile, blankCapture, captureErrors, personalSavedPayload } from '../utils/personalCapture';
+
+      let currentUser: any = null;
+      let activeDraft: any = null;
+
+      const showToast = (message: string, type = 'success') => {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = `<span class="toast-icon"><i class="ph ph-${type === 'success' ? 'check' : 'x'}"></i></span><span>${message}</span>`;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 4000);
+      };
+
+      const initAuth = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          window.location.href = '/login';
+          return;
+        }
+        currentUser = session.user;
+        loadSavedCaptures();
+      };
+
+      const loadSavedCaptures = async () => {
+        if (!currentUser) return;
+        const container = document.getElementById('saved-captures-list');
+        if (!container) return;
+        const { data, error } = await supabase
+          .from('saved_deals')
+          .select('*')
+          .eq('user_id', currentUser.id)
+          .eq('fuente', 'manual_capture')
+          .order('guardado_el', { ascending: false });
+
+        if (error || !data || data.length === 0) {
+          container.innerHTML = `<p style="color: var(--text-secondary); background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);">Todavía no guardaste capturas manuales. Podés importar un archivo JSON o ingresar los datos arriba.</p>`;
+          return;
+        }
+
+        container.innerHTML = data.map(item => `
+          <div style="background: rgba(20,24,20,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 1rem; margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+              <div style="font-weight: 600; font-size: 1.05rem;">${item.origen} → ${item.destino} · US$${item.precio_total_usd}</div>
+              <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                ${item.ida_fecha} al ${item.vuelta_fecha} · ${item.pasajeros} pax · ${item.aerolinea} (${item.cantidad_escalas === 0 ? 'Directo' : `${item.cantidad_escalas} esc.`})
+              </div>
+              <div style="font-size: 0.78rem; color: rgba(255,255,255,0.4); margin-top: 0.2rem;">
+                Fuente: ${item.detalle_cotizacion?.sourceProvider || 'Manual'} · Guardado el ${new Date(item.guardado_el).toLocaleDateString('es-AR')}
+              </div>
+            </div>
+            <div>
+              <button type="button" class="btn btn-outline btn-delete" data-id="${item.id}" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; border-color: rgba(248,113,113,0.3); color: #f87171;">
+                <i class="ph ph-trash"></i> Eliminar
+              </button>
+            </div>
+          </div>
+        `).join('');
+
+        container.querySelectorAll('.btn-delete').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const id = (e.currentTarget as HTMLElement).dataset.id;
+            if (!id) return;
+            const { error } = await supabase.from('saved_deals').delete().eq('id', id).eq('user_id', currentUser.id);
+            if (!error) {
+              showToast('Captura eliminada');
+              loadSavedCaptures();
+            } else {
+              showToast('Error al eliminar captura', 'error');
+            }
+          });
+        });
+      };
+
+      // Manejo de tabs
+      const tabFileBtn = document.getElementById('tab-file-btn');
+      const tabManualBtn = document.getElementById('tab-manual-btn');
+      const secFile = document.getElementById('section-file');
+      const secManual = document.getElementById('section-manual');
+
+      tabFileBtn?.addEventListener('click', () => {
+        tabFileBtn.style.borderColor = 'var(--accent-color, #4ade80)';
+        tabFileBtn.style.color = 'var(--accent-color, #4ade80)';
+        tabFileBtn.style.opacity = '1';
+        if (tabManualBtn) { tabManualBtn.style.borderColor = ''; tabManualBtn.style.color = ''; tabManualBtn.style.opacity = '0.7'; }
+        if (secFile) secFile.style.display = 'block';
+        if (secManual) secManual.style.display = 'none';
+      });
+
+      tabManualBtn?.addEventListener('click', () => {
+        tabManualBtn.style.borderColor = 'var(--accent-color, #4ade80)';
+        tabManualBtn.style.color = 'var(--accent-color, #4ade80)';
+        tabManualBtn.style.opacity = '1';
+        if (tabFileBtn) { tabFileBtn.style.borderColor = ''; tabFileBtn.style.color = ''; tabFileBtn.style.opacity = '0.7'; }
+        if (secFile) secFile.style.display = 'none';
+        if (secManual) secManual.style.display = 'block';
+        updateManualDraft();
+      });
+
+      // File Drag & Drop
+      const dropzone = document.getElementById('dropzone');
+      const fileInput = document.getElementById('capture-file-input') as HTMLInputElement;
+
+      dropzone?.addEventListener('click', () => fileInput?.click());
+      dropzone?.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.style.borderColor = 'var(--accent-color, #4ade80)'; });
+      dropzone?.addEventListener('dragleave', () => { dropzone.style.borderColor = 'rgba(255,255,255,0.15)'; });
+      dropzone?.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.style.borderColor = 'rgba(255,255,255,0.15)';
+        if (e.dataTransfer?.files.length) handleFile(e.dataTransfer.files[0]);
+      });
+
+      fileInput?.addEventListener('change', () => {
+        if (fileInput.files?.length) handleFile(fileInput.files[0]);
+      });
+
+      const handleFile = async (file: File) => {
+        try {
+          const text = await file.text();
+          const draft = readCaptureFile(text);
+          activeDraft = draft;
+          renderPreview(draft);
+        } catch (err: any) {
+          showToast(err.message || 'Error leyendo el archivo JSON', 'error');
+        }
+      };
+
+      const updateManualDraft = () => {
+        const p = (id: string) => (document.getElementById(id) as HTMLInputElement)?.value || '';
+        const num = (id: string) => {
+          const val = Number((document.getElementById(id) as HTMLInputElement)?.value);
+          return Number.isFinite(val) ? val : null;
+        };
+
+        const draft = blankCapture(p('m-provider') as any);
+        draft.origin = p('m-origin').toUpperCase().trim();
+        draft.destination = p('m-destination').toUpperCase().trim();
+        draft.departureDate = p('m-dep-date');
+        draft.returnDate = p('m-ret-date');
+        draft.passengers = num('m-pax');
+        draft.totalUsd = num('m-total');
+        draft.airline = p('m-airline').trim();
+        draft.outboundStops = num('m-out-stops');
+        draft.returnStops = num('m-ret-stops');
+        draft.paymentCondition = p('m-payment').trim();
+        draft.baggage = p('m-baggage').trim();
+
+        activeDraft = draft;
+        renderPreview(draft);
+      };
+
+      ['m-provider','m-origin','m-destination','m-dep-date','m-ret-date','m-pax','m-total','m-airline','m-out-stops','m-ret-stops','m-payment','m-baggage']
+        .forEach(id => document.getElementById(id)?.addEventListener('input', updateManualDraft));
+
+      const renderPreview = (draft: any) => {
+        const previewContainer = document.getElementById('preview-container');
+        const previewCard = document.getElementById('preview-card');
+        const previewErrors = document.getElementById('preview-errors');
+        if (!previewContainer || !previewCard) return;
+
+        previewContainer.style.display = 'block';
+        previewCard.innerHTML = `
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;">
+            <div><strong style="color: var(--text-secondary); font-size: 0.8rem;">Ruta:</strong> <div>${draft.origin || '---'} → ${draft.destination || '---'}</div></div>
+            <div><strong style="color: var(--text-secondary); font-size: 0.8rem;">Fechas:</strong> <div>${draft.departureDate || '---'} al ${draft.returnDate || '---'}</div></div>
+            <div><strong style="color: var(--text-secondary); font-size: 0.8rem;">Total USD:</strong> <div style="font-size: 1.1rem; font-weight: 600; color: var(--accent-color, #4ade80);">${draft.totalUsd ? `US$ ${draft.totalUsd}` : '---'}</div></div>
+            <div><strong style="color: var(--text-secondary); font-size: 0.8rem;">Pasajeros:</strong> <div>${draft.passengers || '---'} adultos</div></div>
+            <div><strong style="color: var(--text-secondary); font-size: 0.8rem;">Aerolínea:</strong> <div>${draft.airline || '---'}</div></div>
+            <div><strong style="color: var(--text-secondary); font-size: 0.8rem;">Escalas:</strong> <div>Ida: ${draft.outboundStops ?? '---'} · Vuelta: ${draft.returnStops ?? '---'}</div></div>
+          </div>
+        `;
+
+        const errors = captureErrors(draft);
+        const saveBtn = document.getElementById('btn-save-capture') as HTMLButtonElement;
+        if (previewErrors) {
+          if (errors.length) {
+            previewErrors.style.display = 'block';
+            previewErrors.innerHTML = `<i class="ph ph-warning"></i> Faltan completar datos:<ul style="margin: 0.3rem 0 0 1.2rem; padding: 0;">${errors.map(e => `<li>${e}</li>`).join('')}</ul>`;
+            if (saveBtn) saveBtn.disabled = true;
+          } else {
+            previewErrors.style.display = 'none';
+            if (saveBtn) saveBtn.disabled = false;
+          }
+        }
+      };
+
+      document.getElementById('btn-save-capture')?.addEventListener('click', async () => {
+        if (!currentUser || !activeDraft) return;
+        try {
+          const payload = personalSavedPayload(activeDraft, currentUser.id);
+          const { error } = await supabase.from('saved_deals').insert(payload);
+          if (error) throw error;
+          showToast('¡Cotización guardada exitosamente!');
+          loadSavedCaptures();
+          const previewContainer = document.getElementById('preview-container');
+          if (previewContainer) previewContainer.style.display = 'none';
+        } catch (err: any) {
+          showToast(err.message || 'Error al guardar la cotización', 'error');
+        }
+      });
+
+      initAuth();
+    </script>
+  </body>
+</html>

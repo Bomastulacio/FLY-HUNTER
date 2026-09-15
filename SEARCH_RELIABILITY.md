@@ -41,3 +41,99 @@ La primera auditoría preparó `schema_quote_evidence.sql` sin aplicarla remotam
 - `cd frontend && npm run build`: compilación Astro SSR.
 
 Referencias: [SerpApi Google Flights](https://serpapi.com/google-flights-api), [Gemini Structured Outputs](https://ai.google.dev/gemini-api/docs/structured-output), [Supabase upsert](https://supabase.com/docs/reference/javascript/upsert).
+
+## Auditoría con evidencia de ejecución — 14/09/2026
+
+La captura recibida muestra Aeroméxico a US$1.884 y Aerolíneas Argentinas a US$2.376,
+ambas finales para dos personas con débito, EZE–MAD 18/04/2027–01/05/2027.
+Son observaciones de la captura, no precios actuales ni registros insertados en producción.
+
+Se inspeccionaron los resúmenes y logs reales de Actions, además de los tests:
+
+- [Corrida manual #31](https://github.com/Bomastulacio/FLY-HUNTER/actions/runs/34744393657):
+  la combinación exacta de la captura sí se intentó en Despegar y terminó `blocked`, cero
+  cotizaciones. Google devolvió cuatro resultados de búsqueda para esa combinación.
+- [Corrida #32](https://github.com/Bomastulacio/FLY-HUNTER/actions/runs/34760711559):
+  Google consultó Barcelona y Londres con ida 17/04/2027; Despegar no tuvo intentos.
+- [Corrida #33](https://github.com/Bomastulacio/FLY-HUNTER/actions/runs/34788611025):
+  cero consultas y cero cotizaciones, aunque el job terminó exitosamente. Los logs históricos
+  usan `budget_or_cooldown` y no permiten distinguir esas dos causas por sí solos.
+
+Esto prueba un bloqueo de Despegar para la consulta concreta. No prueba que la tarifa se haya
+agotado, que el usuario haya configurado mal los pasajeros ni que los nuevos parsers eludan
+el bloqueo. No se vació la caché ni se forzó otra búsqueda de Despegar.
+
+### Cobertura y correcciones
+
+- Ejemplo reproducible, no lectura de los parámetros privados de producción: dos orígenes,
+  cuatro países (nueve aeropuertos), tres idas y ocho vueltas generan 432 combinaciones.
+  Con cuatro intentos diarios de Despegar, recorrerlas una vez necesita como mínimo 108 días
+  si toda la capacidad fuera para ese radar, sin seguimiento ni bloqueos. El feed conserva
+  vigencia de 24 h: una vuelta completa de 108 días no es cobertura vigente simultánea.
+- Se distribuyen países, orígenes y fechas desde las primeras consultas, conservando todas
+  las combinaciones. Cambiar solo presupuesto no reinicia el cursor. Cambiar el orden de
+  exploración inicia una firma nueva, pero mantiene reservas de cuota y pausas existentes.
+- Las pausas nuevas conservan causa y fecha real. Los logs y el resumen de Actions distinguen
+  tope por corrida, tope diario (incluye manuales), bloqueo, error y pausa histórica sin motivo.
+  La cobertura se calcula respecto de la fecha mostrada, también al reutilizar caché.
+- Despegar ignora variantes ocultas y precios tachados por CSS; verifica ruta, fecha y escala
+  de cada dirección. Los fixtures de US$1.884 y US$2.376 llegan al feed offline con débito.
+- Google rechaza una fecha explícita de fila que contradiga la consulta; una carga que no
+  termina no publica tarifas provisionales y un CAPTCHA tardío conserva estado de bloqueo.
+- Python elimina el límite oculto de 32 horas, exige pasajeros exactos sin prorratear y conserva
+  subas válidas fuera de presupuesto como observaciones `no_aplica` de alcance radar.
+  El límite de duración no era la causa demostrada del vacío de Despegar: TypeScript persiste
+  esas cotizaciones antes de Python.
+- El hash Python conserva el contrato TypeScript desplegado para evitar duplicados y pérdida
+  del estado de notificación. Añadir escalas/fare family al hash requiere una migración compatible;
+  no se cambia unilateralmente en un solo productor.
+
+### Fuentes solicitadas: Turismocity y Aerolíneas Argentinas
+
+Turismocity se pudo abrir y su [programa de afiliados](https://www.turismocity.com.ar/afiliados)
+ofrece integración y soporte. Sus [condiciones, sección 4](https://www.turismocity.com.ar/condiciones)
+restringen extracción/scraping; no se habilita una fuente automática basada en endpoints privados
+ni se interpreta afiliación como acceso API garantizado. Solicitar al programa un feed/API,
+alcance, moneda, pasajeros, enlaces y autorización de uso. No se envió ningún mensaje externo.
+Es un metabuscador: resultados duplicados de otras agencias no agregan inventario independiente.
+
+La web de Aerolíneas permite elegir aeropuertos exactos, ida/vuelta, dos adultos y desactivar
+fechas flexibles. Una única prueba exploratoria se reservó localmente antes de buscar.
+La opción visible «Pago en USD» redirige oficialmente a `/es-uy/`; no es una conversión ARS/USD
+calculada por Flight Hunter. Tras seleccionar ambos tramos, el resumen mostró **US$2.336,60
+para dos adultos**, tarifa Base, ida AR1134 (18/04 15:05) y vuelta AR1133 (01/05 20:05), ambos
+directos. Se verificaron los números de vuelo en el detalle; no se avanzó al botón Comprar.
+La tarifa Base muestra artículo personal y una pieza de cabina de 10 kg; equipaje en bodega
+con cargo. No afirmar equivalencia de equipaje/condiciones con la captura de Despegar.
+El total se leyó del resumen, no se calculó multiplicando los importes de la tabla.
+Esta es una observación puntual del 14/09/2026, no una promesa de disponibilidad posterior.
+El éxito en un navegador
+personal no verifica acceso estable desde GitHub Actions. Esta auditoría no activa un adaptador
+directo de Aerolíneas ni agrega cuota/cron; la integración directa sigue siendo una etapa separada
+según `MONITORING.md`.
+
+Despegar también documenta una [API de vuelos para partners](https://api-docs.despegar.com/docs/Flight).
+Su existencia no implica credenciales disponibles, uso gratuito ni igualdad con promociones
+minoristas de débito. Es una vía para evaluar si se necesita cobertura estable.
+
+### Verificación y límites pendientes
+
+Validación local: 36 tests TypeScript (incluyen Chromium interceptado, feed, cuotas, PGlite/RLS
+y autorización administrativa del endpoint),
+TypeScript check y build Astro aprobados. Python: 13 tests de orquestación y 22 del Crítico,
+sin errores, con una brecha documentada `expectedFailure` sobre refinamiento tras vacío.
+En Windows se usó `PYTHONIOENCODING=utf-8`; una consola cp1252 puede fallar al imprimir los
+logs existentes y confundir un fallo de log con uno de caché. Las pruebas no consumen proveedores,
+SerpApi ni Gemini. La navegación de factibilidad se registra por separado de los tests.
+
+La revisión del commit de seguridad detectó además que una sesión autenticada podía invocar
+escrituras globales de `flight_deals` con service role. El endpoint ahora exige el privilegio
+`app_metadata.flight_hunter_admin === true` gestionado desde el servidor, o el `ADMIN_TOKEN`
+existente en un header de un llamador backend autenticado. `user_metadata` no autoriza.
+Solo cambia filas pendientes: una revisión repetida no reinicia la notificación. El frontend
+no recibe secretos. Asignar ese privilegio administrativo a la cuenta autorizada es un paso
+operativo pendiente; no se modificaron usuarios ni metadatos de Supabase remoto.
+
+No hacen falta nuevos agentes LLM: faltan acceso verificable a fuentes y cobertura suficiente.
+Se mantienen el grafo, el plan compartido, la aprobación determinista y la cuota. Una segunda
+capa de agentes o RAG no transforma un bloqueo en una cotización válida.

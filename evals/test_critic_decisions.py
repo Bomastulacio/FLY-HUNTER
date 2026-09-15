@@ -11,6 +11,7 @@ import argparse
 from copy import deepcopy
 from datetime import date, timedelta
 import importlib.util
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -232,10 +233,13 @@ class CriticDecisionEvals(unittest.TestCase):
                     self.deal(2800, ida_fecha="2027-04-10")]
         self.assertEqual(critic.filter_and_evaluate(rejected, [self.alert]), [])
 
-    def test_hash_distinguishes_stop_count_and_payment_condition(self):
-        variants = [self.deal(cantidad_escalas=0), self.deal(cantidad_escalas=1),
-                    self.deal(detalle_cotizacion={"paymentCondition": "Con débito"})]
-        self.assertEqual(len({critic.generate_hash(d) for d in variants}), 3)
+    def test_hash_preserves_typescript_legacy_contract_and_payment_identity(self):
+        deal = self.deal(detalle_cotizacion={"paymentCondition": "Con débito"})
+        raw = (f"{deal['ida_fecha']}_{deal['ida_origen_destino']}_{deal['vuelta_fecha']}_"
+               f"{deal['vuelta_origen_destino']}_{deal['aerolinea']}_{deal['precio_total_usd']:.2f}_"
+               f"{deal.get('pasajeros', 1)}_{deal.get('fuente', '')}_Con débito")
+        self.assertEqual(critic.generate_hash(deal), hashlib.md5(raw.encode('utf-8')).hexdigest())
+        self.assertNotEqual(critic.generate_hash(deal), critic.generate_hash(self.deal()))
 
     @unittest.expectedFailure
     def test_target_empty_success_should_explore_once_without_llm(self):

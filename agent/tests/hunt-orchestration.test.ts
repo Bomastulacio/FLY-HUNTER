@@ -29,7 +29,7 @@ test('Screenshot scenario: Despegar alone reaches persistence and the feed when 
         assert.equal(matchesFocus(p, parseSearchFocus(focus)!), true);
         const options = [
           { airline: 'Aeroméxico', stops: '1 escala', price: '1.884' },
-          { airline: 'Aerolíneas Argentinas', stops: 'Directo', price: '2.253' },
+          { airline: 'Aerolíneas Argentinas', stops: 'Directo', price: '2.376' },
         ].map(row => parseCard('despegar', { text: `Final 2 personas US$ ${row.price} Con Débito
           IDA dom. 18 abr. 2027 EZE MAD ${row.stops} VUELTA sáb. 1 may. 2027 MAD EZE ${row.stops}`,
           airlineNames: [row.airline], bookingUrl: 'https://www.despegar.com.ar/shop/flights/results/roundtrip/EZE/MAD/2027-04-18/2027-05-01/2/0/0',
@@ -48,7 +48,7 @@ test('Screenshot scenario: Despegar alone reaches persistence and the feed when 
     await runHunt([], io, new SearchRuntime(join(directory, 'state.json'), { google_flights: 4, despegar: 2 }, 0), focus);
     assert.equal(googleCalls, 1); assert.equal(despegarCalls, 1);
     const feed = latestQuotes(persisted).filter(feedCandidate).filter(deal => matchesRadar(deal, radar));
-    assert.deepEqual(feed.map(d => d.precio_total_usd), [1884, 2253]);
+    assert.deepEqual(feed.map(d => d.precio_total_usd), [1884, 2376]);
     assert.ok(feed.every(d => renderCompactFlight(d, radar).includes('Ver en Despegar')));
     assert.deepEqual(scans.map(s => s.outcome), ['blocked', 'ok']);
     assert.equal(plans[0].provider_results.length, 2);
@@ -57,6 +57,9 @@ test('Screenshot scenario: Despegar alone reaches persistence and the feed when 
     await runHunt([], io, new SearchRuntime(join(directory, 'state.json'), { google_flights: 4, despegar: 2 }, 0), focus);
     assert.equal(googleCalls, 1); assert.equal(despegarCalls, 1); // Despegar reuses its exact cache.
     assert.equal(scans.at(-2).outcome, 'ok'); assert.equal(scans.at(-1).outcome, 'blocked');
+    assert.equal(scans.at(-1).checked_at, scans[0].checked_at);
+    assert.deepEqual(plans[1].deferred_sources, [{ provider: 'google_flights', reason: 'provider_blocked' }]);
+    assert.ok(summaries[1].includes('Pausa por bloqueo del proveedor'));
     await assert.rejects(runHunt([], io, new SearchRuntime(join(directory, 'state.json')), 'EZE,MAD,2027-04-16,2027-05-01,2'), /radar activo/);
     assert.equal(googleCalls, 1); assert.equal(despegarCalls, 1);
   } finally {

@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
+import { timingSafeEqual } from 'node:crypto';
 
 export const prerender = false;
 
@@ -70,6 +71,19 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
+    // A valid session identifies a user; it does not authorize changing global
+    // observations. app_metadata is server-managed, unlike user_metadata.
+    // Keep ADMIN_TOKEN for trusted backend callers; never ship it to the UI.
+    const configuredAdminToken = String(env.ADMIN_TOKEN || '');
+    const suppliedAdminToken = request.headers.get('X-Admin-Token') || '';
+    const adminTokenMatches = configuredAdminToken.length > 0
+      && Buffer.byteLength(configuredAdminToken) === Buffer.byteLength(suppliedAdminToken)
+      && timingSafeEqual(Buffer.from(configuredAdminToken), Buffer.from(suppliedAdminToken));
+    if (user.app_metadata?.flight_hunter_admin !== true && !adminTokenMatches) {
+      return new Response(JSON.stringify({ success: false, error: 'Esta acción requiere una cuenta administradora.' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } });
+    }
+
     // 3. Validación de cuerpo y parámetros
     const body = await request.json().catch(() => null);
     if (!body || typeof body !== 'object') {
@@ -98,19 +112,21 @@ export const POST: APIRoute = async ({ request }) => {
       updatePayload.notificado = false;
     }
 
-    // Para la mutación de flight_deals, si la tabla está protegida por RLS pero permitida por el backend,
-    // usamos el cliente de servicio únicamente si el usuario está legítimamente autenticado.
+    // Global observations are writable only by the authorized backend.
     const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
-    const dbClient = serviceRoleKey
-      ? createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } })
-      : supabaseAuthClient;
+    if (!serviceRoleKey) {
+      return new Response(JSON.stringify({ success: false, error: 'Configuración administrativa no disponible.' }),
+        { status: 503, headers: { 'Content-Type': 'application/json' } });
+    }
+    const dbClient = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
 
     const { data, error } = await dbClient
       .from('flight_deals')
       .update(updatePayload)
       .eq('id', deal_id)
+      .eq('estado_aprobacion', 'pendiente')
       .select('id, ida_origen_destino, vuelta_origen_destino, estado_aprobacion')
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error('[API anomaly-action] Error al actualizar oferta:', error);
@@ -118,6 +134,11 @@ export const POST: APIRoute = async ({ request }) => {
         JSON.stringify({ success: false, error: 'Error al actualizar el estado de la oferta.' }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    if (!data) {
+      return new Response(JSON.stringify({ success: false, error: 'La oferta ya fue revisada o no está pendiente.' }),
+        { status: 409, headers: { 'Content-Type': 'application/json' } });
     }
 
     return new Response(

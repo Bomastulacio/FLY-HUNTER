@@ -17,9 +17,9 @@ export function sameSearch(saved: SavedDeal, p: FlightSearchParams): boolean {
 }
 export const savedProvider = (s: SavedDeal) => s.fuente === 'serpapi' ? 'google_flights' : s.fuente;
 
-/** A bookmark can schedule work only inside one of its owner's currently active radars. */
+/** A bookmark can schedule work only inside one of its owner's currently active radars. Manual captures are never tracked automatically. */
 export function watchTargets(alert: SearchAlert, searches: FlightSearchParams[], saved: SavedDeal[], provider: Provider) {
-  const owned = saved.filter(s => s.user_id === alert.user_id && savedProvider(s) === provider
+  const owned = saved.filter(s => s.fuente !== 'manual_capture' && s.user_id === alert.user_id && savedProvider(s) === provider
     && s.cantidad_escalas != null && Number.isInteger(Number(s.cantidad_escalas)) && Number(s.cantidad_escalas) >= 0
     && Number(s.cantidad_escalas) <= Math.min(1, alert.escalas_max ?? 1)
     && !(alert.aerolineas_excluidas || []).some(a => a.trim() && ` ${normalizedAirline(s.aerolinea || '')} `.includes(` ${normalizedAirline(a)} `)));
@@ -40,7 +40,7 @@ export function pickMonitoringSearch(searches: FlightSearchParams[], watches: Fl
 
 export function savedChecks(alert: SearchAlert, p: FlightSearchParams, provider: Provider, result: ProviderResult,
   saved: SavedDeal[], checkedAt: string) {
-  return saved.filter(s => s.user_id === alert.user_id && savedProvider(s) === provider && sameSearch(s, p)).map(s => {
+  return saved.filter(s => s.fuente !== 'manual_capture' && s.user_id === alert.user_id && savedProvider(s) === provider && sameSearch(s, p)).map(s => {
     // Today's collectors lack flight numbers / fare family. This follows a comparable
     // route/date/carrier offer, never claims to reprice an identical ticket.
     const q = result.options.filter(q => !quoteIntegrityReason(p, q)

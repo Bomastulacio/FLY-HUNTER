@@ -181,7 +181,9 @@ def generate_hash(deal: Dict) -> str:
     raw = (f"{deal.get('ida_fecha', '')}_{deal.get('ida_origen_destino', '')}_"
            f"{deal.get('vuelta_fecha', '')}_{deal.get('vuelta_origen_destino', '')}_"
            f"{deal.get('aerolinea', '')}_{_number(deal.get('precio_total_usd', 0)):.2f}_"
-           f"{deal.get('pasajeros', 1)}_{deal.get('fuente', '')}_{deal.get('cantidad_escalas')}_"
+           # Keep the deployed TypeScript/legacy hash contract. Adding stops in
+           # Python alone would insert a second row and lose notification state.
+           f"{deal.get('pasajeros', 1)}_{deal.get('fuente', '')}_"
            f"{evidence.get('paymentCondition') or ''}")
     return hashlib.md5(raw.encode("utf-8"), usedforsecurity=False).hexdigest()  # nosec B324
 

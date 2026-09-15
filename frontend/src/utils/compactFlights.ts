@@ -43,12 +43,12 @@ export function matchesRadar(deal: any, radar: any): boolean {
     && (Number(deal.precio_total_usd) < 750 * Number(radar.pasajeros) || Number(deal.precio_total_usd) >= Number(radar.presupuesto_min || 0))
     && !excluded.some((a: string) => a.trim() && normalize(String(deal.aerolinea || '')).includes(normalize(a)))
     && (!radar.fecha_ida_min || deal.ida_fecha >= radar.fecha_ida_min)
-    && (!(radar.fecha_ida_max || radar.fecha_ida_min) || deal.ida_fecha <= (radar.fecha_ida_max || radar.fecha_ida_min))
+    && (!radar.fecha_ida_max || deal.ida_fecha <= radar.fecha_ida_max)
     && (!radar.fecha_vuelta_min || deal.vuelta_fecha >= radar.fecha_vuelta_min)
-    && (!(radar.fecha_vuelta_max || radar.fecha_vuelta_min) || deal.vuelta_fecha <= (radar.fecha_vuelta_max || radar.fecha_vuelta_min));
+    && (!radar.fecha_vuelta_max || deal.vuelta_fecha <= radar.fecha_vuelta_max);
 }
 
-export function renderCompactFlight(deal: any, alert: any, featured = false, country = '', saved = false) {
+export function renderCompactFlight(deal: any, alert: any, featured = false, country = '', saved = false, insight: any = null) {
   const e = escapeHtml;
   const rawOD = String(deal.ida_origen_destino || `${deal.origen || 'EZE'}-${deal.destino || 'Vuelo'}`);
   const [origin = '', destination = ''] = rawOD.split('-').map(s => s.trim());
@@ -65,6 +65,7 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
   const unverifiedGoogle = googleSearch && (deal.detalle_cotizacion?.googleParserVersion !== 2
     || !deal.detalle_cotizacion?.priceVerified || !deal.detalle_cotizacion?.queryVerified);
   const isSavedSnapshot = Boolean(deal.guardado_el);
+  const isManualCapture = deal.fuente === 'manual_capture';
   const query = `Flights from ${origin} to ${destination} on ${deal.ida_fecha} through ${deal.vuelta_fecha} for ${searchPassengers} adults`;
   let bookingUrl = `https://www.google.com/travel/flights?q=${encodeURIComponent(query)}&curr=USD&hl=es`;
   let provider = 'Google Flights';
@@ -77,12 +78,25 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
         provider = 'Despegar';
       }
     } catch { /* Fall back to a passenger-aware search. */ }
+  } else if (isManualCapture) {
+    const src = deal.detalle_cotizacion?.sourceProvider;
+    provider = src === 'despegar' ? 'Despegar' : src === 'aerolineas' ? 'Aerolíneas Argentinas' : src === 'turismocity' ? 'Turismocity' : 'sitio original';
+    bookingUrl = deal.link_reserva || (src === 'aerolineas' ? 'https://www.aerolineas.com.ar/' : src === 'turismocity' ? 'https://www.turismocity.com.ar/' : 'https://www.despegar.com.ar/');
   }
   const dateToFormat = deal.detalle_cotizacion?.observedAt || deal.created_at || deal.guardado_el;
   const updated = dateToFormat ? new Date(dateToFormat) : null;
   const observation = updated && !Number.isNaN(updated.getTime())
     ? new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(updated)
     : 'Fecha de consulta no disponible';
+
+  const criticReason = deal.detalle_cotizacion?.criterio_evaluacion
+    || deal.detalle_cotizacion?.decision_reason
+    || deal.criterio_evaluacion
+    || deal.detalle_cotizacion?.reason;
+
+  const savings = alert?.presupuesto_max && Number(deal.precio_total_usd) < Number(alert.presupuesto_max)
+    ? Math.max(0, Math.round(Number(alert.presupuesto_max) - Number(deal.precio_total_usd)))
+    : 0;
 
   return `<article class="flight-item${featured ? ' flight-item--featured' : ''}${isSavedSnapshot ? ' flight-item--saved' : ''}" data-flight-id="${e(deal.id)}">
     <button class="flight-save" type="button" data-save-id="${e(deal.id)}"
@@ -94,7 +108,7 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
       <summary class="flight-summary">
         <span class="flight-summary-top">
           <span class="flight-destination">${e(city)}</span>
-          ${isSavedSnapshot ? `<span class="flight-badge" style="background:#4ade8022;color:#86efac;border-color:#4ade8044;"><i class="ph-fill ph-bookmark-simple"></i> Guardado</span>` : (gold || featured ? `<span class="flight-badge">${gold ? 'Oportunidad de Oro' : 'Menor precio encontrado'}</span>` : '')}
+          ${isSavedSnapshot ? (isManualCapture ? `<span class="flight-badge" style="background:#0284c722;color:#38bdf8;border-color:#0284c744;"><i class="ph ph-camera"></i> Captura personal</span>` : `<span class="flight-badge" style="background:#4ade8022;color:#86efac;border-color:#4ade8044;"><i class="ph-fill ph-bookmark-simple"></i> Guardado</span>`) : (gold || featured ? `<span class="flight-badge">${gold ? 'Oportunidad de Oro' : 'Menor precio encontrado'}</span>` : '')}
         </span>
         <span class="flight-route-line">${e(country || 'Vuelo internacional')} · Ida y vuelta</span>
         <span class="ticket-route" aria-label="${e(origin)} a ${e(destination)}">
@@ -120,8 +134,20 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
         ${deal.tracking_status ? `<p class="flight-freshness"><strong>${e(deal.tracking_status)}</strong><br>Guardaste a ${e(usd(deal.saved_price_usd))}.${deal.tracking_observed ? ' Se sigue la combinación y aerolínea; horarios y condiciones pueden variar.' : ''}</p>` : ''}
         <details class="flight-explanation">
           <summary>Sobre esta oferta</summary>
-          <p>${isSavedSnapshot ? `Cotización guardada por vos a ${e(usd(deal.saved_price_usd ?? deal.precio_total_usd))} para ${e(pax)}.` : (gold ? 'El radar la clasificó como Oportunidad de Oro.' : 'Oferta dentro de los filtros de tu radar.')} Total registrado: ${e(usd(deal.precio_total_usd))}.</p>
+          <p>${isSavedSnapshot ? (isManualCapture ? `Cotización capturada y revisada personalmente desde ${e(provider)} a ${e(usd(deal.saved_price_usd ?? deal.precio_total_usd))} para ${e(pax)}. Las capturas personales no cuentan con seguimiento automático en segundo plano.` : `Cotización guardada por vos a ${e(usd(deal.saved_price_usd ?? deal.precio_total_usd))} para ${e(pax)}.`) : (gold ? 'El radar la clasificó como Oportunidad de Oro.' : 'Oferta dentro de los filtros de tu radar.')} Total registrado: ${e(usd(deal.precio_total_usd))}.</p>
           <p>${e(stopText)} · ${e(pax)}${alert?.presupuesto_max ? `. El presupuesto de tu búsqueda es ${e(usd(alert.presupuesto_max))}.` : '.'}</p>
+          ${savings > 0 ? `<p style="color:#4ade80;"><i class="ph ph-trend-down"></i> <strong>Ahorro:</strong> Estás ahorrando ${e(usd(savings))} respecto al presupuesto máximo del radar.</p>` : ''}
+          ${criticReason ? `<p><i class="ph ph-check-circle"></i> <strong>Criterio del Agente Crítico:</strong> ${e(criticReason)}</p>` : ''}
+          ${deal.es_feriado_origen ? `<p style="color:#fbbf24;"><i class="ph ph-calendar-check"></i> <strong>Feriado nacional:</strong> La salida coincide con un feriado o fin de semana largo en Argentina.</p>` : ''}
+          ${deal.es_feriado_destino ? `<p style="color:#fbbf24;"><i class="ph ph-calendar-check"></i> <strong>Feriado en destino:</strong> La fecha en destino coincide con feriados locales.</p>` : ''}
+          ${insight ? `
+            <div style="margin-top: 0.5rem; padding: 0.6rem; background: rgba(255,255,255,0.04); border-radius: 8px; font-size: 0.85rem;">
+              <div style="font-weight: 600; margin-bottom: 0.25rem;"><i class="ph ph-chart-line"></i> Análisis de ruta (Data Scientist):</div>
+              ${insight.precio_promedio_7d ? `<div>Promedio 7 días: <strong>${e(usd(insight.precio_promedio_7d))}</strong></div>` : ''}
+              ${insight.minimo_historico ? `<div>Mínimo 30 días: <strong>${e(usd(insight.minimo_historico))}</strong> ${Number(deal.precio_total_usd) <= Number(insight.minimo_historico) ? '<span style="color:#4ade80;">(¡Mínimo del mes!)</span>' : ''}</div>` : ''}
+              ${typeof insight.tendencia === 'number' && Math.abs(insight.tendencia) > 0.5 ? `<div>Tendencia: <strong>${insight.tendencia < 0 ? `En baja (${e(usd(Math.abs(insight.tendencia)))}/día)` : `En alza (+${e(usd(insight.tendencia))}/día)`}</strong></div>` : ''}
+            </div>
+          ` : ''}
           ${deal.detalle_cotizacion?.itineraryScope === 'search_result' ? '<p>Precio observado en la búsqueda de ida y vuelta. Revisá los tramos de regreso antes de reservar.</p>' : ''}
         </details>
         ${alert?.id ? `<a class="flight-edit" href="/alertas?radar=${encodeURIComponent(alert.id)}"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i> Cambiar fechas o filtros</a>` : ''}

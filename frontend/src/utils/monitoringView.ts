@@ -1,5 +1,19 @@
 /** Pure projection: never overwrite a user's original saved price. */
 export function monitoredSavedDeal(saved: any, check: any, now = Date.now()) {
+  if (saved?.fuente === 'manual_capture') {
+    return {
+      ...saved,
+      id: saved.id,
+      guardado_el: saved.guardado_el,
+      ida_origen_destino: `${saved.origen}-${saved.destino}`,
+      vuelta_origen_destino: `${saved.destino}-${saved.origen}`,
+      saved_price_usd: Number(saved.precio_total_usd),
+      tracking_status: 'Captura personal (sin seguimiento automático)',
+      tracking_observed: false,
+      tracking_stale: false,
+    };
+  }
+
   const candidate = check?.last_quote || (check?.outcome === 'observed' ? check.quote : null);
   const normalize = (s: unknown) => String(s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
   const matches = candidate && candidate.ida_origen_destino === `${saved.origen}-${saved.destino}`
@@ -27,6 +41,7 @@ export function monitoredSavedDeal(saved: any, check: any, now = Date.now()) {
 }
 
 export function meaningfulDrop(saved: any, check: any, now = Date.now()): boolean {
+  if (saved?.fuente === 'manual_capture') return false;
   const projected = monitoredSavedDeal(saved, check, now);
   const reduction = Number(saved.precio_total_usd) - Number(projected.precio_total_usd);
   return check?.outcome === 'observed' && projected.tracking_observed && !projected.tracking_stale
