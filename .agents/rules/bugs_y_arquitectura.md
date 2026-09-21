@@ -46,3 +46,41 @@ Este archivo sirve como memoria a largo plazo para los agentes de IA que trabaje
 - **Regla de Oro:** Siempre enviar vuelos en lote (batching) por alerta. Jamás 1 consulta LLM por vuelo.
 - **Degradación Elegante:** En caso de HTTP 429 (cuota diaria cumplida), el pipeline nunca falla; conmuta de inmediato a evaluación determinista por reglas de negocio.
 
+## 8. Resolución de Dependencias Cruzadas en CI (`agent` y `frontend`)
+- **Contexto:** En el repositorio, `agent` y `frontend` son subproyectos hermanos con sus propios `package.json`. Las pruebas de `agent/tests` importan código del frontend (`frontend/src/pages/api/...`).
+- **El Bug:** En GitHub Actions (`agent-hunt.yml`), si solo se instala `agent` (`cd agent && npm ci`), Node.js falla al resolver dependencias de `frontend` (como `@supabase/supabase-js`) porque la resolución ESM busca hacia arriba por el árbol de directorios del archivo importado (`frontend/`) y nunca inspecciona carpetas hermanas (`agent/node_modules`). Esto provocaba `ERR_MODULE_NOT_FOUND` y abortaba el workflow antes de iniciar el scraper.
+- **La Solución:** En `.github/workflows/agent-hunt.yml`, **siempre instalar ambas carpetas** y registrar ambos `package-lock.json` en `setup-node`:
+  ```yaml
+  - name: Set up Node.js 22
+    uses: actions/setup-node@v4
+    with:
+      node-version: 22
+      cache: 'npm'
+      cache-dependency-path: |
+        agent/package-lock.json
+        frontend/package-lock.json
+
+  - name: Install dependencies
+    run: |
+      cd frontend && npm ci
+      cd ../agent && npm ci
+  ```
+
+## 9. Robustez del Scraper de Google Flights en Playwright
+- **Contexto:** Google Flights sirve la pestaña de tarifas más bajas con dos variantes de traducción según el CDN regional: *"Los más bajos"* o *"Más económicos"*. Además, durante la carga inicial muestra elementos `[role="progressbar"]`.
+- **El Bug:**
+  1. Si se busca únicamente `/Los más bajos/`, el scraper falla si Google responde con *"Más económicos"*.
+  2. Si se espera que el progressbar inicial desaparezca con `waitFor({ state: 'hidden', timeout: 25000 })` sin tolerancia de captura de error, en los runners de GitHub Actions (donde la barra a veces queda fija en el DOM o parpadea) el scraper moría por `page_timeout` a los 25 segundos en `initial_results_loading` sin llegar a interactuar con los resultados.
+- **La Solución:**
+  1. El selector de la pestaña económica debe contemplar ambas variantes:
+     `const CHEAPEST_NAME = /Los más bajos|Más económicos/i;`
+  2. La barra de carga inicial debe tolerar timeouts breves (5s) con `.catch(() => {})`:
+     `await page.locator('[role="progressbar"]:visible').first().waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});`
+     La espera estricta de 25s se reserva únicamente para el panel interno de resultados tras la selección.
+
+## 10. Gestión de Cooldowns y Limpieza de Caché en GitHub Actions
+- **Contexto:** El runtime del scraper (`searchRuntime.ts`) almacena en `.flight-state/state.json` un enfriamiento (*cooldown*) de 1 hora ante errores (`provider_error`) y de 24 horas ante bloqueos (`provider_blocked`), persistido en la caché de Actions (`flight-search-vX-...`).
+- **El Gotcha:** Si una corrida falla por un bug de código (ej. timeout de selector) y luego se corrige el código, las corridas inmediatas siguen difiriendo las búsquedas porque restauran el cooldown viejo de la caché de GitHub.
+- **La Solución:** Al corregir problemas de scraping que dejaron un cooldown guardado, incrementar la versión de la clave de caché en `agent-hunt.yml` (ej. de `flight-search-v4-` a `flight-search-v5-`) para forzar un arranque limpio sin pausas heredadas.
+
+
