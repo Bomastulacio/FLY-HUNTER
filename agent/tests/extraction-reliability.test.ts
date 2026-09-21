@@ -5,6 +5,9 @@ import { collectDespegar } from '../src/skills/despegar.js';
 import { collectGoogleFlights } from '../src/skills/googleFlights.js';
 import { parseCard } from '../src/skills/quoteParser.js';
 import { parseGoogleResult } from '../src/skills/googleQuote.js';
+import { evaluateQuote } from '../src/agent/quotePolicy.js';
+import { matchesRadar } from '../../frontend/src/utils/compactFlights.js';
+import { toObservedDeal } from '../src/agent/monitoring.js';
 
 const params = { origin: 'EZE', destination: 'MAD', departureDate: '2027-04-18', returnDate: '2027-05-01', passengers: 2, maxStops: 1 };
 const snapshot = {
@@ -93,8 +96,48 @@ test('Google does not publish a provisional fare when the results remain loading
   const { result, requests } = await withOfflineBrowser(fixture, () => collectGoogleFlights(params));
   assert.equal(result.status, 'error');
   assert.equal(result.reason, 'page_timeout');
+  assert.equal(result.stage, 'cheapest_results_loading');
   assert.deepEqual(result.options, []);
   assert.equal(requests, 1);
+});
+
+test('September screenshot: Más económicos keeps verified party fares after a slow initial load', async () => {
+  const p = { ...params, departureDate: '2027-04-17', budgetMinUSD: 1700, budgetMaxUSD: 2400 };
+  const fares = [['Plus Ultra', 1535], ['Air Europa', 2016], ['Iberia', 2172], ['Aerolíneas Argentinas', 2173]] as const;
+  // Screenshot prices/translation; accessible markup is a reduced synthetic fixture, not a live DOM capture.
+  const rows = fares.map(([airline, price]) => `<li class="pIav2d">
+    <div role="link" aria-label="A partir de ${price} dólares estadounidenses (precio total de ida y vuelta). Vuelo directo de ${airline}. Sale de Ezeiza el 17 de abril de 2027 a las 13:25. Seleccionar vuelo"></div>
+    <span role="text" aria-label="${price} dólares estadounidenses">USD ${price.toLocaleString('en-US')}</span>
+  </li>`).join('');
+  const fixture = `<input role="combobox" aria-label="¿Desde dónde? Buenos Aires EZE">
+    <input role="combobox" aria-label="¿A dónde quieres ir? Madrid MAD">
+    <input aria-label="Salida" value="sáb, 17 abr"><input aria-label="Vuelta" value="sáb, 1 may">
+    <button role="switch" aria-label="Hacer un seguimiento con salida el 2027-04-17 y vuelta el 2027-05-01"></button>
+    <div id="loading" role="progressbar">Cargando</div>
+    <button id="cheap" role="tab" aria-selected="false">Más económicos desde USD 1,535</button>
+    <div id="panel" role="tabpanel" aria-label="Recomendado">Precio provisional USD 2,188</div>
+    <template id="final">Los precios incluyen las tarifas y los impuestos obligatorios para 2 adultos.${rows}</template>
+    <script>
+      setTimeout(() => document.getElementById('loading').remove(), 5500);
+      document.getElementById('cheap').onclick = () => {
+        document.getElementById('cheap').setAttribute('aria-selected', 'true');
+        const panel = document.getElementById('panel');
+        panel.setAttribute('aria-label', 'Más económicos');
+        panel.innerHTML = document.getElementById('final').innerHTML;
+      };
+    </script>`;
+  const { result, requests } = await withOfflineBrowser(fixture, () => collectGoogleFlights(p));
+  assert.equal(result.status, 'ok', JSON.stringify(result));
+  assert.equal(requests, 1, 'Waiting for loading must not issue another search');
+  assert.deepEqual(result.options.map(q => [q.airline, q.priceTotalUSD]), fares.map(row => [...row]));
+  assert.ok(result.options.every(q => q.passengers === 2 && q.evidence?.searchView === 'cheapest'));
+  const radar = { origen: 'EZE', pasajeros: 2, presupuesto_min: 1700, presupuesto_max: 2400,
+    fecha_ida_min: p.departureDate, fecha_ida_max: p.departureDate,
+    fecha_vuelta_min: p.returnDate, fecha_vuelta_max: p.returnDate };
+  assert.deepEqual(result.options.filter(q => evaluateQuote(p, q).approvalStatus === 'aprobado').map(q => q.airline),
+    ['Air Europa', 'Iberia', 'Aerolíneas Argentinas']);
+  assert.deepEqual(result.options.filter(q => matchesRadar(toObservedDeal(q), radar)).map(q => q.airline),
+    ['Air Europa', 'Iberia', 'Aerolíneas Argentinas']);
 });
 
 test('Google reports a late CAPTCHA as blocked so the source cooldown survives the run', async () => {

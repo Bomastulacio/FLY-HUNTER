@@ -85,7 +85,7 @@ export async function runHunt(args = process.argv.slice(2), io = huntIO, runtime
     reported.add(`${alert.id}:${provider}`);
     receipts.push({ provider, mode, origin: params.origin, destination: params.destination,
       departure: params.departureDate, return: params.returnDate, passengers: params.passengers,
-      status: result.status, quotes: result.options.length, checked_at: result.checkedAt });
+      status: result.status, reason: result.reason, stage: result.stage, quotes: result.options.length, checked_at: result.checkedAt });
     attempted.push({ alert_id: alert.id, origin: params.origin, dest: params.destination,
       dep_date: params.departureDate, ret_date: params.returnDate, passengers: params.passengers });
     for (const quote of result.options) {
@@ -127,8 +127,8 @@ export async function runHunt(args = process.argv.slice(2), io = huntIO, runtime
       no_unvisited_combination: 'No quedan combinaciones pendientes en esta corrida',
     };
     await io.writeSummary(`## Resultado de la búsqueda\n\n${persisted.size} cotizaciones verificadas registradas; ${reported.size} pares radar/fuente procesados.\n\n`
-      + '| Fuente | Ruta | Ida / vuelta | Adultos | Resultado | Cotizaciones |\n|---|---|---|---|---|---|\n'
-      + receipts.map(r => `| ${r.provider} | ${r.origin}–${r.destination} | ${r.departure} / ${r.return} | ${r.passengers} | ${r.status} | ${r.quotes} |`).join('\n')
+      + '| Fuente | Ruta | Ida / vuelta | Adultos | Resultado | Cotizaciones | Diagnóstico |\n|---|---|---|---|---|---|---|\n'
+      + receipts.map(r => `| ${r.provider} | ${r.origin}–${r.destination} | ${r.departure} / ${r.return} | ${r.passengers} | ${r.status} | ${r.quotes} | ${[r.reason, r.stage].filter(Boolean).join(' / ') || '—'} |`).join('\n')
       + '\n\nFuentes sin intento por cuota o pausa: ' + (plans.length * sources.length - reported.size)
       + '. Un job terminado no confirma que todas las fechas hayan sido consultadas.\n'
       + (deferred.length ? '\n| Fuente sin intento | Motivo |\n|---|---|\n'

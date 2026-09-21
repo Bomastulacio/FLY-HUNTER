@@ -6,7 +6,7 @@ import { searchKey } from './searchPlanner.js';
 
 export type Provider = ScrapedFlightOption['source'];
 export type DeferralReason = 'run_budget_exhausted' | 'daily_budget_exhausted' | 'provider_blocked' | 'provider_error' | 'provider_cooldown';
-export interface ProviderResult { status: 'ok' | 'empty' | 'blocked' | 'error' | 'unverified'; options: ScrapedFlightOption[]; reason?: string; checkedAt?: string }
+export interface ProviderResult { status: 'ok' | 'empty' | 'blocked' | 'error' | 'unverified'; options: ScrapedFlightOption[]; reason?: string; stage?: string; checkedAt?: string }
 interface State {
   cursors: Record<string, number>;
   cooldown: Partial<Record<Provider, number>>;
@@ -106,7 +106,7 @@ export class SearchRuntime {
     // Unverified markup is not evidence that there are no flights.
     if (result.status === 'ok' || result.status === 'empty') this.state.cache[key] = { expires: Date.now() + (result.status === 'ok' ? 6 : 1) * 3600000, result };
     await this.save();
-    logEvent('search.completed', { provider, key, status: result.status, reason: result.reason, quotes: result.options.length, latency_ms: Date.now() - start, api_credits: 0, searches_used: this.used[provider] });
+    logEvent('search.completed', { provider, key, status: result.status, reason: result.reason, stage: result.stage, quotes: result.options.length, latency_ms: Date.now() - start, api_credits: 0, searches_used: this.used[provider] });
     return result;
   }
 }

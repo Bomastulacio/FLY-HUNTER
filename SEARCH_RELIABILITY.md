@@ -1,5 +1,28 @@
 # Búsquedas verificables y cobertura por fuente
 
+## Auditoría del 21/09/2026 — corrida #49
+
+La [corrida 35655172449](https://github.com/Bomastulacio/FLY-HUNTER/actions/runs/35655172449)
+superó los tests después de instalar las dependencias del frontend, pero registró cero cotizaciones.
+Solo intentó Google AEP–MIA 11/01–07/02/2027, un adulto (`page_timeout`, 6771 ms),
+y Despegar EZE–MIA 19/01–04/03/2027, un adulto (`blocked`). Las pausas globales de
+una hora por error y 24 horas por bloqueo impidieron consultar el otro radar en esa corrida.
+Esto no demuestra ausencia de vuelos EZE–MAD 17/04–01/05/2027 para dos adultos.
+
+Las capturas del usuario muestran la traducción «Más económicos», incompatible con el
+selector anterior «Los más bajos». El extractor admite ambas y conserva las verificaciones
+de consulta, pasajeros y precio. Las esperas de carga inicial/final pasan de 5/8 a 25 segundos,
+sin reintentos ni búsquedas adicionales. Los errores ahora incluyen la etapa en logs, plan
+y resumen. El timeout histórico no registró etapa: no se atribuye retrospectivamente a un
+selector concreto. No se borran las pausas ni se aumentan cuotas.
+
+El fixture offline de las capturas usa precios de US$1.535/2.016/2.172/2.173 y markup accesible
+sintético; no es un DOM capturado en vivo ni evidencia de disponibilidad actual. Con presupuesto
+US$1.700–2.400, el mínimo vigente excluye US$1.535 (no baja de US$1.500 para dos adultos),
+mientras los otros tres pasan. Los filtros no se cambian. La validación remota pendiente debe
+usar el foco existente `EZE,MAD,2027-04-17,2027-05-01,2`, dentro de un radar activo y respetando
+pausas y cuota. Una prueba offline no garantiza acceso desde Actions.
+
 Documento de soporte del diagnóstico de extracción. La operación vigente y el seguimiento
 se describen en `agents.md` y `MONITORING.md`; esas reglas reemplazan decisiones históricas incompatibles.
 
