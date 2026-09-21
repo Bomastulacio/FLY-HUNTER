@@ -83,10 +83,6 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
             <i class="ph ph-sliders"></i>
             <span class="nav-alertas-text">Mis Alertas</span>
           </a>
-          <a href="/capturas" class="btn btn-outline desktop-only" title="Capturar vuelo personal" aria-label="Capturar vuelo">
-            <i class="ph ph-camera"></i>
-            <span>Capturas</span>
-          </a>
           <a href="/login" id="nav-login-btn" class="btn btn-outline" style="display: none; padding: 0.4rem 1rem; margin-top: 0;"><i class="ph ph-key" style="margin-right: 0.5rem;"></i> Ingresar</a>
           
           <div id="user-profile-dropdown" class="profile-dropdown" style="display: none;">
@@ -98,7 +94,6 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
             <div class="dropdown-content">
               <div id="dropdown-user-info" class="dropdown-user-header">usuario</div>
               <a href="/alertas"><i class="ph ph-sliders" style="margin-right: 0.5rem;"></i> Mis Alertas</a>
-              <a href="/capturas"><i class="ph ph-camera" style="margin-right: 0.5rem;"></i> Capturas Personales</a>
               <div class="dropdown-divider"></div>
               <a href="#" id="btn-logout" class="danger"><i class="ph ph-sign-out" style="margin-right: 0.5rem;"></i> Cerrar Sesión</a>
             </div>

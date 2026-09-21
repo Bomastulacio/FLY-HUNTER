@@ -33,11 +33,15 @@ jobs:
         with:
           node-version: 22
           cache: 'npm'
-          cache-dependency-path: agent/package-lock.json
+          cache-dependency-path: |
+            agent/package-lock.json
+            frontend/package-lock.json
 
       - name: Install dependencies
         run: |
-          cd agent
+          cd frontend
+          npm ci
+          cd ../agent
           npm ci
 
       - name: Install Playwright Chromium with Linux dependencies
