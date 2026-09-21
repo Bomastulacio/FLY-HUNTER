@@ -37,14 +37,18 @@ export async function collectGoogleFlights(p: FlightSearchParams, options: { hea
     const cheapest = page.getByRole('tab', { name: CHEAPEST_NAME });
     await cheapest.waitFor({ state: 'visible', timeout: 25000 });
     stage = 'initial_results_loading';
-    await page.locator('[role="progressbar"]:visible').first().waitFor({ state: 'hidden', timeout: 25000 });
+    await page.locator('[role="progressbar"]:visible').first().waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
     // The Best view exposes exact ISO dates in its price-tracking control.
     // Cheapest omits that control: validate first and check inputs stay unchanged.
     stage = 'date_controls';
     const depDateEsc = escapeRegex(p.departureDate);
     const retDateEsc = escapeRegex(p.returnDate);
     const dates = page.getByRole('switch', { name: new RegExp(`salida el ${depDateEsc} y vuelta el ${retDateEsc}`) });
-    if (!await dates.count()) return { status: 'unverified', options: [], reason: 'exact_dates_not_verified' };
+    if (!await dates.count()) {
+      const body = await page.locator('body').innerText().catch(() => '');
+      if (challenged(body)) return { status: 'blocked', options: [] };
+      return { status: 'unverified', options: [], reason: 'exact_dates_not_verified' };
+    }
     const departureInput = page.getByRole('textbox', { name: 'Salida', exact: true });
     const returnInput = page.getByRole('textbox', { name: 'Vuelta', exact: true });
     const departureValue = await departureInput.inputValue();

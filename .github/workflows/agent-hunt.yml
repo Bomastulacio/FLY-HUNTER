@@ -54,8 +54,8 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: agent/.flight-state
-          key: flight-search-v4-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: flight-search-v4-
+          key: flight-search-v5-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: flight-search-v5-
 
       - name: Offline collector evals
         run: |
