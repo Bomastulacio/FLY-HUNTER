@@ -492,7 +492,8 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         const zoneFallback = zoneCountriesMap[targetZone] || zoneCountriesMap["Europa"];
 
         // Priorizamos los países que el usuario eligió explícitamente o los de su zona
-        let explicitCountries = (alert.paises && alert.paises.length > 0 && !alert.paises.includes('Cualquiera')) 
+        const hasExplicitCountries = Boolean(alert.paises && alert.paises.length > 0 && !alert.paises.includes('Cualquiera'));
+        let explicitCountries = hasExplicitCountries 
             ? [...alert.paises] 
             : zoneFallback;
             
@@ -544,7 +545,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
 
           if (destDeal && !countriesWithDeals.some(item => item.deal.id === destDeal.id)) {
             countriesWithDeals.push({ country, deal: destDeal });
-          } else if (!destDeal) {
+          } else if (!destDeal && hasExplicitCountries) {
             countriesSearching.push({ country });
           }
         });

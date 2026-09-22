@@ -154,6 +154,7 @@ test('USD locale and decimal handling without a guessed ARS rate', () => {
   assert.equal(parseUsd('USD 1925 1 escala'), 1925);
   assert.equal(parseUsd('USD 1 925,50'), 1925.5);
   assert.equal(verifiedPassengerCount('El precio incluye los impuestos y las comisiones correspondientes a 2 adultos.'), 2);
+  assert.equal(verifiedPassengerCount('El precio incluye los impuestos y las comisiones correspondientes a 1 adulto.'), 1);
 });
 
 test('Round-robin eventually covers the missing 18 April / 1 May pair and all selected destinations', () => {

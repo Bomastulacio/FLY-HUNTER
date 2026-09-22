@@ -31,7 +31,7 @@ export function readStops(text: string): number[] {
 function passengerCounts(text: string): number[] {
   const normalized = normalizedAirline(text);
   const counts = [...normalized.matchAll(/\b(?:final|total|para|for)\s+(\d+)\s+(?:personas?|adultos?|adults?|pasajeros?|passengers?)\b/g)].map(m => Number(m[1]));
-  const included = normalized.match(/precio incluye.*?correspondientes a\s+(\d+)\s+adultos/);
+  const included = normalized.match(/precio incluye.*?correspondientes a\s+(\d+)\s+adultos?/);
   if (included) counts.push(Number(included[1]));
   return [...new Set(counts)];
 }
