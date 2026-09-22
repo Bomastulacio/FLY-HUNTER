@@ -83,4 +83,15 @@ Este archivo sirve como memoria a largo plazo para los agentes de IA que trabaje
 - **El Gotcha:** Si una corrida falla por un bug de código (ej. timeout de selector) y luego se corrige el código, las corridas inmediatas siguen difiriendo las búsquedas porque restauran el cooldown viejo de la caché de GitHub.
 - **La Solución:** Al corregir problemas de scraping que dejaron un cooldown guardado, incrementar la versión de la clave de caché en `agent-hunt.yml` (ej. de `flight-search-v4-` a `flight-search-v5-`) para forzar un arranque limpio sin pausas heredadas.
 
+## 11. Concordancia de Pasajeros y Modo de Zona en el Feed
+
+- **Concordancia de Número en Google Flights:**
+  - En español, Google Flights utiliza singular (*"1 adulto"*) y plural (*"2 adultos"*).
+  - La expresión regular de validación en `quoteParser.ts` **siempre debe usar `adultos?` con cuantificador opcional**, de lo contrario las búsquedas individuales son rechazadas silenciosamente por `search_controls_mismatch`.
+
+- **Feed de Zona vs. Destinos Específicos:**
+  - Cuando una alerta tiene `paises: ["Cualquiera"]` o no define destinos puntuales, el radar busca a nivel regional amplio (ej. Norteamérica cubre MIA, JFK, LAX, YYZ, MEX).
+  - En este modo, el frontend (`index.astro`) **no debe renderizar tarjetas de espera país por país** pidiendo ajustar la búsqueda. Esas tarjetas se reservan exclusivamente para cuando el usuario seleccionó explícitamente países puntuales en el radar.
+
+
 
