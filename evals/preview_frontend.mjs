@@ -7,6 +7,7 @@ import { readFile } from 'node:fs/promises';
 import { stripTypeScriptTypes } from 'node:module';
 const root = new URL('../frontend/', import.meta.url);
 const read = path => readFile(new URL(path, root), 'utf8');
+const previewPort = Number(process.env.FH_PREVIEW_PORT || 4322);
 const alert = { id: 'demo-europe', nombre: 'Europa en abril', origen: 'EZE, AEP', destino: 'Europa',
   pasajeros: 2, escalas_max: 1, presupuesto_min: 1700, presupuesto_max: 2400,
   fecha_ida_min: '2027-04-17', fecha_ida_max: '2027-04-19', fecha_vuelta_min: '2027-04-26',
@@ -17,6 +18,7 @@ const deals = [['demo-mad', 'MAD', 2047, 1, 'Aeroméxico'], ['demo-cdg', 'CDG', 
   ida_fecha: '2027-04-17', vuelta_fecha: '2027-05-02', pasajeros: 2, precio_total_usd: price,
   cantidad_escalas: stops, aerolinea: airline, estado_aprobacion: 'aprobado',
   fuente: 'google_flights', created_at: new Date().toISOString(),
+  detalle_cotizacion: { googleParserVersion: 2, priceVerified: true, queryVerified: true, searchView: 'cheapest' },
 }));
 
 createServer(async (req, res) => {
@@ -29,14 +31,18 @@ createServer(async (req, res) => {
       res.end((await read('src/styles/global.css')) + '\n' + extra + '\n' + await read('src/styles/compact.css'));
       return;
     }
-    if (['/utils/compactFlights.js', '/utils/radarPicker.js'].includes(req.url)) {
+    if (req.url && /^\/utils\/(compactFlights|radarPicker|searchSchedule|monitoringView|latestQuotes)\.js$/.test(req.url)) {
       res.setHeader('Content-Type', 'text/javascript');
       res.end(stripTypeScriptTypes(await read(`src${req.url.replace(/\.js$/, '.ts')}`))
-        .replace("from './compactFlights'", "from './compactFlights.js'"));
+        .replace("from './compactFlights'", "from './compactFlights.js'")
+        .replace("import { supabase } from '../lib/supabase';", "const supabase={from:()=>({select(){return this},eq(){return this},update(){return this},maybeSingle:async()=>({data:null,error:null}),upsert:async()=>({error:null})})};"));
       return;
     }
     if (req.url === '/favicon.svg') {
       res.setHeader('Content-Type', 'image/svg+xml'); res.end(await read('public/favicon.svg')); return;
+    }
+    if (req.url?.startsWith('/destinations/') && /^\/destinations\/[a-z-]+\.jpg$/.test(req.url)) {
+      res.setHeader('Content-Type', 'image/jpeg'); res.end(await readFile(new URL(`public${req.url}`, root))); return;
     }
     const settingsPage = req.url?.startsWith('/alertas');
     const source = await read(settingsPage ? 'src/pages/alertas.astro' : 'src/pages/index.astro');
@@ -65,4 +71,4 @@ createServer(async (req, res) => {
   } catch (error) {
     res.writeHead(500); res.end(String(error));
   }
-}).listen(4322, '127.0.0.1', () => console.log('UI fixture: http://127.0.0.1:4322'));
+}).listen(previewPort, '127.0.0.1', () => console.log(`UI fixture: http://127.0.0.1:${previewPort}`));

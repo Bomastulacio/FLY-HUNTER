@@ -103,7 +103,8 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
 
       <!-- Hero -->
       <header id="main-hero">
-        <h1>Encontramos las mejores tarifas desde Buenos Aires.</h1>
+        <span class="hero-eyebrow">UN VIAJE POR DELANTE</span>
+        <h1>Tu próximo viaje, <span>sin buscar todos los días.</span></h1>
         <p id="hero-subtitle">Configura tu radar para empezar a recibir alertas.</p>
       </header>
 
@@ -135,7 +136,10 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
           </details>
         </aside>
         <div class="feed-toolbar">
-          <h1>Tus vuelos</h1>
+          <div>
+            <span class="feed-eyebrow">TU RADAR, DE UN VISTAZO</span>
+            <h1>Más cerca de despegar.</h1>
+          </div>
           <div class="feed-filters" role="group" aria-label="Mostrar vuelos">
             <button type="button" data-feed-filter="all" aria-pressed="true">Todos</button>
             <button type="button" data-feed-filter="saved" aria-pressed="false"><i class="ph ph-bookmark-simple" aria-hidden="true"></i> Guardados</button>
@@ -274,7 +278,13 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         
         
         const mainHero = document.getElementById('main-hero');
-        if (mainHero) mainHero.style.display = 'none';
+        if (mainHero) {
+          mainHero.style.display = '';
+          const title = mainHero.querySelector('h1');
+          const subtitle = mainHero.querySelector('#hero-subtitle');
+          if (title) title.innerHTML = `${escapeHtml(alert.nombre || alert.destino || 'Tu próximo viaje')}, <span>allá vamos.</span>`;
+          if (subtitle) subtitle.textContent = `${Number(alert.pasajeros) || 2} adulto${Number(alert.pasajeros) === 1 ? '' : 's'} · ${Array.isArray(alert.paises) && alert.paises.length ? `${alert.paises.length} países posibles` : 'fechas flexibles'} · hasta ${usd(alert.presupuesto_max)}`;
+        }
 
         const origRaw = alert.origen || "EZE";
         const orig = origRaw.split(',').map((s: string) => s.trim()).join(', ');
@@ -859,7 +869,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         const grid = document.getElementById('destinations-grid');
         if (!grid) return;
         grid.querySelector('.saved-empty')?.remove();
-        grid.querySelectorAll('.extra-saved-card')?.remove();
+        grid.querySelectorAll('.extra-saved-card').forEach(card => card.remove());
         let visible = 0;
 
         grid.querySelectorAll<HTMLElement>('.flight-item:not(.extra-saved-card)').forEach(card => {
@@ -1031,6 +1041,30 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
           if (item !== opened) item.open = false;
         });
       }, true);
+
+      // Cards react like a physical ticket on precise pointers. Touch keeps a short press response.
+      const flightGrid = document.getElementById('destinations-grid');
+      flightGrid?.addEventListener('pointermove', event => {
+        if (event.pointerType !== 'mouse' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        const card = (event.target as HTMLElement).closest<HTMLElement>('.flight-item');
+        if (!card) return;
+        const rect = card.getBoundingClientRect();
+        const x = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+        const y = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
+        card.style.setProperty('--card-rx', `${(0.5 - y) * 4}deg`);
+        card.style.setProperty('--card-ry', `${(x - 0.5) * 4}deg`);
+        card.style.setProperty('--card-x', `${x * 100}%`);
+        card.style.setProperty('--card-y', `${y * 100}%`);
+      });
+      flightGrid?.addEventListener('pointerout', event => {
+        const card = (event.target as HTMLElement).closest<HTMLElement>('.flight-item');
+        const next = event.relatedTarget instanceof Element ? event.relatedTarget.closest('.flight-item') : null;
+        if (!card || next === card) return;
+        card.style.removeProperty('--card-rx');
+        card.style.removeProperty('--card-ry');
+        card.style.removeProperty('--card-x');
+        card.style.removeProperty('--card-y');
+      });
 
       // Multi-Alerts Tabs Navigator
       let userAlerts: any[] = [];

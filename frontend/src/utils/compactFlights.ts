@@ -26,6 +26,13 @@ const cities: Record<string, string> = {
   MIA: 'Miami', JFK: 'Nueva York', GRU: 'San Pablo', GIG: 'Río de Janeiro',
 };
 
+const destinationPhotos: Record<string, string> = {
+  MAD: '/destinations/madrid.jpg', BCN: '/destinations/madrid.jpg', AGP: '/destinations/madrid.jpg', VLC: '/destinations/madrid.jpg',
+  FCO: '/destinations/rome.jpg', MXP: '/destinations/rome.jpg', LIN: '/destinations/rome.jpg', NAP: '/destinations/rome.jpg',
+  CDG: '/destinations/paris.jpg', ORY: '/destinations/paris.jpg', NCE: '/destinations/paris.jpg', MRS: '/destinations/paris.jpg',
+  LIS: '/destinations/lisbon.jpg', OPO: '/destinations/lisbon.jpg',
+};
+
 /** A total quoted for one adult must never be compared with a two-adult radar. */
 export function matchesRadar(deal: any, radar: any): boolean {
   // Historical rows from the old scraper must not compete with verified fares.
@@ -92,8 +99,9 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
   const savings = alert?.presupuesto_max && Number(deal.precio_total_usd) < Number(alert.presupuesto_max)
     ? Math.max(0, Math.round(Number(alert.presupuesto_max) - Number(deal.precio_total_usd)))
     : 0;
+  const destinationPhoto = destinationPhotos[destination] || '';
 
-  return `<article class="flight-item${featured ? ' flight-item--featured' : ''}${isSavedSnapshot ? ' flight-item--saved' : ''}" data-flight-id="${e(deal.id)}">
+  return `<article class="flight-item${featured ? ' flight-item--featured' : ''}${isSavedSnapshot ? ' flight-item--saved' : ''}${destinationPhoto ? ' flight-item--visual' : ''}" data-flight-id="${e(deal.id)}"${destinationPhoto ? ` style="--flight-image:url('${destinationPhoto}')"` : ''}>
     <button class="flight-save" type="button" data-save-id="${e(deal.id)}"
       aria-label="${saved ? 'Quitar de guardados' : 'Guardar vuelo'} a ${e(city)}" aria-pressed="${saved}"
       title="${saved ? 'Quitar de guardados' : 'Guardar vuelo en tu cuenta'}">
@@ -101,6 +109,7 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
     </button>
     <details class="flight-disclosure">
       <summary class="flight-summary">
+        ${destinationPhoto ? `<span class="flight-photo" aria-hidden="true"><img src="${destinationPhoto}" alt="" width="1000" height="650" loading="lazy" decoding="async"></span>` : ''}
         <span class="flight-summary-top">
           <span class="flight-destination">${e(city)}</span>
           ${isSavedSnapshot ? `<span class="flight-badge" style="background:#4ade8022;color:#86efac;border-color:#4ade8044;"><i class="ph-fill ph-bookmark-simple"></i> Guardado</span>` : (gold || featured ? `<span class="flight-badge">${gold ? 'Oportunidad de Oro' : 'Menor precio encontrado'}</span>` : '')}
@@ -131,8 +140,8 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
           <summary>Sobre esta oferta</summary>
           <p>${isSavedSnapshot ? `Cotización guardada por vos a ${e(usd(deal.saved_price_usd ?? deal.precio_total_usd))} para ${e(pax)}.` : (gold ? 'El radar la clasificó como Oportunidad de Oro.' : 'Oferta dentro de los filtros de tu radar.')} Total registrado: ${e(usd(deal.precio_total_usd))}.</p>
           <p>${e(stopText)} · ${e(pax)}${alert?.presupuesto_max ? `. El presupuesto de tu búsqueda es ${e(usd(alert.presupuesto_max))}.` : '.'}</p>
-          ${savings > 0 ? `<p style="color:#4ade80;"><i class="ph ph-trend-down"></i> <strong>Ahorro:</strong> Estás ahorrando ${e(usd(savings))} respecto al presupuesto máximo del radar.</p>` : ''}
-          ${criticReason ? `<p><i class="ph ph-check-circle"></i> <strong>Criterio del Agente Crítico:</strong> ${e(criticReason)}</p>` : ''}
+          ${savings > 0 ? `<p class="flight-positive"><i class="ph ph-trend-down"></i> <strong>Margen:</strong> ${e(usd(savings))} por debajo de tu presupuesto máximo.</p>` : ''}
+          ${criticReason ? `<p><i class="ph ph-check-circle"></i> <strong>Por qué aparece:</strong> ${e(criticReason)}</p>` : ''}
           ${deal.es_feriado_origen ? `<p style="color:#fbbf24;"><i class="ph ph-calendar-check"></i> <strong>Feriado nacional:</strong> La salida coincide con un feriado o fin de semana largo en Argentina.</p>` : ''}
           ${deal.es_feriado_destino ? `<p style="color:#fbbf24;"><i class="ph ph-calendar-check"></i> <strong>Feriado en destino:</strong> La fecha en destino coincide con feriados locales.</p>` : ''}
           ${insight ? `
