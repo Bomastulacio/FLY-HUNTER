@@ -122,6 +122,16 @@ no se consumieron búsquedas de proveedores ni llamadas Gemini en esta validaci�
 
 ## Próximas etapas (no implementadas aún)
 
+### Estudio de UX del 24/09/2026
+
+Se preparó un prototipo local independiente en `design/prototype/`, abierto con
+`node evals/preview_concept.mjs` (puerto 4323). Incluye cards glass, país ganador y país
+fijado, guardados en memoria, edición de fechas/noches/precio objetivo y estados de ejemplo.
+No está integrado a la app ni conectado a datos o correos. Los precios son demostrativos.
+Antes de integrar, validar la propuesta visual con el usuario y conservar las etapas de
+fiabilidad siguientes. País fijado no implica mayor cuota; umbral personal y noches aún
+requieren implementación persistente y verificación de extremo a extremo.
+
 ### Plan personal sin abono — decisión del 15/09/2026
 
 El usuario confirmó presupuesto **US$0/mes** y pidió investigación/arquitectura para implementar
