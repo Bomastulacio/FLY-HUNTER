@@ -209,7 +209,6 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
   }
 
   const destinationPhoto = destinationPhotos[destination] || destinationCountryPhotos[countryName] || '/destinations/travel_default.jpg';
-  const flagIso = countryIsoCodes[countryName] || countryIsoCodes[city] || (destinationCountry[destination] ? countryIsoCodes[destinationCountry[destination]] : null);
 
   let badgeHtml = '';
   if (isSavedSnapshot) {
@@ -235,7 +234,7 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
           <div class="flight-photo-overlay"></div>
           ${badgeHtml ? `<div class="flight-photo-badge">${badgeHtml}</div>` : ''}
           <div class="flight-photo-place">
-            <span class="flight-photo-country">${flagIso ? `<img class="flight-photo-flag" src="https://flagcdn.com/w40/${flagIso.toLowerCase()}.png" srcset="https://flagcdn.com/w80/${flagIso.toLowerCase()}.png 2x" alt="" width="15" height="10" loading="lazy" decoding="async" /> ` : ''}${e(countryName.toUpperCase())} / ${e(destination)}</span>
+            <span class="flight-photo-country">${e(countryName.toUpperCase())} / ${e(destination)}</span>
             <h3 class="flight-photo-city">${e(city)}</h3>
           </div>
         </div>

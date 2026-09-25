@@ -503,19 +503,6 @@ body.compact-app {
   color: rgba(235, 245, 225, .82);
   text-transform: uppercase;
   text-shadow: 0 1px 3px rgba(0, 0, 0, .6);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.flight-photo-flag {
-  display: inline-block;
-  width: 15px;
-  height: 10px;
-  object-fit: cover;
-  border-radius: 2px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  flex-shrink: 0;
 }
 .flight-photo-city {
   font-size: clamp(1.8rem, 3.8vw, 2.15rem);
