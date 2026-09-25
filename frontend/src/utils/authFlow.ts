@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { getRememberedGoogleAccount } from './rememberedAccount';
 
 export function mountAuth() {
   const register = document.body.dataset.authMode === 'register';
@@ -7,6 +8,7 @@ export function mountAuth() {
   const password = document.getElementById('auth-password') as HTMLInputElement;
   const submit = document.getElementById('submit-btn') as HTMLButtonElement;
   const google = document.getElementById('google-btn') as HTMLButtonElement;
+  const otherGoogle = document.getElementById('other-google-btn') as HTMLButtonElement | null;
   const error = document.getElementById('error-msg')!;
   const confirmation = document.getElementById('confirmation')!;
   const resend = document.getElementById('resend-btn') as HTMLButtonElement;
@@ -14,6 +16,27 @@ export function mountAuth() {
   let confirmedEmail = '';
   let resendAt = 0;
   const redirect = `${window.location.origin}/alertas`;
+  const loginDestination = register ? '/alertas' : '/';
+  const remembered = register ? null : getRememberedGoogleAccount();
+  if (remembered) {
+    const card = document.getElementById('remembered-account')!;
+    document.getElementById('remembered-name')!.textContent = remembered.name;
+    document.getElementById('remembered-email')!.textContent = remembered.email;
+    const avatar = document.getElementById('remembered-avatar')!;
+    if (remembered.avatarUrl) {
+      const image = document.createElement('img');
+      image.src = remembered.avatarUrl;
+      image.alt = '';
+      image.referrerPolicy = 'no-referrer';
+      avatar.replaceChildren(image);
+    } else avatar.textContent = remembered.name.charAt(0).toUpperCase();
+    card.hidden = false;
+    google.innerHTML = '<i class="ph ph-google-logo" aria-hidden="true"></i> Continuar con esta cuenta';
+    if (otherGoogle) otherGoogle.hidden = false;
+  }
+  void supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session) window.location.replace(loginDestination);
+  }).catch(() => { /* Keep the sign-in form usable during network errors. */ });
   function showError(message: string) { error.textContent = message; error.hidden = false; }
   function friendly(message: string) {
     if (/invalid login credentials/i.test(message)) return 'El email o la contraseña no coinciden. Revisalos e intentá de nuevo.';
@@ -48,19 +71,24 @@ export function mountAuth() {
       } else {
         const { error: authError } = await supabase.auth.signInWithPassword({ email: email.value.trim(), password: password.value });
         if (authError) { showError(friendly(authError.message)); return; }
-        window.location.assign('/alertas');
+        window.location.assign(loginDestination);
       }
     } catch { showError('No pudimos conectarnos. Probá de nuevo en unos instantes.'); }
     finally { submit.disabled = google.disabled = false; submit.innerHTML = label; }
   });
-  google.addEventListener('click', async () => {
+  async function startGoogle(useRememberedAccount: boolean) {
+    if (google.disabled) return;
     error.hidden = true; google.disabled = submit.disabled = true;
+    if (otherGoogle) otherGoogle.disabled = true;
     try {
-      const { error: authError } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: redirect } });
+      const queryParams = useRememberedAccount && remembered ? { login_hint: remembered.email } : undefined;
+      const { error: authError } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}${loginDestination}`, queryParams } });
       if (authError) showError(friendly(authError.message));
     } catch { showError('No pudimos conectar con Google. Intentá de nuevo.'); }
-    finally { google.disabled = submit.disabled = false; }
-  });
+    finally { google.disabled = submit.disabled = false; if (otherGoogle) otherGoogle.disabled = false; }
+  }
+  google.addEventListener('click', () => { void startGoogle(true); });
+  otherGoogle?.addEventListener('click', () => { void startGoogle(false); });
   resend.addEventListener('click', async () => {
     if (!confirmedEmail || resend.disabled || Date.now() < resendAt) return;
     resend.disabled = true; status.textContent = 'Enviando…';

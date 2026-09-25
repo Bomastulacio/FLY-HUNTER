@@ -180,6 +180,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
 
     <script>
       import { supabase } from '../lib/supabase';
+      import { rememberGoogleAccount } from '../utils/rememberedAccount';
       import { renderCompactFlight, escapeHtml, usd, matchesRadar } from '../utils/compactFlights';
       import { mountRadarPicker, preferredRadarId, loadRadarPreference } from '../utils/radarPicker';
       import { nextSearchAt } from '../utils/searchSchedule';
@@ -289,8 +290,10 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
           mainHero.style.display = '';
           const title = mainHero.querySelector('h1');
           const subtitle = mainHero.querySelector('#hero-subtitle');
-          if (title) title.innerHTML = `${escapeHtml(alert.nombre || alert.destino || 'Tu próximo viaje')}, <span>allá vamos.</span>`;
-          if (subtitle) subtitle.textContent = `${Number(alert.pasajeros) || 2} adulto${Number(alert.pasajeros) === 1 ? '' : 's'} · ${Array.isArray(alert.paises) && alert.paises.length ? `${alert.paises.length} países posibles` : 'fechas flexibles'} · hasta ${usd(alert.presupuesto_max)}`;
+          if (title) title.textContent = alert.nombre || alert.destino || 'Tu radar';
+          const eyebrow = mainHero.querySelector('.hero-eyebrow');
+          if (eyebrow) eyebrow.textContent = 'TU RADAR ACTIVO';
+          if (subtitle) subtitle.textContent = `${Number(alert.pasajeros) || 2} adulto${Number(alert.pasajeros) === 1 ? '' : 's'} · ${Array.isArray(alert.paises) && alert.paises.length ? `${alert.paises.length} ${alert.paises.length === 1 ? 'país posible' : 'países posibles'}` : 'fechas flexibles'} · hasta ${usd(alert.presupuesto_max)}`;
         }
 
         const origRaw = alert.origen || "EZE";
@@ -607,17 +610,8 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
       };
 
       const initDashboard = async () => {
-        // Handle OAuth Redirect processing if needed
-        if (window.location.hash.includes('access_token')) {
-          supabase.auth.onAuthStateChange(async (event) => {
-            if (event === 'SIGNED_IN') {
-              window.location.hash = ''; // Limpiar la URL visualmente
-              await loadUserData();
-            }
-          });
-        } else {
-          await loadUserData();
-        }
+        await loadUserData();
+        if (window.location.hash.includes('access_token')) history.replaceState(null, '', window.location.pathname + window.location.search);
         await refreshLiveData(true);
       };
 
@@ -632,6 +626,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         const { data: { session } } = await supabase.auth.getSession();
 
         if (session) {
+          rememberGoogleAccount(session.user);
           radarPreferenceUserId = session.user.id;
           const [preferenceResult, savedResult, alertsResult] = await Promise.allSettled([
             loadRadarPreference(radarPreferenceUserId),
