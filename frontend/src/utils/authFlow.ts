@@ -32,6 +32,7 @@ export function mountAuth() {
     } else avatar.textContent = remembered.name.charAt(0).toUpperCase();
     rememberedBtn.hidden = false;
     google.hidden = true;
+    google.style.display = 'none';
     if (otherGoogle) otherGoogle.hidden = false;
   }
   void supabase.auth.getSession().then(({ data: { session } }) => {
