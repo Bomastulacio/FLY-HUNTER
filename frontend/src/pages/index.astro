@@ -51,14 +51,19 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="FlyHunter" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <script defer src="https://unpkg.com/@phosphor-icons/web"></script>
   </head>
   <body class="compact-app">
     <!-- Auth Guard Loader -->
-    <div id="auth-loader" style="position: fixed; inset: 0; background: var(--bg-color); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-      <div style="font-size: 3rem; margin-bottom: 1rem; animation: pulse 1.5s infinite;"><i class="ph ph-airplane-tilt"></i></div>
-      <h3 style="color: var(--text-secondary); font-weight: normal;">Conectando al radar...</h3>
+    <div id="auth-loader" class="radar-loading" role="status" aria-live="polite">
+      <div class="radar-loading-mark" aria-hidden="true"><span></span><img src="/favicon.svg" width="56" height="56" alt="" fetchpriority="high" /></div>
+      <strong>Flight Hunter</strong>
+      <p id="loading-message">Preparando tu próximo viaje</p>
+      <a class="loading-retry" href="/" hidden>Volver a intentar</a>
     </div>
+    <noscript><style>#auth-loader { display:none }</style><p>Activá JavaScript para abrir tus radares.</p></noscript>
 
     <!-- 3D Animated Background -->
     <div class="bg-3d-scene">
@@ -615,14 +620,23 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
       };
 
       const loadUserData = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        
         const loader = document.getElementById('auth-loader');
-        if (loader) loader.style.display = 'none';
+        const slowLoad = window.setTimeout(() => {
+          const message = document.getElementById('loading-message');
+          if (message) message.textContent = 'Está tardando un poco más de lo habitual';
+          loader?.querySelector<HTMLElement>('.loading-retry')?.removeAttribute('hidden');
+        }, 10000);
+        try {
+        const { data: { session } } = await supabase.auth.getSession();
 
         if (session) {
           radarPreferenceUserId = session.user.id;
-          await loadRadarPreference(radarPreferenceUserId);
+          const [preferenceResult, savedResult, alertsResult] = await Promise.allSettled([
+            loadRadarPreference(radarPreferenceUserId),
+            supabase.from('saved_deals').select('*').eq('user_id', session.user.id).order('guardado_el', { ascending: false }),
+            supabase.from('search_alerts').select('*').eq('user_id', session.user.id).order('creado_en', { ascending: false }),
+          ]);
+          if (alertsResult.status === 'rejected' || alertsResult.value.error) throw new Error('No se pudieron cargar tus radares');
           savedStorageKey = `fh_saved_flights_v1:${session.user.id}`;
           try {
             const stored = JSON.parse(localStorage.getItem(savedStorageKey) || '[]');
@@ -631,11 +645,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
 
           // Cargar guardados permanentes de Supabase
           try {
-            const { data: dbSaved } = await supabase
-              .from('saved_deals')
-              .select('*')
-              .eq('user_id', session.user.id)
-              .order('guardado_el', { ascending: false });
+            const dbSaved = savedResult.status === 'fulfilled' ? savedResult.value.data : null;
             if (dbSaved && dbSaved.length > 0) {
               persistedSavedDeals = dbSaved;
               dbSaved.forEach((s: any) => {
@@ -705,11 +715,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
           }
 
           // Traemos todas las alertas configuradas del usuario
-          const { data: alertsList } = await supabase
-            .from('search_alerts')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .order('creado_en', { ascending: false });
+          const alertsList = alertsResult.value.data;
             
           if (alertsList && alertsList.length > 0) {
             userAlerts = alertsList;
@@ -735,6 +741,16 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
           
           const empty = document.getElementById('empty-state');
           if(empty) empty.style.display = 'block';
+        }
+        loader?.classList.add('is-ready');
+        window.setTimeout(() => loader?.remove(), 220);
+        } catch {
+          const message = document.getElementById('loading-message');
+          if (message) message.textContent = 'No pudimos cargar tus radares. Revisá tu conexión.';
+          loader?.classList.add('has-error');
+          loader?.querySelector<HTMLElement>('.loading-retry')?.removeAttribute('hidden');
+        } finally {
+          window.clearTimeout(slowLoad);
         }
       };
 

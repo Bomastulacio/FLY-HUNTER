@@ -51,8 +51,10 @@ createServer(async (req, res) => {
       .replace(/from '..\/utils\/(\w+)'/g, "from '/utils/$1.js'"));
     const client = prepare(source.match(/<script>\s*([\s\S]*?)<\/script>/)[1]);
     const data = { allDeals: deals, approvedDeals: deals, pendingDeals: [], routeInsights: [] };
+    const previewQuery = new URL(req.url, 'http://localhost').searchParams;
+    const delay = Math.min(15000, Math.max(0, Number(previewQuery.get('delay')) || 0));
     const mock = `const supabase = { auth: {
-      getSession: async () => ({data:{session:{user:{id:'ui-fixture-user', email:'preview@example.test', user_metadata:{}}}}}),
+      getSession: async () => { await new Promise(resolve => setTimeout(resolve, ${delay})); ${previewQuery.has('fail') ? 'throw new Error("Offline fixture");' : ''} return ({data:{session:{user:{id:'ui-fixture-user', email:'preview@example.test', user_metadata:{}}}}}); },
       signOut: async () => {}, onAuthStateChange: () => {}
     }, from: () => ({select(){return this},update(){return this},insert:async()=>({error:null}),eq(){return this},order:async()=>({data:${JSON.stringify(alerts)}})})};`;
     const code = `${mock}\n${client}`;
