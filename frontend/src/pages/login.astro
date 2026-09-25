@@ -28,11 +28,16 @@ import '../styles/auth.css';
       <div class="auth-content">
         <a class="auth-back" href="/"><i class="ph ph-arrow-left" aria-hidden="true"></i> Volver al inicio</a>
         <div class="auth-heading"><span class="auth-kicker">Tu espacio</span><h2 id="auth-title">Volvé a tu radar.</h2><p id="auth-description">Entrá para ver tus viajes y vuelos guardados.</p></div>
-        <div id="remembered-account" class="remembered-account" hidden>
-          <span class="remembered-eyebrow">TU CUENTA DE GOOGLE</span>
-          <div class="remembered-identity"><span id="remembered-avatar" class="remembered-avatar"><i class="ph ph-user" aria-hidden="true"></i></span><span><strong id="remembered-name"></strong><small id="remembered-email"></small></span></div>
-        </div>
         <form id="auth-form" class="auth-form">
+          <button type="button" class="remembered-account-btn" id="remembered-btn" hidden>
+            <span id="remembered-avatar" class="remembered-avatar"><i class="ph ph-user" aria-hidden="true"></i></span>
+            <span class="remembered-meta">
+              <span class="remembered-eyebrow"><i class="ph ph-google-logo" aria-hidden="true"></i> Continuar con Google</span>
+              <strong id="remembered-name"></strong>
+              <small id="remembered-email"></small>
+            </span>
+            <span class="remembered-arrow" aria-hidden="true"><i class="ph ph-arrow-right"></i></span>
+          </button>
           <button type="button" class="auth-google" id="google-btn"><i class="ph ph-google-logo" aria-hidden="true"></i> Continuar con Google</button>
           <button type="button" id="other-google-btn" class="auth-other-google" hidden>Usar otra cuenta de Google</button>
           <div class="auth-divider">o con email</div>

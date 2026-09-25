@@ -5,16 +5,22 @@ body.auth-page { min-height: 100dvh; background: #111813; color: #edf2e9; }
 .auth-consent { display: flex; align-items: flex-start; gap: 10px; color: #b8c5b4; font-size: .75rem; line-height: 1.6; }
 .auth-consent input { accent-color: #d5f49b; flex: 0 0 auto; margin-top: 4px; }
 .auth-text-button { display: block; margin: 16px auto 0; padding: 8px; color: #d5f49b; background: none; border: 0; font: inherit; font-size: .8rem; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
-.remembered-account { display: grid; gap: 12px; margin: 0 0 16px; padding: 15px; border: 1px solid rgba(213,244,155,.22); border-radius: 15px; background: rgba(213,244,155,.055); }
-.remembered-account[hidden], .auth-other-google[hidden] { display: none; }
-.remembered-eyebrow { color: #d5f49b; font-size: .66rem; font-weight: 700; letter-spacing: .12em; }
-.remembered-identity { display: flex; align-items: center; gap: 11px; min-width: 0; }
-.remembered-identity > span:last-child { display: grid; min-width: 0; gap: 2px; }
-.remembered-identity strong { font-size: .9rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.remembered-identity small { color: #afbcad; font-size: .74rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.remembered-avatar { width: 40px; height: 40px; flex: 0 0 40px; display: grid; place-items: center; overflow: hidden; border: 1px solid rgba(213,244,155,.25); border-radius: 50%; background: #344331; color: #d5f49b; font-weight: 700; }
+.remembered-account-btn { display: flex; align-items: center; gap: 13px; width: 100%; padding: 12px 16px; border: 1px solid rgba(213,244,155,.28); border-radius: 16px; background: rgba(213,244,155,.06); color: #edf2e9; text-align: left; cursor: pointer; transition: transform .2s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease; box-sizing: border-box; }
+.remembered-account-btn[hidden], .auth-other-google[hidden] { display: none; }
+.remembered-account-btn:hover { background: rgba(213,244,155,.11); border-color: rgba(213,244,155,.5); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,.25); }
+.remembered-account-btn:active { transform: scale(.99); }
+.remembered-account-btn:focus-visible { outline: 2px solid #d5f49b; outline-offset: 3px; }
+.remembered-account-btn:disabled { opacity: .6; cursor: wait; transform: none; }
+.remembered-avatar { width: 44px; height: 44px; flex: 0 0 44px; display: grid; place-items: center; overflow: hidden; border: 1.5px solid rgba(213,244,155,.35); border-radius: 50%; background: #344331; color: #d5f49b; font-weight: 700; font-size: 1.1rem; }
 .remembered-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.auth-other-google { justify-self: center; padding: 2px 8px; border: 0; background: transparent; color: #cde4aa; font: 600 .78rem 'Plus Jakarta Sans',sans-serif; cursor: pointer; }
+.remembered-meta { display: flex; flex-direction: column; min-width: 0; flex: 1; gap: 2px; }
+.remembered-eyebrow { display: flex; align-items: center; gap: 5px; color: #d5f49b; font-size: .68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.remembered-eyebrow i { font-size: .85rem; }
+.remembered-meta strong { font-size: .95rem; font-weight: 600; color: #f4f7ef; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.remembered-meta small { color: #afbcad; font-size: .76rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.remembered-arrow { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 50%; background: rgba(213,244,155,.1); color: #d5f49b; display: grid; place-items: center; font-size: 1rem; transition: transform .2s ease, background .2s ease; }
+.remembered-account-btn:hover .remembered-arrow { transform: translateX(2px); background: rgba(213,244,155,.2); }
+.auth-other-google { justify-self: center; padding: 4px 8px; border: 0; background: transparent; color: #cde4aa; font: 600 .78rem 'Plus Jakarta Sans',sans-serif; cursor: pointer; }
 .auth-other-google:hover { text-decoration: underline; text-underline-offset: 4px; }
 .auth-other-google:focus-visible { outline: 2px solid #d5f49b; outline-offset: 3px; }
 .auth-other-google:disabled { opacity: .6; cursor: wait; }

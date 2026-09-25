@@ -18,8 +18,8 @@ export function mountAuth() {
   const redirect = `${window.location.origin}/alertas`;
   const loginDestination = register ? '/alertas' : '/';
   const remembered = register ? null : getRememberedGoogleAccount();
-  if (remembered) {
-    const card = document.getElementById('remembered-account')!;
+  const rememberedBtn = document.getElementById('remembered-btn') as HTMLButtonElement | null;
+  if (remembered && rememberedBtn) {
     document.getElementById('remembered-name')!.textContent = remembered.name;
     document.getElementById('remembered-email')!.textContent = remembered.email;
     const avatar = document.getElementById('remembered-avatar')!;
@@ -30,8 +30,8 @@ export function mountAuth() {
       image.referrerPolicy = 'no-referrer';
       avatar.replaceChildren(image);
     } else avatar.textContent = remembered.name.charAt(0).toUpperCase();
-    card.hidden = false;
-    google.innerHTML = '<i class="ph ph-google-logo" aria-hidden="true"></i> Continuar con esta cuenta';
+    rememberedBtn.hidden = false;
+    google.hidden = true;
     if (otherGoogle) otherGoogle.hidden = false;
   }
   void supabase.auth.getSession().then(({ data: { session } }) => {
@@ -77,17 +77,24 @@ export function mountAuth() {
     finally { submit.disabled = google.disabled = false; submit.innerHTML = label; }
   });
   async function startGoogle(useRememberedAccount: boolean) {
-    if (google.disabled) return;
-    error.hidden = true; google.disabled = submit.disabled = true;
+    if (google.disabled || (rememberedBtn && rememberedBtn.disabled)) return;
+    error.hidden = true;
+    google.disabled = submit.disabled = true;
+    if (rememberedBtn) rememberedBtn.disabled = true;
     if (otherGoogle) otherGoogle.disabled = true;
     try {
       const queryParams = useRememberedAccount && remembered ? { login_hint: remembered.email } : undefined;
       const { error: authError } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}${loginDestination}`, queryParams } });
       if (authError) showError(friendly(authError.message));
     } catch { showError('No pudimos conectar con Google. Intentá de nuevo.'); }
-    finally { google.disabled = submit.disabled = false; if (otherGoogle) otherGoogle.disabled = false; }
+    finally {
+      google.disabled = submit.disabled = false;
+      if (rememberedBtn) rememberedBtn.disabled = false;
+      if (otherGoogle) otherGoogle.disabled = false;
+    }
   }
-  google.addEventListener('click', () => { void startGoogle(true); });
+  rememberedBtn?.addEventListener('click', () => { void startGoogle(true); });
+  google.addEventListener('click', () => { void startGoogle(false); });
   otherGoogle?.addEventListener('click', () => { void startGoogle(false); });
   resend.addEventListener('click', async () => {
     if (!confirmedEmail || resend.disabled || Date.now() < resendAt) return;
