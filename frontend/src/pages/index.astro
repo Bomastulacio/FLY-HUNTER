@@ -181,7 +181,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
     <script>
       import { supabase } from '../lib/supabase';
       import { rememberGoogleAccount } from '../utils/rememberedAccount';
-      import { renderCompactFlight, escapeHtml, usd, matchesRadar, buildGoogleFlightsSearchUrl } from '../utils/compactFlights';
+      import { renderCompactFlight, escapeHtml, usd, matchesRadar, buildGoogleFlightsSearchUrl, cities, destinationCountry } from '../utils/compactFlights';
       import { mountRadarPicker, preferredRadarId, loadRadarPreference } from '../utils/radarPicker';
       import { nextSearchAt } from '../utils/searchSchedule';
       import { monitoredSavedDeal, meaningfulDrop } from '../utils/monitoringView';
@@ -500,10 +500,10 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         // Destinos de la zona del radar actual
         const zoneCountriesMap: Record<string, string[]> = {
           "Europa": ["España", "Reino Unido", "Francia", "Alemania", "Italia", "Portugal", "Países Bajos", "Suiza", "Grecia"],
-          "Norteamérica": ["Estados Unidos", "Canadá", "México", "Miami", "Nueva York"],
-          "Latinoamérica": ["Brasil", "Chile", "Colombia", "Perú", "Uruguay", "Río de Janeiro"],
-          "Caribe": ["República Dominicana", "Cancún", "Cuba", "Costa Rica", "Puerto Rico"],
-          "Asia": ["Japón", "Tokio", "Tailandia", "Corea del Sur", "Emiratos Árabes"],
+          "Norteamérica": ["Estados Unidos", "Canadá", "México"],
+          "Latinoamérica": ["Brasil", "Chile", "Colombia", "Perú", "Uruguay"],
+          "Caribe": ["República Dominicana", "México", "Cuba", "Costa Rica", "Puerto Rico"],
+          "Asia": ["Japón", "Tailandia", "Corea del Sur", "Emiratos Árabes"],
           "Oceanía": ["Australia", "Nueva Zelanda"]
         };
 
@@ -524,16 +524,35 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
           countriesToRender.some((c: string) => countryCodes[c]?.includes(d.ida_origen_destino.split('-')[1]))
         );
 
+        const getDestinationKey = (d) => {
+          const destCode = (d?.ida_origen_destino || '').split('-')[1]?.trim().toUpperCase() || '';
+          const city = (cities[destCode] || destCode || '').toLowerCase();
+          return { destCode, city };
+        };
+
+        const getCountryForDeal = (d) => {
+          const destCode = (d?.ida_origen_destino || '').split('-')[1]?.trim().toUpperCase() || '';
+          for (const [cName, codes] of Object.entries(countryCodes)) {
+            if (codes.includes(destCode)) return cName;
+          }
+          return destinationCountry[destCode] || '';
+        };
+
+        const shownDestCodes = new Set();
+        const shownCities = new Set();
+        const shownCountries = new Set();
+
         // 1. Tarjeta Principal (Mejor vuelo del radar activo)
         const mainDeal = radarMatchingDeals.length > 0 ? radarMatchingDeals[0] : null;
         let mainDealCountry = '';
         if (mainDeal) {
-          for (const [cName, codes] of Object.entries(countryCodes)) {
-            if (codes.some(code => mainDeal.ida_origen_destino.includes(code))) {
-              mainDealCountry = cName;
-              break;
-            }
-          }
+          const { destCode, city } = getDestinationKey(mainDeal);
+          if (destCode) shownDestCodes.add(destCode);
+          if (city) shownCities.add(city);
+
+          mainDealCountry = getCountryForDeal(mainDeal);
+          if (mainDealCountry) shownCountries.add(mainDealCountry.toLowerCase());
+
           html += renderFlightCard(mainDeal, alert, true, mainDealCountry);
         } else {
           html += `
@@ -544,27 +563,33 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         }
 
         // Otros destinos: separar los que tienen oferta de los que siguen buscando
-        let countriesWithDeals: any[] = [];
-        let countriesSearching: any[] = [];
+        let countriesWithDeals = [];
+        let countriesSearching = [];
+        const isMultiCountryRadar = countriesToRender.length > 1;
 
-        countriesToRender.forEach((country: string) => {
-          let destDeal = null;
-          if (countryCodes[country]) {
-            destDeal = affordableDeals.find((d: any) => countryCodes[country].some(code => d.ida_origen_destino.includes(code)));
-          }
-
-          const isDuplicateOfMain = mainDeal && destDeal && (
-            destDeal.id === mainDeal.id || 
-            (destDeal.ida_origen_destino === mainDeal.ida_origen_destino && destDeal.ida_fecha === mainDeal.ida_fecha && destDeal.precio_total_usd === mainDeal.precio_total_usd)
-          );
-
-          if (isDuplicateOfMain) {
+        countriesToRender.forEach((country) => {
+          // Si el país ya fue cubierto (ej. en la tarjeta principal), no duplicar tarjetas para el mismo país
+          if (shownCountries.has(country.toLowerCase())) {
             return;
           }
 
-          if (destDeal && !countriesWithDeals.some(item => item.deal.id === destDeal.id)) {
+          let destDeal = null;
+          if (countryCodes[country]) {
+            // Buscamos la mejor cotización que no repita un aeropuerto o ciudad ya mostrada
+            destDeal = affordableDeals.find((d) => {
+              const { destCode, city } = getDestinationKey(d);
+              if (shownDestCodes.has(destCode) || shownCities.has(city)) return false;
+              return countryCodes[country].some(code => d.ida_origen_destino.includes(code));
+            });
+          }
+
+          if (destDeal) {
+            const { destCode, city } = getDestinationKey(destDeal);
+            if (destCode) shownDestCodes.add(destCode);
+            if (city) shownCities.add(city);
+            shownCountries.add(country.toLowerCase());
             countriesWithDeals.push({ country, deal: destDeal });
-          } else if (!destDeal && hasExplicitCountries) {
+          } else if (hasExplicitCountries) {
             countriesSearching.push({ country });
           }
         });
@@ -578,19 +603,35 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
           });
         }
 
-        // More than one flight may be useful for the same destination: preserve carrier/date choices.
+        // Solo agregar ofertas adicionales si pertenecen a OTROS destinos o ciudades no mostradas
         const visibleQuotes = [mainDeal, ...countriesWithDeals.map(item => item.deal)].filter(Boolean);
-        const itineraryKey = (d: any) => [d.ida_origen_destino, d.ida_fecha, d.vuelta_fecha, d.pasajeros, d.aerolinea, d.cantidad_escalas].join('|');
+        const itineraryKey = (d) => [d.ida_origen_destino, d.ida_fecha, d.vuelta_fecha, d.pasajeros, d.aerolinea, d.cantidad_escalas].join('|');
         const shownItineraries = new Set(visibleQuotes.map(itineraryKey));
-        const extraQuotes = radarMatchingDeals.filter((d: any) => {
+
+        const extraQuotes = radarMatchingDeals.filter((d) => {
+          const { destCode, city } = getDestinationKey(d);
+          if (!destCode || !city) return false;
+
+          // NUNCA mostrar dos vuelos al mismo lugar o a la misma ciudad
+          if (shownDestCodes.has(destCode) || shownCities.has(city)) return false;
+
+          // Si el radar es multi-país, nunca mostrar dos tarjetas del mismo país en el feed general
+          const cName = getCountryForDeal(d);
+          if (isMultiCountryRadar && cName && shownCountries.has(cName.toLowerCase())) return false;
+
           const key = itineraryKey(d);
           if (shownItineraries.has(key)) return false;
           shownItineraries.add(key);
+
+          shownDestCodes.add(destCode);
+          shownCities.add(city);
+          if (cName) shownCountries.add(cName.toLowerCase());
           return true;
         });
+
         const availableSlots = Math.max(0, 8 - visibleQuotes.length);
         const extras = extraQuotes.slice(0, availableSlots);
-        const arQuote = extraQuotes.find((d: any) => /aerol[ií]neas argentinas/i.test(d.aerolinea || ''));
+        const arQuote = extraQuotes.find((d) => /aerol[ií]neas argentinas/i.test(d.aerolinea || ''));
         if (arQuote && availableSlots && !extras.includes(arQuote)) extras.splice(availableSlots - 1, 1, arQuote);
         for (const deal of extras) html += renderFlightCard(deal, alert);
 

@@ -15,7 +15,7 @@ export function flightDate(value: string, year = false) {
   }).format(day);
 }
 
-const cities: Record<string, string> = {
+export const cities: Record<string, string> = {
   MAD: 'Madrid', BCN: 'Barcelona', AGP: 'Málaga', VLC: 'Valencia',
   CDG: 'París', ORY: 'París', NCE: 'Niza', MRS: 'Marsella',
   FCO: 'Roma', MXP: 'Milán', LIN: 'Milán', NAP: 'Nápoles',
@@ -114,7 +114,7 @@ export const countryIsoCodes: Record<string, string> = {
   "Tokio": "JP",
 };
 
-const destinationCountry: Record<string, string> = {
+export const destinationCountry: Record<string, string> = {
   MAD: 'España', BCN: 'España', AGP: 'España', VLC: 'España',
   FCO: 'Italia', MXP: 'Italia', LIN: 'Italia', NAP: 'Italia',
   CDG: 'Francia', ORY: 'Francia', NCE: 'Francia', MRS: 'Francia',
