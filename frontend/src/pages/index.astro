@@ -159,11 +159,13 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
       </div>
       
       <!-- EMPTY STATE (Sin Alerta) -->
-      <div id="empty-state" style="display: none; text-align: center; margin: 4rem 0;">
-        <div style="font-size: 4rem; margin-bottom: 1rem; color: var(--text-secondary);"><i class="ph ph-broadcast"></i></div>
-        <h2>Todavía no tenés una búsqueda</h2>
-        <p style="color: var(--text-secondary); margin-bottom: 2rem;">Elegí destino, fechas y presupuesto. Te mostramos las opciones que encontramos.</p>
-        <a href="/alertas" class="btn btn-primary">Configurar mi búsqueda</a>
+      <div id="empty-state" class="welcome-empty" style="display: none;">
+        <img src="/destinations/lisbon.jpg" alt="Vista de Lisboa" width="900" height="250" loading="lazy" />
+        <div class="welcome-empty-content">
+          <h2>Tu próximo viaje empieza con una idea.</h2>
+          <p>Europa, una escapada, ese lugar pendiente. Reuní tus destinos en un radar, elegí tus fechas y definí el precio que pagarías. Después, volvé para ver las oportunidades encontradas.</p>
+          <a id="welcome-cta" href="/alertas" class="btn btn-primary">Crear mi primer radar <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+        </div>
       </div>
 
     </main>
@@ -738,6 +740,8 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
           
           const profileDropdown = document.getElementById('user-profile-dropdown');
           if(profileDropdown) profileDropdown.style.display = 'none';
+          const welcomeCta = document.getElementById('welcome-cta') as HTMLAnchorElement | null;
+          if (welcomeCta) { welcomeCta.href = '/registro'; welcomeCta.textContent = 'Crear mi cuenta'; }
           
           const empty = document.getElementById('empty-state');
           if(empty) empty.style.display = 'block';

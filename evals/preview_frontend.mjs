@@ -23,6 +23,16 @@ const deals = [['demo-mia', 'MIA', 1380, 0, 'LATAM'], ['demo-lax', 'LAX', 1416, 
 
 createServer(async (req, res) => {
   try {
+    if (req.url === '/auth.css') { res.setHeader('Content-Type', 'text/css'); res.end(await read('src/styles/auth.css')); return; }
+    if (req.url === '/utils/authFlow.js') {
+      res.setHeader('Content-Type', 'text/javascript');
+      res.end(stripTypeScriptTypes(await read('src/utils/authFlow.ts')).replace("import { supabase } from '../lib/supabase';", "const supabase={auth:{signUp:async()=>({data:{user:{id:'fixture'},session:null},error:null}),resend:async()=>({error:null}),signInWithPassword:async()=>({error:{message:'Invalid login credentials'}}),signInWithOAuth:async()=>({error:{message:'Offline fixture'}})}};")); return;
+    }
+    if (req.url === '/login' || req.url === '/registro') {
+      const page = await read(`src/pages${req.url}.astro`);
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.end(page.slice(page.indexOf('<html')).replace("from '../utils/authFlow'", "from '/utils/authFlow.js'").replace('<script>', '<script type="module">').replace('</head>', '<link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/auth.css"></head>')); return;
+    }
     if (req.url?.startsWith('/styles.css')) {
       res.setHeader('Content-Type', 'text/css');
       const widget = await read('src/components/SearchWidget.astro');
@@ -41,7 +51,7 @@ createServer(async (req, res) => {
     if (req.url === '/favicon.svg') {
       res.setHeader('Content-Type', 'image/svg+xml'); res.end(await read('public/favicon.svg')); return;
     }
-    if (req.url?.startsWith('/destinations/') && /^\/destinations\/[a-z-]+\.jpg$/.test(req.url)) {
+    if (req.url?.startsWith('/destinations/') && /^\/destinations\/[a-z_-]+\.jpg$/.test(req.url)) {
       res.setHeader('Content-Type', 'image/jpeg'); res.end(await readFile(new URL(`public${req.url}`, root))); return;
     }
     const settingsPage = req.url?.startsWith('/alertas');
@@ -54,9 +64,10 @@ createServer(async (req, res) => {
     const previewQuery = new URL(req.url, 'http://localhost').searchParams;
     const delay = Math.min(15000, Math.max(0, Number(previewQuery.get('delay')) || 0));
     const mock = `const supabase = { auth: {
+      getUser: async () => ({data:{user:{id:'ui-fixture-user',email:'preview@example.test',user_metadata:{}}}}),
       getSession: async () => { await new Promise(resolve => setTimeout(resolve, ${delay})); ${previewQuery.has('fail') ? 'throw new Error("Offline fixture");' : ''} return ({data:{session:{user:{id:'ui-fixture-user', email:'preview@example.test', user_metadata:{}}}}}); },
       signOut: async () => {}, onAuthStateChange: () => {}
-    }, from: () => ({select(){return this},update(){return this},insert:async()=>({error:null}),eq(){return this},order:async()=>({data:${JSON.stringify(alerts)}})})};`;
+    }, from: () => ({select(){return this},update(){return this},insert:async()=>({error:null}),eq(){return this},order:async()=>({data:${JSON.stringify(previewQuery.has('new') ? [] : alerts)}})})};`;
     const code = `${mock}\n${client}`;
     let html = source.slice(source.indexOf('<html'))
       .replace(/<script is:inline define:vars=[\s\S]*?<\/script>/, () => `<script>window.__SERVER_DATA__=${JSON.stringify(data)}</script>`)

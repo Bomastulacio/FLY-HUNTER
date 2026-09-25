@@ -5,6 +5,21 @@ import { supabase } from '../lib/supabase';
 <div class="search-widget-wrapper">
   
   <div class="main-content card">
+    <section id="radar-onboarding" class="radar-onboarding hidden" aria-labelledby="onboarding-title">
+      <div class="onboarding-photo"><img src="/destinations/rome.jpg" alt="El Coliseo de Roma" width="900" height="600" /><span>UN VIAJE QUE TODAVÍA ESTÁ POR PASAR</span></div>
+      <div class="onboarding-content">
+        <span class="onboarding-eyebrow">Bienvenida a tu radar</span>
+        <h2 id="onboarding-title">Vos imaginá el viaje.<br />Dale un lugar acá.</h2>
+        <p>Reuní los destinos que te gustan y compará las oportunidades encontradas, con tus fechas y tu presupuesto.</p>
+        <ol class="onboarding-steps">
+          <li><i class="ph ph-globe-hemisphere-west" aria-hidden="true"></i><div><strong>Un viaje, varios destinos</strong><span>Elegí dónde ir y cuándo podrías salir y volver.</span></div></li>
+          <li><i class="ph ph-ticket" aria-hidden="true"></i><div><strong>El precio que pagarías</strong><span>Definí un presupuesto total para tus pasajeros.</span></div></li>
+          <li><i class="ph ph-envelope-simple" aria-hidden="true"></i><div><strong>Un mail cuando valga la pena</strong><span>Las alertas por email son para oportunidades excepcionales.</span></div></li>
+        </ol>
+        <button id="start-first-radar" type="button" class="btn btn-primary">Crear mi primer radar <i class="ph ph-arrow-right" aria-hidden="true"></i></button>
+        <p class="onboarding-note">Hay dos búsquedas programadas por día. Crear el radar no inicia una búsqueda inmediata; los primeros resultados pueden tardar.</p>
+      </div>
+    </section>
     <!-- DASHBOARD VIEW (Shown if active alert exists) -->
     <div id="radar-dashboard" class="hidden">
       <!-- Selector de Búsquedas / Alertas Múltiples -->
@@ -1503,8 +1518,21 @@ import { supabase } from '../lib/supabase';
   // DASHBOARD TOGGLE LOGIC
   const radarDashboard = document.getElementById('radar-dashboard');
   const wizardContainer = document.getElementById('wizard-view-container');
+  const onboarding = document.getElementById('radar-onboarding');
+  function showOnboardingView() {
+    radarDashboard?.classList.add('hidden');
+    wizardContainer?.classList.add('hidden');
+    onboarding?.classList.remove('hidden');
+  }
+  document.getElementById('start-first-radar')?.addEventListener('click', () => {
+    showWizardView(1);
+    const heading = document.getElementById('wizard-title');
+    heading?.setAttribute('tabindex', '-1');
+    heading?.focus();
+  });
 
   function showDashboardView() {
+    onboarding?.classList.add('hidden');
     if (radarDashboard) radarDashboard.classList.remove('hidden');
     if (wizardContainer) wizardContainer.classList.add('hidden');
     const headerP = document.querySelector('.alertas-header-text p');
@@ -1512,6 +1540,7 @@ import { supabase } from '../lib/supabase';
   }
 
   function showWizardView(step: number = 1) {
+    onboarding?.classList.add('hidden');
     if (radarDashboard) radarDashboard.classList.add('hidden');
     if (wizardContainer) wizardContainer.classList.remove('hidden');
     wizardContainer?.classList.toggle('is-editing', Boolean(currentEditingAlertId));
@@ -1522,7 +1551,9 @@ import { supabase } from '../lib/supabase';
       if (wizardSubtitle) wizardSubtitle.textContent = 'Hacé el cambio y guardá este bloque.';
     } else {
       const wizardSubtitle = document.getElementById('wizard-subtitle');
-      if (wizardSubtitle) wizardSubtitle.textContent = 'Elegí tu origen, fechas y destinos. Te avisamos cuando haya oportunidades de oro.';
+      const wizardTitle = document.getElementById('wizard-title');
+      if (wizardTitle) wizardTitle.textContent = 'Dale forma a tu próximo viaje';
+      if (wizardSubtitle) wizardSubtitle.textContent = 'Vamos de a poco: destinos y fechas, presupuesto y tus preferencias.';
     }
     const headerP = document.querySelector('.alertas-header-text p');
     if (headerP) headerP.textContent = 'Elegí dónde y cuándo querés viajar.';
@@ -1779,7 +1810,8 @@ import { supabase } from '../lib/supabase';
       .eq('user_id', currentUserId)
       .order('creado_en', { ascending: false });
 
-    if (!error && alertsList && alertsList.length > 0) {
+    if (error) { showToast('No pudimos cargar tus radares. Volvé a intentar recargando la página.', 'error'); return; }
+    if (alertsList && alertsList.length > 0) {
       const previousId = currentEditingAlertId;
       userAlerts = alertsList;
       activeAlertIndex = Math.max(0, userAlerts.findIndex(a => a.id === (previousId || preferredRadarId(currentUserId))));
@@ -1796,7 +1828,7 @@ import { supabase } from '../lib/supabase';
       userAlerts = [];
       currentEditingAlertId = null;
       resetFormToDefaults();
-      showWizardView(1);
+      showOnboardingView();
     }
   }
 

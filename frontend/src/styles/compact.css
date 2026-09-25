@@ -713,3 +713,27 @@ body.compact-app {
 @keyframes radar-breathe { 0% { transform:scale(.86); opacity:0; } 25% { opacity:.6; } 100% { transform:scale(1.22); opacity:0; } }
 @keyframes radar-float { 50% { transform:translateY(-3px); } }
 @media (prefers-reduced-motion:reduce) { .radar-loading-mark *, .radar-loading { animation:none; transition:none; } }
+/* First radar: a deliberate introduction before the configuration form. */
+.radar-onboarding { overflow: hidden; border-radius: 20px; }
+.onboarding-photo { position: relative; height: 220px; overflow: hidden; border-radius: 17px; background: #283729; }
+.onboarding-photo img { width: 100%; height: 100%; object-fit: cover; filter: saturate(.75); }
+.onboarding-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(transparent 25%,rgba(14,27,17,.8)); }
+.onboarding-photo > span { position: absolute; z-index: 1; bottom: 22px; left: 26px; right: 20px; font-size: .65rem; letter-spacing: .16em; color: #eef6df; }
+.onboarding-content { padding: 30px 22px 10px; }
+.onboarding-eyebrow { color: var(--accent-color); font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; }
+.onboarding-content h2 { margin: 12px 0 16px; font-size: clamp(1.9rem,4vw,2.8rem); line-height: 1.12; letter-spacing: -.055em; }
+.onboarding-content > p { max-width: 55ch; color: var(--text-secondary); line-height: 1.65; }
+.onboarding-steps { list-style: none; padding: 0; margin: 26px 0; display: grid; gap: 21px; }
+.onboarding-steps li { display: flex; gap: 16px; align-items: flex-start; }
+.onboarding-steps i { flex: 0 0 40px; height: 40px; display: grid; place-items: center; border: 1px solid rgba(213,244,155,.2); border-radius: 12px; color: var(--accent-color); font-size: 1.25rem; }
+.onboarding-steps div { display: flex; flex-direction: column; gap: 4px; }
+.onboarding-steps strong { font-size: .9rem; font-weight: 600; }
+.onboarding-steps span { font-size: .8rem; line-height: 1.5; color: var(--text-secondary); }
+.onboarding-content .onboarding-note { margin: 16px 0 0; font-size: .74rem; line-height: 1.6; }
+.onboarding-content .btn { gap: 16px; }
+.welcome-empty { overflow: hidden; max-width: 920px; margin: 30px auto; border: 1px solid rgba(213,244,155,.18); border-radius: 28px; background: rgba(213,244,155,.04); }
+.welcome-empty img { width: 100%; height: 250px; object-fit: cover; filter: brightness(.85) saturate(.8); }
+.welcome-empty-content { padding: clamp(24px,5vw,46px); max-width: 640px; }
+.welcome-empty h2 { font-size: clamp(2rem,5vw,3rem); letter-spacing: -.06em; line-height: 1.1; margin: 0 0 18px; }
+.welcome-empty p { color: var(--text-secondary); line-height: 1.6; margin-bottom: 24px; }
+@media (max-width: 600px) { .onboarding-content { padding: 24px 3px 5px; } .onboarding-photo { height: 180px; } .onboarding-content .btn { width: 100%; } .welcome-empty img { height: 190px; } }
