@@ -9,11 +9,11 @@ import { evaluateQuote, selectDiverseQuotes } from '../src/agent/quotePolicy.js'
 import { parseCard, parseUsd, challenged, verifiedPassengerCount } from '../src/skills/quoteParser.js';
 import { SearchRuntime } from '../src/agent/searchRuntime.js';
 import { evaluateDealWithGemini } from '../src/agent/geminiEvaluator.js';
-import { matchesRadar, renderCompactFlight } from '../../frontend/src/utils/compactFlights.js';
+import { buildGoogleFlightsSearchUrl, matchesRadar, renderCompactFlight } from '../../frontend/src/utils/compactFlights.js';
 import type { ScrapedFlightOption } from '../src/types/flight.js';
 import { chromium } from 'playwright';
 import { collectDespegar } from '../src/skills/despegar.js';
-import { collectGoogleFlights } from '../src/skills/googleFlights.js';
+import { buildGoogleFlightsUrl, collectGoogleFlights } from '../src/skills/googleFlights.js';
 import { parseGoogleResult } from '../src/skills/googleQuote.js';
 
 const radar = { id: 'test', origen: 'EZE', destino: 'MAD', pasajeros: 2, presupuesto_min: 1700, presupuesto_max: 2400,
@@ -25,6 +25,15 @@ const snapshot = { text: 'Final 2 personas US$ 1.884 Con Débito IDA dom. 18 abr
 const quote = () => parseCard('despegar', snapshot, params)!;
 const googleLabel = 'A partir de 1925 dólares estadounidenses (precio total de ida y vuelta). Vuelo con 1 escala de Aeromexico. Sale de Aeropuerto Internacional Ezeiza el domingo, abril 18 a las 23:25. Llega a Madrid el martes, abril 20 a las 5:00. Duración total: 24 h 35 min. Seleccionar vuelo';
 const googleInput = { label: googleLabel, visiblePrices: ['1.925 US$'], passengers: 2, bookingUrl: 'https://www.google.com/travel/flights/search', collectedAt: observed };
+
+test('Google links open a populated one-adult search for the quoted route and dates', () => {
+  const tokyo = { ...params, destination: 'NRT', departureDate: '2027-02-08', returnDate: '2027-05-05', passengers: 1 };
+  const expected = buildGoogleFlightsSearchUrl('EZE', 'NRT', tokyo.departureDate, tokyo.returnDate, 1);
+  assert.equal(buildGoogleFlightsUrl(tokyo), expected);
+  const url = new URL(expected);
+  assert.equal(url.pathname, '/travel/flights/search');
+  assert.equal(url.searchParams.get('q'), 'Flights from EZE to NRT on 2027-02-08 through 2027-05-05 for 1 adult');
+});
 
 test('Google cross-checks visible USD price with the accessible itinerary, not unrelated DOM', () => {
   const q = parseGoogleResult(googleInput, params)!;
@@ -58,6 +67,7 @@ test('Old Google quotes do not reappear in the feed; links keep exact dates and 
   assert.ok(html.includes('Los más bajos'));
   assert.ok(html.includes('Desde'));
   assert.ok(html.includes('for%202%20adults'));
+  assert.ok(html.includes('google.com/travel/flights/search?q='));
   assert.ok(html.includes('2027-04-18%20through%202027-05-01'));
   assert.equal(html.includes('OLD_ONE_ADULT'), false);
 });

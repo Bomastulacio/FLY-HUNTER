@@ -12,8 +12,8 @@ const CHEAPEST_NAME = /Los más bajos|Más económicos/i;
 export function buildGoogleFlightsUrl(p: FlightSearchParams): string {
   const origin = (p.origin || '').trim().toUpperCase();
   const destination = (p.destination || '').trim().toUpperCase();
-  const query = `Flights from ${origin} to ${destination} on ${p.departureDate} through ${p.returnDate} for ${p.passengers} adults`;
-  return `https://www.google.com/travel/flights?q=${encodeURIComponent(query)}&curr=USD&hl=es`;
+  const query = `Flights from ${origin} to ${destination} on ${p.departureDate} through ${p.returnDate} for ${p.passengers} ${p.passengers === 1 ? 'adult' : 'adults'}`;
+  return `https://www.google.com/travel/flights/search?q=${encodeURIComponent(query)}&curr=USD&hl=es`;
 }
 
 export async function collectGoogleFlights(p: FlightSearchParams, options: { headless?: boolean } = {}): Promise<ProviderResult> {

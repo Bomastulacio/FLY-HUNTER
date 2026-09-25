@@ -151,6 +151,12 @@ export function matchesRadar(deal: any, radar: any): boolean {
     && (!radar.fecha_vuelta_max || deal.vuelta_fecha <= radar.fecha_vuelta_max);
 }
 
+export function buildGoogleFlightsSearchUrl(origin: string, destination: string, departure: string, returnDate: string, passengers: number): string {
+  const count = Math.max(1, Math.trunc(passengers) || 1);
+  const query = `Flights from ${origin} to ${destination} on ${departure} through ${returnDate} for ${count} ${count === 1 ? 'adult' : 'adults'}`;
+  return `https://www.google.com/travel/flights/search?q=${encodeURIComponent(query)}&curr=USD&hl=es`;
+}
+
 export function renderCompactFlight(deal: any, alert: any, featured = false, country = '', saved = false, insight: any = null) {
   const e = escapeHtml;
   const rawOD = String(deal.ida_origen_destino || `${deal.origen || 'EZE'}-${deal.destino || 'Vuelo'}`);
@@ -158,7 +164,6 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
   const city = cities[destination] || destination || country || 'Vuelo';
   const countryName = country || destinationCountry[destination] || 'Internacional';
   const passengers = Math.max(1, Number(deal.pasajeros ?? alert?.pasajeros) || 1);
-  const searchPassengers = passengers;
   const pax = `${passengers} adulto${passengers === 1 ? '' : 's'}`;
   const unitPrice = passengers > 1 ? (Number(deal.precio_por_pasajero_usd) || Math.round(Number(deal.precio_total_usd) / passengers)) : null;
   const stops = Number(deal.cantidad_escalas);
@@ -169,8 +174,7 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
   const unverifiedGoogle = googleSearch && (deal.detalle_cotizacion?.googleParserVersion !== 2
     || !deal.detalle_cotizacion?.priceVerified || !deal.detalle_cotizacion?.queryVerified);
   const isSavedSnapshot = Boolean(deal.guardado_el);
-  const query = `Flights from ${origin} to ${destination} on ${deal.ida_fecha} through ${deal.vuelta_fecha} for ${searchPassengers} adults`;
-  let bookingUrl = `https://www.google.com/travel/flights?q=${encodeURIComponent(query)}&curr=USD&hl=es`;
+  let bookingUrl = buildGoogleFlightsSearchUrl(origin, destination, deal.ida_fecha, deal.vuelta_fecha, passengers);
   let provider = 'Google Flights';
   // Retain the winning OTA only when the stored URL belongs to that provider.
   if (deal.fuente === 'despegar' && deal.link_reserva) {

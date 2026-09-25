@@ -181,7 +181,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
     <script>
       import { supabase } from '../lib/supabase';
       import { rememberGoogleAccount } from '../utils/rememberedAccount';
-      import { renderCompactFlight, escapeHtml, usd, matchesRadar } from '../utils/compactFlights';
+      import { renderCompactFlight, escapeHtml, usd, matchesRadar, buildGoogleFlightsSearchUrl } from '../utils/compactFlights';
       import { mountRadarPicker, preferredRadarId, loadRadarPreference } from '../utils/radarPicker';
       import { nextSearchAt } from '../utils/searchSchedule';
       import { monitoredSavedDeal, meaningfulDrop } from '../utils/monitoringView';
@@ -422,9 +422,8 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
             const routeParts = (pDeal.ida_origen_destino || 'EZE-BCN').split('-');
             const origin = (routeParts[0] || 'EZE').trim().toUpperCase();
             const dest = (routeParts[1] || 'BCN').trim().toUpperCase();
-            const passengers = Number(currentAlert?.pasajeros) || 2;
-            const paxText = passengers === 1 ? '1 adult' : `${passengers} adults`;
-            const inspectUrl = pDeal.link_reserva || `https://www.google.com/travel/flights?q=Flights%20to%20${dest}%20from%20${origin}%20on%20${pDeal.ida_fecha}%20through%20${pDeal.vuelta_fecha}%20for%20${encodeURIComponent(paxText)}&curr=USD&hl=es`;
+            const passengers = Number(pDeal.pasajeros ?? currentAlert?.pasajeros) || 2;
+            const inspectUrl = buildGoogleFlightsSearchUrl(origin, dest, pDeal.ida_fecha, pDeal.vuelta_fecha, passengers);
 
             sectionHtml += `
               <div class="anomaly-card" id="anomaly-card-${pDeal.id}">
