@@ -189,8 +189,9 @@ body.compact-app { color-scheme: dark; -webkit-text-size-adjust: 100%; text-size
 .radar-rename-cancel:hover { background: #ffffff20; color: var(--text-primary); }
 .compact-app .radar-tabs-nav { align-items: center; justify-content: space-between; }
 .radar-manage { align-self: center; white-space: nowrap; }
-.destination-waiting { display: grid; grid-template-columns: 36px minmax(0, 1fr) 44px; gap: 12px; align-items: center; border: 1px solid #ffffff10; border-radius: 16px; padding: 16px; background: #ffffff02; }
-.waiting-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: #ffffff06; color: #a4b29b; font-size: 21px; }
+.destination-waiting { display: grid; grid-template-columns: 38px minmax(0, 1fr) 44px; gap: 12px; align-items: center; border: 1px solid #ffffff10; border-radius: 16px; padding: 16px; background: #ffffff02; }
+.waiting-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); color: #a4b29b; font-size: 21px; overflow: hidden; flex-shrink: 0; }
+.waiting-flag { width: 25px; height: 17px; object-fit: cover; border-radius: 3px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45); border: 1px solid rgba(255, 255, 255, 0.2); display: block; }
 .destination-waiting h2 { margin: 0 0 4px; font-size: .9rem; font-weight: 600; }
 .destination-waiting p { margin: 0; color: var(--text-secondary); font-size: .72rem; }
 .destination-waiting > a { display: grid; place-items: center; min-height: 44px; border-radius: 8px; color: var(--text-secondary); text-decoration: none; }
@@ -502,6 +503,19 @@ body.compact-app {
   color: rgba(235, 245, 225, .82);
   text-transform: uppercase;
   text-shadow: 0 1px 3px rgba(0, 0, 0, .6);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.flight-photo-flag {
+  display: inline-block;
+  width: 15px;
+  height: 10px;
+  object-fit: cover;
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  flex-shrink: 0;
 }
 .flight-photo-city {
   font-size: clamp(1.8rem, 3.8vw, 2.15rem);

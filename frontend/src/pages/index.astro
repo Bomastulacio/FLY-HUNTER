@@ -587,7 +587,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
 
         if (countriesSearching.length > 0) {
           html += countriesSearching.map(({ country }) => `<article class="destination-waiting">
-            <span class="waiting-icon"><i class="ph ph-globe-hemisphere-west" aria-hidden="true"></i></span>
+            <span class="waiting-icon" aria-label="Bandera de ${escapeHtml(country)}">${countryIsoCodes[country] ? `<img class="waiting-flag" src="https://flagcdn.com/w80/${countryIsoCodes[country].toLowerCase()}.png" srcset="https://flagcdn.com/w160/${countryIsoCodes[country].toLowerCase()}.png 2x" alt="" width="26" height="18" loading="lazy" decoding="async" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='inline-flex';" /><i class="ph ph-globe-hemisphere-west" style="display:none;" aria-hidden="true"></i>` : `<i class="ph ph-globe-hemisphere-west" aria-hidden="true"></i>`}</span>
             <div><h2>${escapeHtml(country)}</h2><p>Sin cotizaciones recientes en tus filtros</p></div>
             <a href="/alertas?radar=${encodeURIComponent(alert.id)}" aria-label="Ajustar búsqueda para ${escapeHtml(country)}"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i></a>
             <span class="waiting-next"><i class="ph ph-clock" aria-hidden="true"></i> Se revisa por turnos, según cobertura</span>

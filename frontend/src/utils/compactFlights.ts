@@ -40,6 +40,78 @@ const destinationPhotos: Record<string, string> = {
   LHR: '/destinations/london.jpg', LGW: '/destinations/london.jpg',
   CUN: '/destinations/cancun.jpg',
   NRT: '/destinations/tokyo.jpg', HND: '/destinations/tokyo.jpg',
+  FRA: '/destinations/germany.jpg', MUC: '/destinations/germany.jpg', BER: '/destinations/germany.jpg', DUS: '/destinations/germany.jpg',
+  GRU: '/destinations/rio.jpg', GIG: '/destinations/rio.jpg', SDU: '/destinations/rio.jpg',
+};
+
+const destinationCountryPhotos: Record<string, string> = {
+  'España': '/destinations/madrid.jpg',
+  'Italia': '/destinations/rome.jpg',
+  'Francia': '/destinations/paris.jpg',
+  'Portugal': '/destinations/lisbon.jpg',
+  'Reino Unido': '/destinations/london.jpg',
+  'Alemania': '/destinations/germany.jpg',
+  'Estados Unidos': '/destinations/miami.jpg',
+  'México': '/destinations/cancun.jpg',
+  'Japón': '/destinations/tokyo.jpg',
+  'Brasil': '/destinations/rio.jpg',
+};
+
+export const countryIsoCodes: Record<string, string> = {
+  "España": "ES",
+  "Francia": "FR",
+  "Italia": "IT",
+  "Reino Unido": "GB",
+  "Alemania": "DE",
+  "Portugal": "PT",
+  "Países Bajos": "NL",
+  "Suiza": "CH",
+  "Grecia": "GR",
+  "Irlanda": "IE",
+  "Austria": "AT",
+  "Bélgica": "BE",
+  "Suecia": "SE",
+  "Noruega": "NO",
+  "Dinamarca": "DK",
+  "Finlandia": "FI",
+  "Polonia": "PL",
+  "República Checa": "CZ",
+  "Turquía": "TR",
+  "Estados Unidos": "US",
+  "Canadá": "CA",
+  "México": "MX",
+  "Brasil": "BR",
+  "Chile": "CL",
+  "Colombia": "CO",
+  "Perú": "PE",
+  "Uruguay": "UY",
+  "Argentina": "AR",
+  "Ecuador": "EC",
+  "Bolivia": "BO",
+  "Paraguay": "PY",
+  "República Dominicana": "DO",
+  "Cuba": "CU",
+  "Costa Rica": "CR",
+  "Puerto Rico": "PR",
+  "Panamá": "PA",
+  "Guatemala": "GT",
+  "Japón": "JP",
+  "Tailandia": "TH",
+  "Corea del Sur": "KR",
+  "Emiratos Árabes": "AE",
+  "Australia": "AU",
+  "Nueva Zelanda": "NZ",
+  "Egipto": "EG",
+  "Sudáfrica": "ZA",
+  "Marruecos": "MA",
+  "Singapur": "SG",
+  "Indonesia": "ID",
+  "París": "FR",
+  "Miami": "US",
+  "Nueva York": "US",
+  "Río de Janeiro": "BR",
+  "Cancún": "MX",
+  "Tokio": "JP",
 };
 
 const destinationCountry: Record<string, string> = {
@@ -136,7 +208,8 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
     }
   }
 
-  const destinationPhoto = destinationPhotos[destination] || '/destinations/travel_default.jpg';
+  const destinationPhoto = destinationPhotos[destination] || destinationCountryPhotos[countryName] || '/destinations/travel_default.jpg';
+  const flagIso = countryIsoCodes[countryName] || countryIsoCodes[city] || (destinationCountry[destination] ? countryIsoCodes[destinationCountry[destination]] : null);
 
   let badgeHtml = '';
   if (isSavedSnapshot) {
@@ -162,7 +235,7 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
           <div class="flight-photo-overlay"></div>
           ${badgeHtml ? `<div class="flight-photo-badge">${badgeHtml}</div>` : ''}
           <div class="flight-photo-place">
-            <span class="flight-photo-country">${e(countryName.toUpperCase())} / ${e(destination)}</span>
+            <span class="flight-photo-country">${flagIso ? `<img class="flight-photo-flag" src="https://flagcdn.com/w40/${flagIso.toLowerCase()}.png" srcset="https://flagcdn.com/w80/${flagIso.toLowerCase()}.png 2x" alt="" width="15" height="10" loading="lazy" decoding="async" /> ` : ''}${e(countryName.toUpperCase())} / ${e(destination)}</span>
             <h3 class="flight-photo-city">${e(city)}</h3>
           </div>
         </div>
