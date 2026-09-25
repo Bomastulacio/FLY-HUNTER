@@ -8,12 +8,12 @@ import { stripTypeScriptTypes } from 'node:module';
 const root = new URL('../frontend/', import.meta.url);
 const read = path => readFile(new URL(path, root), 'utf8');
 const previewPort = Number(process.env.FH_PREVIEW_PORT || 4322);
-const alert = { id: 'demo-europe', nombre: 'Europa en abril', origen: 'EZE, AEP', destino: 'Europa',
+const alert = { id: 'demo-north-america', nombre: 'Escapada a Estados Unidos', origen: 'EZE, AEP', destino: 'Estados Unidos',
   pasajeros: 2, escalas_max: 1, presupuesto_min: 1700, presupuesto_max: 2400,
   fecha_ida_min: '2027-04-17', fecha_ida_max: '2027-04-19', fecha_vuelta_min: '2027-04-26',
-  fecha_vuelta_max: '2027-05-02', aerolineas_excluidas: ['LEVEL'], paises: ['España', 'Francia', 'Italia', 'Alemania'] };
+  fecha_vuelta_max: '2027-05-02', aerolineas_excluidas: ['LEVEL'], paises: ['Estados Unidos'] };
 const alerts = [alert, { ...alert, id: 'demo-direct', nombre: 'Solo vuelos directos', escalas_max: 0 }];
-const deals = [['demo-mad', 'MAD', 2047, 1, 'Aeroméxico'], ['demo-cdg', 'CDG', 2183, 0, 'Air France'], ['demo-fco', 'FCO', 2316, 1, 'ITA Airways']].map(([id, dest, price, stops, airline]) => ({
+const deals = [['demo-mia', 'MIA', 1380, 0, 'LATAM'], ['demo-lax', 'LAX', 1416, 1, 'LATAM'], ['demo-sfo', 'SFO', 1678, 1, 'United']].map(([id, dest, price, stops, airline]) => ({
   id, ida_origen_destino: `EZE-${dest}`, vuelta_origen_destino: `${dest}-EZE`,
   ida_fecha: '2027-04-17', vuelta_fecha: '2027-05-02', pasajeros: 2, precio_total_usd: price,
   cantidad_escalas: stops, aerolinea: airline, estado_aprobacion: 'aprobado',

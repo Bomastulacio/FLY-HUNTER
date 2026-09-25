@@ -945,6 +945,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         const button = (event.target as Element).closest<HTMLButtonElement>('[data-save-id]');
         if (!button) return;
         const id = button.dataset.saveId!;
+        const saveCity = button.dataset.saveCity || 'este vuelo';
         if (button.disabled) return;
         bookmarkRevision++;
         button.disabled = true;
@@ -960,7 +961,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         }
         savedFlights = next;
         button.setAttribute('aria-pressed', String(saving));
-        button.setAttribute('aria-label', saving ? 'Quitar de guardados' : 'Guardar vuelo');
+        button.setAttribute('aria-label', `${saving ? 'Quitar de guardados' : 'Guardar vuelo'} a ${saveCity}`);
         button.title = saving ? 'Quitar de guardados' : 'Guardar en tu cuenta';
         const icon = button.querySelector('i');
         if (icon) icon.className = saving ? 'ph-fill ph-bookmark-simple' : 'ph ph-bookmark-simple';
@@ -1020,7 +1021,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
             }
             button.disabled = false;
             button.setAttribute('aria-pressed', String(!saving));
-            button.setAttribute('aria-label', !saving ? 'Quitar de guardados' : 'Guardar vuelo');
+            button.setAttribute('aria-label', `${!saving ? 'Quitar de guardados' : 'Guardar vuelo'} a ${saveCity}`);
             button.title = !saving ? 'Quitar de guardados' : 'Guardar en tu cuenta';
             if (icon) icon.className = !saving ? 'ph-fill ph-bookmark-simple' : 'ph ph-bookmark-simple';
             applySavedFilter();

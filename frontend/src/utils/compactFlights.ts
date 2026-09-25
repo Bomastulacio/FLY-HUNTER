@@ -23,7 +23,10 @@ const cities: Record<string, string> = {
   FRA: 'Frankfurt', MUC: 'Múnich', BER: 'Berlín', DUS: 'Düsseldorf',
   LIS: 'Lisboa', OPO: 'Oporto', AMS: 'Ámsterdam', ZRH: 'Zúrich',
   GVA: 'Ginebra', ATH: 'Atenas', NRT: 'Tokio', HND: 'Tokio', KIX: 'Osaka',
-  MIA: 'Miami', JFK: 'Nueva York', GRU: 'San Pablo', GIG: 'Río de Janeiro',
+  MIA: 'Miami', FLL: 'Fort Lauderdale', JFK: 'Nueva York', EWR: 'Nueva York', LGA: 'Nueva York',
+  LAX: 'Los Ángeles', SFO: 'San Francisco', ORD: 'Chicago',
+  CUN: 'Cancún', MEX: 'Ciudad de México',
+  GRU: 'San Pablo', GIG: 'Río de Janeiro',
 };
 
 const destinationPhotos: Record<string, string> = {
@@ -31,6 +34,27 @@ const destinationPhotos: Record<string, string> = {
   FCO: '/destinations/rome.jpg', MXP: '/destinations/rome.jpg', LIN: '/destinations/rome.jpg', NAP: '/destinations/rome.jpg',
   CDG: '/destinations/paris.jpg', ORY: '/destinations/paris.jpg', NCE: '/destinations/paris.jpg', MRS: '/destinations/paris.jpg',
   LIS: '/destinations/lisbon.jpg', OPO: '/destinations/lisbon.jpg',
+  MIA: '/destinations/miami.jpg', FLL: '/destinations/miami.jpg',
+  LAX: '/destinations/lax.jpg',
+  JFK: '/destinations/newyork.jpg', EWR: '/destinations/newyork.jpg', LGA: '/destinations/newyork.jpg',
+  LHR: '/destinations/london.jpg', LGW: '/destinations/london.jpg',
+  CUN: '/destinations/cancun.jpg',
+  NRT: '/destinations/tokyo.jpg', HND: '/destinations/tokyo.jpg',
+};
+
+const destinationCountry: Record<string, string> = {
+  MAD: 'España', BCN: 'España', AGP: 'España', VLC: 'España',
+  FCO: 'Italia', MXP: 'Italia', LIN: 'Italia', NAP: 'Italia',
+  CDG: 'Francia', ORY: 'Francia', NCE: 'Francia', MRS: 'Francia',
+  LIS: 'Portugal', OPO: 'Portugal',
+  LHR: 'Reino Unido', LGW: 'Reino Unido', MAN: 'Reino Unido', EDI: 'Reino Unido',
+  FRA: 'Alemania', MUC: 'Alemania', BER: 'Alemania', DUS: 'Alemania',
+  MIA: 'Estados Unidos', FLL: 'Estados Unidos',
+  LAX: 'Estados Unidos', SFO: 'Estados Unidos', ORD: 'Estados Unidos',
+  JFK: 'Estados Unidos', EWR: 'Estados Unidos', LGA: 'Estados Unidos',
+  CUN: 'México', MEX: 'México',
+  NRT: 'Japón', HND: 'Japón', KIX: 'Japón',
+  GRU: 'Brasil', GIG: 'Brasil',
 };
 
 /** A total quoted for one adult must never be compared with a two-adult radar. */
@@ -60,6 +84,7 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
   const rawOD = String(deal.ida_origen_destino || `${deal.origen || 'EZE'}-${deal.destino || 'Vuelo'}`);
   const [origin = '', destination = ''] = rawOD.split('-').map(s => s.trim());
   const city = cities[destination] || destination || country || 'Vuelo';
+  const countryName = country || destinationCountry[destination] || 'Internacional';
   const passengers = Math.max(1, Number(deal.pasajeros ?? alert?.pasajeros) || 1);
   const searchPassengers = passengers;
   const pax = `${passengers} adulto${passengers === 1 ? '' : 's'}`;
@@ -99,42 +124,85 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
   const savings = alert?.presupuesto_max && Number(deal.precio_total_usd) < Number(alert.presupuesto_max)
     ? Math.max(0, Math.round(Number(alert.presupuesto_max) - Number(deal.precio_total_usd)))
     : 0;
-  const destinationPhoto = destinationPhotos[destination] || '';
 
-  return `<article class="flight-item${featured ? ' flight-item--featured' : ''}${isSavedSnapshot ? ' flight-item--saved' : ''}${destinationPhoto ? ' flight-item--visual' : ''}" data-flight-id="${e(deal.id)}"${destinationPhoto ? ` style="--flight-image:url('${destinationPhoto}')"` : ''}>
-    <button class="flight-save" type="button" data-save-id="${e(deal.id)}"
+  const aboveBudget = alert?.presupuesto_max && Number(deal.precio_total_usd) > Number(alert.presupuesto_max);
+
+  let nightsCount = 0;
+  if (deal.ida_fecha && deal.vuelta_fecha) {
+    const d1 = new Date(`${deal.ida_fecha.slice(0, 10)}T12:00:00`);
+    const d2 = new Date(`${deal.vuelta_fecha.slice(0, 10)}T12:00:00`);
+    if (!Number.isNaN(d1.getTime()) && !Number.isNaN(d2.getTime())) {
+      nightsCount = Math.max(0, Math.round((d2.getTime() - d1.getTime()) / 86400000));
+    }
+  }
+
+  const destinationPhoto = destinationPhotos[destination] || '/destinations/travel_default.jpg';
+
+  let badgeHtml = '';
+  if (isSavedSnapshot) {
+    badgeHtml = `<span class="flight-badge flight-badge--saved"><i class="ph-fill ph-bookmark-simple" aria-hidden="true"></i> Guardado</span>`;
+  } else if (gold) {
+    badgeHtml = `<span class="flight-badge flight-badge--gold"><i class="ph ph-sparkle" aria-hidden="true"></i> Oportunidad de Oro</span>`;
+  } else if (featured) {
+    badgeHtml = `<span class="flight-badge flight-badge--featured"><i class="ph ph-sparkle" aria-hidden="true"></i> Menor precio encontrado</span>`;
+  }
+
+  const priceDigitsOnly = usd(deal.precio_total_usd).replace('US$', '').trim();
+
+  return `<article class="flight-item${featured ? ' flight-item--featured' : ''}${isSavedSnapshot ? ' flight-item--saved' : ''} flight-item--visual" data-flight-id="${e(deal.id)}">
+    <button class="flight-save" type="button" data-save-id="${e(deal.id)}" data-save-city="${e(city)}"
       aria-label="${saved ? 'Quitar de guardados' : 'Guardar vuelo'} a ${e(city)}" aria-pressed="${saved}"
       title="${saved ? 'Quitar de guardados' : 'Guardar vuelo en tu cuenta'}">
       <i class="${saved ? 'ph-fill' : 'ph'} ph-bookmark-simple" aria-hidden="true"></i>
     </button>
     <details class="flight-disclosure">
       <summary class="flight-summary">
-        ${destinationPhoto ? `<span class="flight-photo" aria-hidden="true"><img src="${destinationPhoto}" alt="" width="1000" height="650" loading="lazy" decoding="async"></span>` : ''}
-        <span class="flight-summary-top">
-          <span class="flight-destination">${e(city)}</span>
-          ${isSavedSnapshot ? `<span class="flight-badge" style="background:#4ade8022;color:#86efac;border-color:#4ade8044;"><i class="ph-fill ph-bookmark-simple"></i> Guardado</span>` : (gold || featured ? `<span class="flight-badge">${gold ? 'Oportunidad de Oro' : 'Menor precio encontrado'}</span>` : '')}
-        </span>
-        <span class="flight-route-line">${e(country || 'Vuelo internacional')} · Ida y vuelta</span>
-        <span class="ticket-route" aria-label="${e(origin)} a ${e(destination)}">
-          <span>${e(origin)}</span><span class="ticket-route-track"><i class="ph ph-airplane-tilt" aria-hidden="true"></i></span><span>${e(destination)}</span>
-        </span>
-        <span class="flight-summary-facts">
-          <span class="flight-dates"><small>Fechas</small>${e(flightDate(deal.ida_fecha))} — ${e(flightDate(deal.vuelta_fecha))}</span>
-          <span class="flight-price">${googleSearch ? '<small>Desde </small>' : ''}${e(usd(deal.precio_total_usd))}</span>
-          <span class="flight-airline">${e(stopText)} · ${e(unverifiedGoogle ? 'Aerolínea por verificar' : deal.aerolinea || 'Aerolínea por confirmar')}</span>
-          <span class="flight-passengers">Total · ${e(pax)}${unitPrice ? ` (${e(usd(unitPrice))}/u)` : ''}</span>
-        </span>
-        <span class="flight-expand"><span class="when-closed">Ver vuelo</span><span class="when-open">Cerrar detalle</span><i class="ph ph-caret-down" aria-hidden="true"></i></span>
+        <div class="flight-photo-wrap" aria-hidden="true">
+          <img src="${destinationPhoto}" alt="" width="800" height="450" loading="lazy" decoding="async">
+          <div class="flight-photo-overlay"></div>
+          ${badgeHtml ? `<div class="flight-photo-badge">${badgeHtml}</div>` : ''}
+          <div class="flight-photo-place">
+            <span class="flight-photo-country">${e(countryName.toUpperCase())} / ${e(destination)}</span>
+            <h3 class="flight-photo-city">${e(city)}</h3>
+          </div>
+        </div>
+        <div class="flight-body">
+          <div class="flight-price-row">
+            <div class="flight-price">
+              ${googleSearch ? '<small class="flight-price-from">Desde </small>' : ''}<span class="flight-price-curr">US$</span><span class="flight-price-num">${e(priceDigitsOnly)}</span>
+            </div>
+            <span class="flight-price-note${aboveBudget ? ' flight-price-note--over' : ''}">${aboveBudget ? 'Sobre tu máximo' : 'Ida y vuelta'}</span>
+          </div>
+          <p class="flight-passengers-note">Total para ${e(pax)}${unitPrice ? ` · ${e(usd(unitPrice))} por persona` : ''}</p>
+          <div class="ticket-route" aria-label="${e(origin)} a ${e(destination)}">
+            <span>${e(origin)}</span><span class="ticket-route-track"><i class="ph ph-airplane-tilt" aria-hidden="true"></i></span><span>${e(destination)}</span>
+          </div>
+          <div class="flight-facts-grid">
+            <div class="flight-fact">
+              <small>FECHAS${nightsCount ? ` · ${nightsCount} NOCHES` : ''}</small>
+              <span>${e(flightDate(deal.ida_fecha))} — ${e(flightDate(deal.vuelta_fecha))}</span>
+            </div>
+            <div class="flight-fact">
+              <small>${e(stopText.toUpperCase())}</small>
+              <span>${e(unverifiedGoogle ? 'Aerolínea por verificar' : deal.aerolinea || 'Aerolínea por confirmar')}</span>
+            </div>
+          </div>
+          <div class="flight-expand">
+            <span class="when-closed">Explorar este vuelo</span>
+            <span class="when-open">Cerrar detalle</span>
+            <i class="ph ph-caret-down" aria-hidden="true"></i>
+          </div>
+          <p class="flight-foot-timestamp"><i class="ph ph-clock" aria-hidden="true"></i> Consulta: ${e(observation)}</p>
+        </div>
       </summary>
       <div class="flight-content">
         <dl class="flight-detail-grid">
-          <div><dt>Ida</dt><dd>${e(deal.ida_origen_destino || `${origin}-${destination}`)}<small>${e(flightDate(deal.ida_fecha, true))}</small></dd></div>
-          <div><dt>Vuelta</dt><dd>${e(deal.vuelta_origen_destino || `${destination}-${origin}`)}<small>${e(flightDate(deal.vuelta_fecha, true))}</small></dd></div>
+          <div><dt>Ida</dt><dd>${e(deal.ida_origen_destino || `${origin}-${destination}`)}<br><small>${e(flightDate(deal.ida_fecha, true))}</small></dd></div>
+          <div><dt>Vuelta</dt><dd>${e(deal.vuelta_origen_destino || `${destination}-${origin}`)}<br><small>${e(flightDate(deal.vuelta_fecha, true))}</small></dd></div>
         </dl>
         <a class="flight-book" href="${e(bookingUrl)}" target="_blank" rel="noopener noreferrer">Ver en ${provider}<i class="ph ph-arrow-up-right" aria-hidden="true"></i><span class="sr-only"> (abre otra pestaña)</span></a>
         ${googleSearch ? `<p class="flight-freshness">${unverifiedGoogle ? 'Cotización anterior pendiente de verificación.' : `Al abrir, elegí <strong>Los más bajos</strong> y buscá ${e(deal.aerolinea)}. El enlace abre la búsqueda para ${e(pax)}; el precio final depende del regreso que elijas.`}</p>` : ''}
         ${deal.detalle_cotizacion?.paymentCondition ? `<p class="flight-freshness"><strong>${e(deal.detalle_cotizacion.paymentCondition)}</strong></p>` : ''}
-        <p class="flight-freshness">Consulta: ${e(observation)}. Confirmá precio, horarios y equipaje al abrir.</p>
         ${deal.tracking_status ? `<p class="flight-freshness"><strong>${e(deal.tracking_status)}</strong><br>Guardaste a ${e(usd(deal.saved_price_usd))}.${deal.tracking_observed ? ' Se sigue la combinación y aerolínea; horarios y condiciones pueden variar.' : ''}</p>` : ''}
         <details class="flight-explanation">
           <summary>Sobre esta oferta</summary>
