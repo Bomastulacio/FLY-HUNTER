@@ -98,6 +98,7 @@ jobs:
           ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
           SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || secrets.GEMINI_MODEL }}
           FLIGHT_SEARCH_PLAN_PATH: ${{ github.event_name == 'workflow_run' && '../run-plan/search-plan.json' || '' }}
           SERPAPI_ENABLED: ${{ github.event_name != 'repository_dispatch' && 'true' || 'false' }}
           SERPAPI_MAX_PER_RUN: '2'

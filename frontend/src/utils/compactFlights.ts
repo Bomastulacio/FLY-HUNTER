@@ -153,8 +153,8 @@ export function matchesRadar(deal: any, radar: any): boolean {
 
 export function buildGoogleFlightsSearchUrl(origin: string, destination: string, departure: string, returnDate: string, passengers: number): string {
   const count = Math.max(1, Math.trunc(passengers) || 1);
-  const query = `Flights from ${origin} to ${destination} on ${departure} through ${returnDate} for ${count} ${count === 1 ? 'adult' : 'adults'}`;
-  return `https://www.google.com/travel/flights/search?q=${encodeURIComponent(query)}&curr=USD&hl=es`;
+  const query = `Flights to ${destination} from ${origin} on ${departure} through ${returnDate} for ${count} ${count === 1 ? 'adult' : 'adults'}`;
+  return `https://www.google.com/travel/flights?q=${encodeURIComponent(query)}&curr=USD&hl=es`;
 }
 
 export function renderCompactFlight(deal: any, alert: any, featured = false, country = '', saved = false, insight: any = null) {

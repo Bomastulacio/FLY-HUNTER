@@ -10,7 +10,7 @@ Actualmente, solo la rama principal (`main`) y su último release reciben actual
 
 Por favor **NO** crees un Issue público en GitHub para reportar vulnerabilidades de seguridad, ya que esto expone la falla antes de que pueda ser mitigada.
 
-En su lugar, envía un correo electrónico detallando el problema a **[tu-correo@ejemplo.com]**. 
+En su lugar, envía un correo electrónico detallando el problema a **[bulatom@hotmail.com]**. 
 
 Intentaremos responder a tu reporte dentro de las 48 horas con una evaluación inicial y los siguientes pasos planeados.
 

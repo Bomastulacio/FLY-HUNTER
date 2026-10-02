@@ -31,8 +31,8 @@ test('Google links open a populated one-adult search for the quoted route and da
   const expected = buildGoogleFlightsSearchUrl('EZE', 'NRT', tokyo.departureDate, tokyo.returnDate, 1);
   assert.equal(buildGoogleFlightsUrl(tokyo), expected);
   const url = new URL(expected);
-  assert.equal(url.pathname, '/travel/flights/search');
-  assert.equal(url.searchParams.get('q'), 'Flights from EZE to NRT on 2027-02-08 through 2027-05-05 for 1 adult');
+  assert.equal(url.pathname, '/travel/flights');
+  assert.equal(url.searchParams.get('q'), 'Flights to NRT from EZE on 2027-02-08 through 2027-05-05 for 1 adult');
 });
 
 test('Google cross-checks visible USD price with the accessible itinerary, not unrelated DOM', () => {
@@ -67,7 +67,7 @@ test('Old Google quotes do not reappear in the feed; links keep exact dates and 
   assert.ok(html.includes('Los más bajos'));
   assert.ok(html.includes('Desde'));
   assert.ok(html.includes('for%202%20adults'));
-  assert.ok(html.includes('google.com/travel/flights/search?q='));
+  assert.ok(html.includes('google.com/travel/flights?q='));
   assert.ok(html.includes('2027-04-18%20through%202027-05-01'));
   assert.equal(html.includes('OLD_ONE_ADULT'), false);
 });

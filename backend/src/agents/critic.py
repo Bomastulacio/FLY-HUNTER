@@ -292,7 +292,7 @@ def _ask_gemini(context: Dict) -> Optional[RefinementDecision]:
             "retry_options": {"attempts": 1},
         }) as client:
             response = client.models.generate_content(
-                model=os.environ.get("GEMINI_MODEL", "").strip() or "gemini-2.5-flash",
+                model=os.environ.get("GEMINI_MODEL", "").strip() or "gemini-2.0-flash",
                 contents=json.dumps(context, ensure_ascii=False, allow_nan=False),
                 config={"system_instruction": CRITIC_SYSTEM_PROMPT,
                         "temperature": 0, "max_output_tokens": 2048,

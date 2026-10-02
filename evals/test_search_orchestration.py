@@ -183,6 +183,23 @@ class OrchestrationEvals(TestCase):
         self.assertEqual([d['precio_total_usd'] for d in result], [1884] * 3)
         self.assertEqual([d['precio_por_pasajero_usd'] for d in result], [942] * 3)
 
+    def test_data_scientist_handles_mixed_iso_timestamps_and_prices(self):
+        from src.agents.data_scientist import data_scientist_analysis
+        deals_data = [
+            {'created_at': '2026-09-25T23:57:57.123456+00:00', 'precio_total_usd': 500, 'ida_origen_destino': 'EZE-MAD'},
+            {'created_at': '2026-09-25T23:57:57+00:00', 'precio_total_usd': '480', 'ida_origen_destino': 'EZE-MAD'},
+        ]
+        with ExitStack() as stack:
+            stack.enter_context(patch('src.agents.data_scientist.get_supabase_client'))
+            stack.enter_context(patch('src.agents.data_scientist.get_recent_flight_deals', return_value=deals_data))
+            upsert_mock = stack.enter_context(patch('src.agents.data_scientist.upsert_route_insights'))
+            data_scientist_analysis([])
+            self.assertTrue(upsert_mock.called)
+            insights = upsert_mock.call_args[0][0]
+            self.assertEqual(len(insights), 1)
+            self.assertEqual(insights[0].ruta, 'EZE-MAD')
+            self.assertEqual(insights[0].minimo_historico, 480.0)
+
 
 if __name__ == '__main__':
     main(verbosity=2)
