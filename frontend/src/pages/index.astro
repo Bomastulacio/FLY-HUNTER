@@ -117,8 +117,6 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
       <div id="dynamic-dashboard" class="dashboard-layout" style="display: none;">
         
 
-        <section id="daily-brief" class="daily-brief" aria-label="Tu radar hoy"></section>
-        <div id="destination-strip" class="destination-strip" aria-label="Precios por destino"></div>
         <aside class="dashboard-sidebar" aria-label="Tu búsqueda">
           <details class="radar-overview">
             <summary>
@@ -131,19 +129,10 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
               <a href="/alertas" class="radar-config-link" id="radar-config-link"><i class="ph ph-pencil-simple" aria-hidden="true"></i> Editar esta búsqueda</a>
             </div>
           </details>
-          <div id="countdown-strip-container" class="countdown-strip">
-            <span class="countdown-strip-label">Próxima búsqueda estimada · <strong id="cd-target-dest">Europa</strong></span>
-            <span class="countdown-strip-timer"><i class="ph ph-clock" aria-hidden="true"></i> <span id="compact-cd-val">Calculando...</span></span>
-          </div>
-          <details class="saved-note" id="source-status" hidden>
-            <summary>Estado de las fuentes</summary>
-            <div id="source-status-content"></div>
-          </details>
         </aside>
         <div class="feed-toolbar">
           <div>
-            <span class="feed-eyebrow">TU RADAR, DE UN VISTAZO</span>
-            <h2>Vuelos para tu viaje.</h2>
+            <h2>Tus vuelos.</h2>
           </div>
           <div class="feed-filters" role="group" aria-label="Mostrar vuelos">
             <button type="button" data-feed-filter="all" aria-pressed="true">Todos</button>
@@ -155,6 +144,24 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         <section class="dashboard-feed" id="destinations-grid">
            <!-- Renderizado por JS: Card destacada + Destinos -->
         </section>
+        <footer class="radar-footer" aria-label="Seguimiento del radar">
+          <details id="destination-status" class="radar-footnote" hidden>
+            <summary><i class="ph ph-map-pin" aria-hidden="true"></i> <span id="destination-status-label">Destinos pendientes</span><i class="ph ph-caret-down" aria-hidden="true"></i></summary>
+            <div id="destination-strip" class="destination-strip" aria-label="Destinos sin precio reciente"></div>
+          </details>
+          <div id="countdown-strip-container" class="countdown-strip">
+            <span class="countdown-strip-label">Próxima búsqueda estimada · <strong id="cd-target-dest">Europa</strong></span>
+            <span class="countdown-strip-timer"><i class="ph ph-clock" aria-hidden="true"></i> <span id="compact-cd-val">Calculando...</span></span>
+          </div>
+          <details class="radar-footnote saved-note" id="source-status" hidden>
+            <summary><i class="ph ph-broadcast" aria-hidden="true"></i><span>Estado de búsqueda</span><span id="source-status-label" class="source-status-label"></span><i class="ph ph-caret-down" aria-hidden="true"></i></summary>
+            <div class="source-status-body">
+              <p id="daily-scan-summary"></p>
+              <small id="daily-scan-time"></small>
+              <div id="source-status-content"></div>
+            </div>
+          </details>
+        </footer>
 
       </div>
       
@@ -482,17 +489,14 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         const daily = dailyRadar(allDeals, alert, countriesToRender, countryCodes);
         const mainDeal = daily.best || daily.above;
         const countryFor = (deal: any) => countriesToRender.find(c => countryCodes[c]?.includes(String(deal.ida_origen_destino).split('-')[1])) || '';
-        const brief = document.getElementById('daily-brief');
-        if (brief) {
-          const gap = mainDeal ? Number(alert.presupuesto_max) - Number(mainDeal.precio_total_usd) : 0;
-          brief.innerHTML = `<div><span class="feed-eyebrow">TU VIAJE HOY</span><h2>${daily.best ? 'Una opción más cerca.' : daily.above ? 'Todavía por encima de tu máximo.' : 'Tu radar sigue en marcha.'}</h2>
-            <p>${mainDeal ? `<strong>${usd(mainDeal.precio_total_usd)}</strong> · ${gap >= 0 ? `${usd(gap)} por debajo` : `${usd(-gap)} por encima`} de tu máximo para ${Number(alert.pasajeros)} adulto${Number(alert.pasajeros) === 1 ? '' : 's'}.` : daily.previous ? 'Hay precios anteriores, pero ninguna cotización de las últimas 24 horas para tu viaje.' : 'Todavía no hay una cotización reciente que coincida con tu viaje.'}</p>
-            <small>${mainDeal?.detalle_cotizacion?.itineraryScope === 'search_result' ? 'Precio desde la búsqueda; falta confirmar el regreso.' : 'Las tarifas pueden cambiar entre consultas.'}</small></div>
-            <div class="daily-scan"><i class="ph ph-broadcast" aria-hidden="true"></i><span id="daily-scan-summary">Leyendo la última búsqueda…</span><small id="daily-scan-time"></small><button type="button" data-open-coverage>Ver cobertura <i class="ph ph-arrow-down" aria-hidden="true"></i></button></div>`;
-        }
         const strip = document.getElementById('destination-strip');
-        if (strip) strip.innerHTML = daily.rows.map(({ country, quote, aboveBudget }) => `<${quote ? 'button type="button"' : 'a'} class="destination-price${aboveBudget ? ' destination-price--over' : ''}" ${quote ? `data-open-flight="${escapeHtml(quote.id)}"` : `href="/alertas?radar=${encodeURIComponent(alert.id)}"`}>
-          <span>${escapeHtml(country)}</span><strong>${quote ? usd(quote.precio_total_usd) : 'Sin precio reciente'}</strong><small>${quote ? aboveBudget ? `+${usd(Number(quote.precio_total_usd) - Number(alert.presupuesto_max))} sobre tu máximo` : 'Ver cotización' : 'Cobertura por turnos'}</small></${quote ? 'button' : 'a'}>`).join('');
+        const waiting = daily.rows.filter(({ quote }) => !quote);
+        if (strip) strip.innerHTML = waiting.map(({ country }) => `<span class="destination-pending">${escapeHtml(country)}</span>`).join('')
+          + '<p>Estos destinos todavía no tienen una cotización reciente para tu viaje.</p>';
+        const destinationStatus = document.getElementById('destination-status');
+        if (destinationStatus) destinationStatus.dataset.hasWaiting = String(waiting.length > 0);
+        const destinationLabel = document.getElementById('destination-status-label');
+        if (destinationLabel) destinationLabel.textContent = `${waiting.length} destino${waiting.length === 1 ? '' : 's'} sin precio reciente`;
         const shown = new Set<string>();
         const addCard = (deal: any, featured = false, label = '') => {
           if (!deal || shown.has(String(deal.id))) return;
@@ -692,9 +696,11 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         if (!container || !content) return;
         const rows = sourceStatuses.filter(row => row.radar_id === radarId);
         const summary = document.getElementById('daily-scan-summary');
+        const label = document.getElementById('source-status-label');
         container.hidden = false;
         if (!sourceStatusesLoaded || sourceStatusesFailed) {
           if (summary) summary.textContent = sourceStatusesFailed ? 'No pudimos actualizar el estado de búsqueda.' : 'Leyendo la última búsqueda…';
+          if (label) label.textContent = sourceStatusesFailed ? 'Sin actualizar' : '';
           content.textContent = sourceStatusesFailed ? 'No pudimos leer el estado de las fuentes. No podemos confirmar si el radar ya buscó.' : 'Consultando el estado de las fuentes…';
           return;
         }
@@ -705,6 +711,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         if (time) time.textContent = lastAttempt ? `Último intento: ${new Intl.DateTimeFormat('es-AR', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}).format(new Date(lastAttempt.checked_at))}` : 'Todavía no hay un intento registrado.';
         const hasCoverage = currentRows.some(row => Number(row.checked_combinations) > 0);
         const hasIssue = currentRows.some(row => ['blocked', 'error'].includes(row.outcome));
+        if (label) label.textContent = hasIssue ? 'Cobertura parcial' : hasCoverage ? 'Por turnos' : 'Pendiente';
         if (summary) summary.textContent = hasIssue ? 'Una fuente está en pausa. La cobertura es parcial.'
           : hasCoverage ? 'Cobertura parcial: seguimos recorriendo tus fechas.'
           : 'Sin combinaciones verificadas en el estado reciente.';
@@ -861,31 +868,14 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
           empty.textContent = 'No tenés vuelos guardados. Tocá el marcador de una oferta para tenerla a mano siempre.';
           grid.append(empty);
         }
-        for (const id of ['daily-brief', 'destination-strip']) {
-          const el = document.getElementById(id);
-          if (el) el.hidden = feedFilter === 'saved';
-        }
+        const destinationStatus = document.getElementById('destination-status');
+        if (destinationStatus) destinationStatus.hidden = feedFilter === 'saved' || destinationStatus.dataset.hasWaiting !== 'true';
         const note = document.getElementById('saved-note');
         if (note) note.hidden = feedFilter !== 'saved';
         document.querySelectorAll<HTMLButtonElement>('[data-feed-filter]').forEach(btn => {
           btn.setAttribute('aria-pressed', String(btn.dataset.feedFilter === feedFilter));
         });
       };
-
-      document.getElementById('daily-brief')?.addEventListener('click', event => {
-        if (!(event.target as Element).closest('[data-open-coverage]')) return;
-        const details = document.getElementById('source-status') as HTMLDetailsElement;
-        details.open = true;
-        details.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        details.querySelector('summary')?.focus({ preventScroll: true });
-      });
-      document.getElementById('destination-strip')?.addEventListener('click', event => {
-        const button = (event.target as Element).closest<HTMLElement>('[data-open-flight]');
-        if (!button) return;
-        const card = document.querySelector<HTMLElement>(`[data-flight-id="${CSS.escape(button.dataset.openFlight || '')}"]`);
-        card?.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-        card?.querySelector<HTMLElement>('.flight-summary')?.focus({ preventScroll: true });
-      });
 
       document.querySelectorAll<HTMLButtonElement>('[data-feed-filter]').forEach(btn => {
         btn.addEventListener('click', () => { feedFilter = btn.dataset.feedFilter || 'all'; applySavedFilter(); });

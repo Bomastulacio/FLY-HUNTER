@@ -13,7 +13,7 @@ body.compact-app { color-scheme: dark; -webkit-text-size-adjust: 100%; text-size
 .compact-app #main-hero p { font-size: .95rem; }
 .compact-app .dashboard-layout, .compact-app .dashboard-layout.is-active { display: flex; flex-direction: column; gap: 20px; }
 .compact-app .dashboard-sidebar { position: static; gap: 10px; }
-.compact-app .dashboard-feed { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 16px; }
+.compact-app .dashboard-feed { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 16px; order: 0; }
 .dashboard-feed > :is(.anomalies-section, .feed-empty) { grid-column: 1 / -1; }
 .compact-app .radar-tabs-nav { gap: 10px; padding: 0; margin: 0 0 12px; flex-wrap: nowrap; overflow: visible; position: relative; z-index: 20; }
 .radar-select-label { display: grid; gap: 5px; flex: 1; min-width: 0; font-size: .75rem; color: var(--text-secondary); }
@@ -665,21 +665,19 @@ body.compact-app {
   padding: 6px 18px 18px;
 }
 .flight-positive { color: #caeaa0 !important; }
-.daily-brief { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, .45fr); gap: 2rem; padding: 1.6rem 0; border-block: 1px solid #e2efd919; }
-.daily-brief h2 { margin: .45rem 0 .6rem; font-size: clamp(1.45rem, 3.5vw, 2rem); font-weight: 500; letter-spacing: -.045em; text-wrap: balance; }
-.daily-brief p { margin: 0 0 .4rem; color: #b7c0b2; line-height: 1.65; }
-.daily-brief p strong { color: #e1f6b5; font-variant-numeric: tabular-nums; }
-.daily-brief small { color: #98a593; font-size: .74rem; }
-.daily-scan { display: flex; flex-direction: column; align-items: flex-start; gap: .6rem; font-size: .8rem; line-height: 1.5; color: #b5c0ae; }
-.daily-scan > .ph { color: #d0ef91; font-size: 1.3rem; }
-.daily-scan button { padding: .5rem 0; background: none; border: 0; color: #d0ef91; font: inherit; cursor: pointer; min-height: 44px; }
-.destination-strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(150px, 1fr); overflow-x: auto; gap: .7rem; padding: .2rem 0 .75rem; scroll-snap-type: x proximity; scrollbar-width: thin; scrollbar-color: #c9ef7350 transparent; }
-.destination-price { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: .5rem; padding: 1rem; text-align: left; background: linear-gradient(145deg, #e4f0da0b, #ffffff02); border: 1px solid #e2efd91c; border-radius: 16px; color: #f1f3ed; font: inherit; text-decoration: none; cursor: pointer; scroll-snap-align: start; }
-.destination-price span { color: #bdc7b7; font-size: .8rem; }
-.destination-price strong { font-size: 1.1rem; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
-.destination-price small { font-size: .68rem; color: #a5b19e; line-height: 1.4; }
-.destination-price--over small, .flight-budget-gap { color: #dfc99c; }
-.destination-price:hover { border-color: #d0ef9170; background: #d0ef910b; }
+.radar-footer { display: grid; gap: .6rem; margin-top: .5rem; padding: 1rem 0; border-top: 1px solid #e2efd919; color: var(--text-secondary); }
+.compact-app .radar-footer > * { order: 0; }
+.radar-footnote > summary { display: flex; align-items: center; gap: .6rem; min-height: 44px; padding: .3rem .25rem; font-size: .8rem; cursor: pointer; list-style: none; }
+.radar-footnote > summary::-webkit-details-marker { display: none; }
+.radar-footnote > summary > .ph-caret-down { margin-left: auto; transition: transform .2s ease; }
+.radar-footnote[open] > summary > .ph-caret-down { transform: rotate(180deg); }
+.source-status-label { font-size: .7rem; color: #a9b997; }
+.source-status-body { max-width: 680px; padding: .5rem .25rem 1rem; }
+.source-status-body > p { margin: 0 0 .4rem; }
+.destination-strip { display: flex; flex-wrap: wrap; gap: .5rem; padding: .5rem .25rem 1rem; }
+.destination-pending { border: 1px solid #e2efd91c; border-radius: 8px; padding: .4rem .65rem; font-size: .75rem; color: #bdc7b7; }
+.destination-strip p { flex-basis: 100%; margin: .3rem 0 0; font-size: .75rem; line-height: 1.6; }
+.flight-budget-gap { color: #dfc99c; }
 .flight-evidence { display: flex; align-items: center; gap: .4rem; margin: -.35rem 0 1rem; font-size: .7rem; color: #b5c5a6; line-height: 1.5; }
 .flight-evidence--old { color: #dfc99c; }
 .flight-budget-gap { margin: -.35rem 0 1rem; font-size: .75rem; }
@@ -696,7 +694,7 @@ body.compact-app {
 .notification-settings .notification-toggle { display: flex; gap: .65rem; align-items: center; min-height: 44px; }
 .notification-settings input[type="checkbox"] { width: 20px; height: 20px; accent-color: #c9ef73; flex-shrink: 0; }
 .notification-settings .hint { display: block; line-height: 1.6; margin-top: .7rem; }
-.compact-app :is(.daily-brief, .destination-strip)[hidden] { display: none; }
+.compact-app .radar-footnote[hidden] { display: none; }
 .destination-waiting { border-radius: 18px; background: rgba(229,240,220,.025); border-color: rgba(226,239,217,.1); }
 .compact-app :where(button, a, summary) { transition: transform .18s ease, background-color .2s ease, border-color .2s ease, color .2s ease; }
 .compact-app :where(button, .flight-book):active { transform: scale(.985); }
@@ -722,13 +720,8 @@ body.compact-app {
   .flight-price { font-size: 2.15rem; }
   .flight-expand { margin: 0 0 10px !important; padding: 10px 16px !important; }
   .flight-summary { padding: 0 !important; }
-  .daily-brief { grid-template-columns: minmax(0, 1fr); gap: .9rem; padding: 1.1rem 0; }
-  .daily-scan { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: .3rem .5rem; }
-  .daily-scan button { grid-column: 2; justify-self: start; padding-block: .2rem; }
-  .daily-scan small { grid-column: 2; }
   .compact-app #main-hero { margin: 1.2rem 0; }
   .compact-app #main-hero h1 { font-size: 2.1rem; }
-  .destination-strip { grid-auto-columns: minmax(155px, 46%); }
 }
 @media (prefers-reduced-motion: reduce) {
   .flight-item { transform: none !important; }

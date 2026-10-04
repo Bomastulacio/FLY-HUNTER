@@ -98,9 +98,11 @@ Las tablas son aditivas; no eliminan datos del feed ni cambian estados humanos d
 
 ### Vista diaria y avisos por radar — 02/10/2026
 
-- Portada con menor precio reciente, diferencia frente al máximo, último intento registrado,
-  próximo horario estimado y fila de países. El país más barato no oculta el resto; si Italia
-  supera el máximo, conserva su precio con la diferencia explícita. Sin datos no se inventa un precio.
+- Portada centrada en las cards: radar y filtros, seguidos de los vuelos. El menor precio y la
+  diferencia frente al máximo se muestran en cada card, sin duplicarlos en una cabecera.
+  El país más barato no oculta el resto; si Italia supera el máximo, conserva su precio con la
+  diferencia explícita. Sin datos no se inventa un precio. Los destinos sin cotización reciente
+  y el detalle de cobertura quedan plegados al pie, junto al próximo horario estimado.
 - Solo compiten observaciones de menos de 24 h con total y pasajeros verificados. Primero se
   resuelve la observación más reciente, incluidas subas. Los precios anteriores quedan en Guardados;
   el estado vacío distingue ausencia de observaciones recientes de inexistencia de vuelos.
