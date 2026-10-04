@@ -130,7 +130,9 @@ export const destinationCountry: Record<string, string> = {
 };
 
 /** A total quoted for one adult must never be compared with a two-adult radar. */
-export function matchesRadar(deal: any, radar: any): boolean {
+export function matchesRadar(deal: any, radar: any, ignoreBudget = false): boolean {
+  const legs = deal.detalle_cotizacion?.stopsPerDirection;
+  if (Array.isArray(legs) && legs.some((s: any) => !Number.isInteger(s) || s < 0 || s > Math.min(1, Number(radar.escalas_max ?? 1)))) return false;
   // Historical rows from the old scraper must not compete with verified fares.
   if (deal.fuente === 'google_flights' && (deal.detalle_cotizacion?.googleParserVersion !== 2
     || !deal.detalle_cotizacion?.priceVerified || !deal.detalle_cotizacion?.queryVerified
@@ -142,8 +144,9 @@ export function matchesRadar(deal: any, radar: any): boolean {
   const stops = deal.cantidad_escalas;
   return origins.includes(origin) && Number(deal.pasajeros) === Number(radar.pasajeros)
     && stops != null && Number.isInteger(Number(stops)) && Number(stops) >= 0 && Number(stops) <= Math.min(1, Number(radar.escalas_max ?? 1))
-    && Number(deal.precio_total_usd) > 0 && Number(deal.precio_total_usd) <= Number(radar.presupuesto_max)
-    && (Number(deal.precio_total_usd) < 750 * Number(radar.pasajeros) || Number(deal.precio_total_usd) >= Number(radar.presupuesto_min || 0))
+    && Number.isFinite(Number(deal.precio_total_usd)) && Number(deal.precio_total_usd) > 0
+    && (ignoreBudget || (Number(deal.precio_total_usd) <= Number(radar.presupuesto_max)
+      && (Number(deal.precio_total_usd) < 750 * Number(radar.pasajeros) || Number(deal.precio_total_usd) >= Number(radar.presupuesto_min || 0))))
     && !excluded.some((a: string) => a.trim() && normalize(String(deal.aerolinea || '')).includes(normalize(a)))
     && (!radar.fecha_ida_min || deal.ida_fecha >= radar.fecha_ida_min)
     && (!radar.fecha_ida_max || deal.ida_fecha <= radar.fecha_ida_max)
@@ -177,7 +180,7 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
   let bookingUrl = buildGoogleFlightsSearchUrl(origin, destination, deal.ida_fecha, deal.vuelta_fecha, passengers);
   let provider = 'Google Flights';
   // Retain the winning OTA only when the stored URL belongs to that provider.
-  if (deal.fuente === 'despegar' && deal.link_reserva) {
+  if (deal.fuente === 'despegar' && deal.link_reserva && deal.detalle_cotizacion?.bookingUrlVerified === true) {
     try {
       const url = new URL(deal.link_reserva);
       if (url.protocol === 'https:' && /(^|\.)despegar\.(com|com\.ar)$/.test(url.hostname)) {
@@ -191,6 +194,11 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
   const observation = updated && !Number.isNaN(updated.getTime())
     ? new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(updated)
     : 'Fecha de consulta no disponible';
+  const stale = !updated || !Number.isFinite(updated.getTime()) || Date.now() - updated.getTime() >= 86400000;
+  const partial = deal.detalle_cotizacion?.itineraryScope !== 'roundtrip'
+    || !Array.isArray(deal.detalle_cotizacion?.stopsPerDirection)
+    || deal.detalle_cotizacion.stopsPerDirection.length !== 2;
+  const sourceName = deal.fuente === 'despegar' ? 'Despegar' : deal.fuente === 'manual_capture' ? 'Captura personal' : 'Google Flights';
 
   const criticReason = deal.detalle_cotizacion?.criterio_evaluacion
     || deal.detalle_cotizacion?.decision_reason
@@ -217,7 +225,9 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
   let badgeHtml = '';
   if (isSavedSnapshot) {
     badgeHtml = `<span class="flight-badge flight-badge--saved"><i class="ph-fill ph-bookmark-simple" aria-hidden="true"></i> Guardado</span>`;
-  } else if (gold) {
+  } else if (deal.display_label) {
+    badgeHtml = `<span class="flight-badge flight-badge--featured">${e(deal.display_label)}</span>`;
+  } else if (gold && !partial && !stale) {
     badgeHtml = `<span class="flight-badge flight-badge--gold"><i class="ph ph-sparkle" aria-hidden="true"></i> Oportunidad de Oro</span>`;
   } else if (featured) {
     badgeHtml = `<span class="flight-badge flight-badge--featured"><i class="ph ph-sparkle" aria-hidden="true"></i> Menor precio encontrado</span>`;
@@ -250,6 +260,8 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
             <span class="flight-price-note${aboveBudget ? ' flight-price-note--over' : ''}">${aboveBudget ? 'Sobre tu máximo' : 'Ida y vuelta'}</span>
           </div>
           <p class="flight-passengers-note">Total para ${e(pax)}${unitPrice ? ` · ${e(usd(unitPrice))} por persona` : ''}</p>
+          <p class="flight-evidence${stale ? ' flight-evidence--old' : ''}"><i class="ph ph-${stale ? 'clock-counter-clockwise' : partial ? 'magnifying-glass' : 'check-circle'}" aria-hidden="true"></i>${e(sourceName)} · ${stale ? 'Precio anterior' : partial ? 'Regreso por confirmar' : 'Ida y vuelta observada'}</p>
+          ${aboveBudget ? `<p class="flight-budget-gap">${e(usd(Number(deal.precio_total_usd) - Number(alert.presupuesto_max)))} por encima de tu máximo</p>` : ''}
           <div class="ticket-route" aria-label="${e(origin)} a ${e(destination)}">
             <span>${e(origin)}</span><span class="ticket-route-track"><i class="ph ph-airplane-tilt" aria-hidden="true"></i></span><span>${e(destination)}</span>
           </div>
@@ -276,13 +288,15 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
           <div><dt>Ida</dt><dd>${e(deal.ida_origen_destino || `${origin}-${destination}`)}<br><small>${e(flightDate(deal.ida_fecha, true))}</small></dd></div>
           <div><dt>Vuelta</dt><dd>${e(deal.vuelta_origen_destino || `${destination}-${origin}`)}<br><small>${e(flightDate(deal.vuelta_fecha, true))}</small></dd></div>
         </dl>
-        <a class="flight-book" href="${e(bookingUrl)}" target="_blank" rel="noopener noreferrer">Ver en ${provider}<i class="ph ph-arrow-up-right" aria-hidden="true"></i><span class="sr-only"> (abre otra pestaña)</span></a>
+        <a class="flight-book" href="${e(bookingUrl)}" target="_blank" rel="noopener noreferrer">${provider === 'Despegar' ? 'Revisar precio en Despegar' : 'Revisar búsqueda en Google Flights'}<i class="ph ph-arrow-up-right" aria-hidden="true"></i><span class="sr-only"> (abre otra pestaña)</span></a>
+        ${deal.fuente === 'despegar' && provider !== 'Despegar' ? '<p class="flight-freshness">Precio observado en Despegar. Como no hay un enlace de reserva validado, abrimos una búsqueda con la misma ruta, fechas y pasajeros; puede mostrar otros precios.</p>' : ''}
+        <p class="flight-freshness">${stale ? 'Esta cotización tiene más de 24 horas o no tiene fecha verificable. ' : ''}Confirmá disponibilidad, equipaje y total final en el proveedor antes de comprar.</p>
         ${googleSearch ? `<p class="flight-freshness">${unverifiedGoogle ? 'Cotización anterior pendiente de verificación.' : `Al abrir, elegí <strong>Los más bajos</strong> y buscá ${e(deal.aerolinea)}. El enlace abre la búsqueda para ${e(pax)}; el precio final depende del regreso que elijas.`}</p>` : ''}
         ${deal.detalle_cotizacion?.paymentCondition ? `<p class="flight-freshness"><strong>${e(deal.detalle_cotizacion.paymentCondition)}</strong></p>` : ''}
         ${deal.tracking_status ? `<p class="flight-freshness"><strong>${e(deal.tracking_status)}</strong><br>Guardaste a ${e(usd(deal.saved_price_usd))}.${deal.tracking_observed ? ' Se sigue la combinación y aerolínea; horarios y condiciones pueden variar.' : ''}</p>` : ''}
         <details class="flight-explanation">
           <summary>Sobre esta oferta</summary>
-          <p>${isSavedSnapshot ? `Cotización guardada por vos a ${e(usd(deal.saved_price_usd ?? deal.precio_total_usd))} para ${e(pax)}.` : (gold ? 'El radar la clasificó como Oportunidad de Oro.' : 'Oferta dentro de los filtros de tu radar.')} Total registrado: ${e(usd(deal.precio_total_usd))}.</p>
+          <p>${isSavedSnapshot ? `Cotización guardada por vos a ${e(usd(deal.saved_price_usd ?? deal.precio_total_usd))} para ${e(pax)}.` : (aboveBudget ? 'Coincide con tu viaje, pero supera tu presupuesto. No genera un aviso de oportunidad.' : gold && !partial && !stale ? 'El radar la clasificó como Oportunidad de Oro.' : 'Cotización observada para tu búsqueda.')} Total registrado: ${e(usd(deal.precio_total_usd))}.</p>
           <p>${e(stopText)} · ${e(pax)}${alert?.presupuesto_max ? `. El presupuesto de tu búsqueda es ${e(usd(alert.presupuesto_max))}.` : '.'}</p>
           ${savings > 0 ? `<p class="flight-positive"><i class="ph ph-trend-down"></i> <strong>Margen:</strong> ${e(usd(savings))} por debajo de tu presupuesto máximo.</p>` : ''}
           ${criticReason ? `<p><i class="ph ph-check-circle"></i> <strong>Por qué aparece:</strong> ${e(criticReason)}</p>` : ''}
@@ -290,7 +304,8 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
           ${deal.es_feriado_destino ? `<p style="color:#fbbf24;"><i class="ph ph-calendar-check"></i> <strong>Feriado en destino:</strong> La fecha en destino coincide con feriados locales.</p>` : ''}
           ${insight ? `
             <div style="margin-top: 0.5rem; padding: 0.6rem; background: rgba(255,255,255,0.04); border-radius: 8px; font-size: 0.85rem;">
-              <div style="font-weight: 600; margin-bottom: 0.25rem;"><i class="ph ph-chart-line"></i> Análisis de ruta (Data Scientist):</div>
+              <div style="font-weight: 600; margin-bottom: 0.25rem;"><i class="ph ph-chart-line"></i> Historial observado por Flight Hunter</div>
+              <p>No representa todo el mercado y puede incluir otras fechas o cantidades de pasajeros.</p>
               ${insight.precio_promedio_7d ? `<div>Promedio 7 días: <strong>${e(usd(insight.precio_promedio_7d))}</strong></div>` : ''}
               ${insight.minimo_historico ? `<div>Mínimo 30 días: <strong>${e(usd(insight.minimo_historico))}</strong> ${Number(deal.precio_total_usd) <= Number(insight.minimo_historico) ? '<span style="color:#4ade80;">(¡Mínimo del mes!)</span>' : ''}</div>` : ''}
               ${typeof insight.tendencia === 'number' && Math.abs(insight.tendencia) > 0.5 ? `<div>Tendencia: <strong>${insight.tendencia < 0 ? `En baja (${e(usd(Math.abs(insight.tendencia)))}/día)` : `En alza (+${e(usd(insight.tendencia))}/día)`}</strong></div>` : ''}

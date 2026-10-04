@@ -179,6 +179,8 @@ test('Monitoring SQL is repeatable and isolates users for reads, preferences and
     await db.query("insert into public.saved_deal_checks values ($1,$2,'google_flights',now(),'observed',$3)", ['a'.repeat(64), bookmark, { precio_total_usd: 1925 }]);
     await db.query("insert into public.radar_scan_status values ($1,'google_flights',now(),'ok',1,54)", [radar]);
     await db.exec('set role authenticated');
+    await assert.rejects(db.exec('select * from public.radar_email_deliveries'));
+    await assert.rejects(db.exec('delete from public.radar_email_deliveries'));
     await db.query("select set_config('request.jwt.claim.sub',$1,false)", [owner]);
     assert.equal((await db.query('select * from public.saved_deal_latest')).rows.length, 1);
     assert.equal((await db.query('select * from public.radar_scan_status')).rows.length, 1);
@@ -193,10 +195,13 @@ test('Monitoring SQL is repeatable and isolates users for reads, preferences and
       assert.equal((await db.query(`select * from public.${table}`)).rows.length, 0);
     }
     await db.exec('reset role; set role anon');
+    await assert.rejects(db.exec('select * from public.radar_email_deliveries'));
     for (const table of ['radar_preferences', 'saved_deal_checks', 'saved_deal_latest', 'radar_scan_status']) {
       await assert.rejects(db.query(`select * from public.${table}`));
     }
     await db.exec('reset role; set role service_role');
+    await db.query("insert into public.radar_email_deliveries(id,radar_id,deal_hash,kind,payload) values ($1,$2,'fixture','opportunity','{}')", ['c'.repeat(64), radar]);
+    assert.equal((await db.query('select * from public.radar_email_deliveries')).rows.length, 1);
     assert.equal((await db.query('select * from public.saved_deal_checks')).rows.length, 1);
   } finally { await db.close(); }
 });

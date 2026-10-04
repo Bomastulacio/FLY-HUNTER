@@ -65,4 +65,22 @@ drop policy if exists radar_scan_status_owner on public.radar_scan_status;
 create policy radar_scan_status_owner on public.radar_scan_status for select to authenticated
   using (exists (select 1 from public.search_alerts r where r.id = radar_id and r.user_id = (select auth.uid())));
 create index if not exists flight_deals_recent_idx on public.flight_deals(created_at desc);
+alter table public.search_alerts add column if not exists notificar_email boolean not null default true;
+alter table public.search_alerts add column if not exists precio_aviso_usd numeric(10,2) check (precio_aviso_usd > 0);
+
+-- Server-only receipts retain the exact request for idempotent Resend retries.
+create table if not exists public.radar_email_deliveries (
+  id text primary key check (id ~ '^[a-f0-9]{64}$'),
+  radar_id uuid not null references public.search_alerts(id) on delete cascade,
+  deal_hash text not null,
+  kind text not null check (kind in ('opportunity', 'review')),
+  payload jsonb not null check (jsonb_typeof(payload) = 'object'),
+  created_at timestamptz not null default now(),
+  sent_at timestamptz,
+  provider_id text
+);
+create index if not exists radar_email_deliveries_radar_idx on public.radar_email_deliveries(radar_id);
+alter table public.radar_email_deliveries enable row level security;
+revoke all on public.radar_email_deliveries from public, anon, authenticated;
+grant all on public.radar_email_deliveries to service_role;
 commit;

@@ -74,8 +74,9 @@ Los tests SQL incluyen otra cuenta, anónimo, service role y una segunda aplicac
   reemplazar un guardado durante una operación del usuario.
 - Una baja de al menos US$50 y 5% produce un toast dentro de la app. El navegador recuerda el
   último precio avisado por guardado para no repetirlo; no se avisa sobre datos de más de 24 h.
-- Los emails actuales de oro/anomalías mantienen el flujo Python existente. Esta fase NO agrega
-  push con la app cerrada ni un segundo emisor de mails; evitar duplicar notificaciones.
+- Los emails siguen saliendo únicamente desde el grafo Python. Se vinculan al radar y al email
+  verificado de su propietario; no usan el destinatario global `ALERT_EMAIL_TO`. Ver la actualización
+  del 02/10/2026 debajo. No se agrega push ni otro emisor de mails.
 - El principal se guarda por cuenta; una preferencia local previa válida se migra al iniciar sesión.
   No modifica cuota/prioridad operativa. Si el esquema no está disponible, se conserva su lectura local
   y un cambio que no se pudo sincronizar informa error.
@@ -94,6 +95,48 @@ Los tests SQL incluyen otra cuenta, anónimo, service role y una segunda aplicac
 
 Esta implementación no aplica automáticamente SQL a producción ni crea suscripciones externas.
 Las tablas son aditivas; no eliminan datos del feed ni cambian estados humanos de aprobación.
+
+### Vista diaria y avisos por radar — 02/10/2026
+
+- Portada con menor precio reciente, diferencia frente al máximo, último intento registrado,
+  próximo horario estimado y fila de países. El país más barato no oculta el resto; si Italia
+  supera el máximo, conserva su precio con la diferencia explícita. Sin datos no se inventa un precio.
+- Solo compiten observaciones de menos de 24 h con total y pasajeros verificados. Primero se
+  resuelve la observación más reciente, incluidas subas. Los precios anteriores quedan en Guardados;
+  el estado vacío distingue ausencia de observaciones recientes de inexistencia de vuelos.
+- La alternativa sin escalas aparece únicamente si ambas cotizaciones tienen evidencia de los
+  dos tramos, misma ruta/fechas/pasajeros/condición de pago y el adicional no supera el 25% ni el
+  máximo del radar. No se inventa una opción intermedia ni se llama «más rápido» a un vuelo sin
+  duración completa verificada. Este 25% es una regla de presentación, no consume cuota.
+- Las cards identifican fuente, antigüedad y regreso pendiente. Un enlace Despegar se publica
+  como reserva solo con `detalle_cotizacion.bookingUrlVerified = true`. Los adaptadores actuales
+  no lo afirman; el fallback se rotula como búsqueda en Google, sin atribuirle el precio Despegar.
+- Se retiró del feed la consulta de promedios globales por ruta: mezclaba pasajeros/fechas y no
+  permitía afirmar si la oferta era barata frente al mercado. Evita también una lectura de DB.
+- `notificar_email` permite pausar emails del radar y `precio_aviso_usd` agrega un umbral personal
+  para el total. Vacío conserva solo oportunidades excepcionales. Los avisos siempre exigen
+  evidencia reciente de ida y vuelta, pasajeros exactos, presupuesto y filtros duros. Un resultado
+  parcial Google puede verse como «desde», pero no dispara una oportunidad. Pendientes admisibles
+  se notifican como revisión, nunca como compra aprobada.
+- `radar_email_deliveries` es un registro privado, solo service role. Conserva la solicitud exacta
+  y una clave por radar/cotización/tipo. Un envío fallido no queda marcado como enviado; Resend
+  recibe una clave idempotente y el recibo se persiste inmediatamente después del éxito. El flag
+  global `notificado` se mantiene por compatibilidad, sin impedir que otro radar reciba su aviso.
+  Un recibo ambiguo de más de 23 h no se reenvía automáticamente (Resend retiene claves 24 h);
+  requiere revisar el envío en Resend antes de resolverlo. No se crea un cron de reintentos.
+
+Antes de publicar esta versión:
+
+1. Reaplicar **`schema_monitoring.sql`**: añade las dos preferencias de email y los recibos.
+   Es idempotente y se prueba con RLS real en PGlite. No se aplicó a la base remota desde esta sesión.
+2. En GitHub Actions, configurar la variable **`RESEND_FROM`** con el remitente de un dominio
+   verificado en Resend para entregar a otras cuentas. El fallback `onboarding@resend.dev` mantiene
+   las restricciones de prueba de Resend. `RESEND_API_KEY` sigue siendo secret. `APP_URL` permite
+   cambiar el destino del email; por defecto usa `https://fly-hunter-ochre.vercel.app`.
+3. Publicar después de aprobar el push. No ejecutar una búsqueda ni enviar un mail real como test.
+
+Verificación añadida: `python -B evals/test_radar_notifications.py` (offline, incorporado al workflow),
+selección diaria/alternativas y privacidad del registro de entrega en la suite TypeScript existente.
 
 Para aprobar/rechazar anomalías globales desde la web, la cuenta autenticada debe tener
 `app_metadata.flight_hunter_admin = true`, asignado por un administrador mediante Supabase Auth
