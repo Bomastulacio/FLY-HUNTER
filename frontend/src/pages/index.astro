@@ -28,9 +28,6 @@ if (!deals || deals.length === 0) {
   deals = fallback.data || [];
 }
 
-const { data: insightsData } = await supabase.from('route_insights').select('*');
-const routeInsights = insightsData || [];
-
 // Procesar datos para enviarlos completos al cliente
 const allDeals = latestQuotes(deals || []);
 const approvedDeals = allDeals.filter(feedCandidate);
@@ -119,6 +116,9 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
       <!-- CONTENEDOR DINÁMICO DEL RADAR (Dashboard Responsive) -->
       <div id="dynamic-dashboard" class="dashboard-layout" style="display: none;">
         
+
+        <section id="daily-brief" class="daily-brief" aria-label="Tu radar hoy"></section>
+        <div id="destination-strip" class="destination-strip" aria-label="Precios por destino"></div>
         <aside class="dashboard-sidebar" aria-label="Tu búsqueda">
           <details class="radar-overview">
             <summary>
@@ -143,7 +143,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         <div class="feed-toolbar">
           <div>
             <span class="feed-eyebrow">TU RADAR, DE UN VISTAZO</span>
-            <h1>Más cerca de despegar.</h1>
+            <h2>Vuelos para tu viaje.</h2>
           </div>
           <div class="feed-filters" role="group" aria-label="Mostrar vuelos">
             <button type="button" data-feed-filter="all" aria-pressed="true">Todos</button>
@@ -174,18 +174,19 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
     <div id="toast-container" class="toast-container" role="status" aria-live="polite" aria-atomic="false"></div>
 
     <!-- Pasar datos del servidor al cliente -->
-    <script is:inline define:vars={{ allDeals, approvedDeals, pendingDeals, routeInsights }}>
-      window.__SERVER_DATA__ = { allDeals, approvedDeals, pendingDeals, routeInsights };
+    <script is:inline define:vars={{ allDeals, approvedDeals, pendingDeals }}>
+      window.__SERVER_DATA__ = { allDeals, approvedDeals, pendingDeals };
     </script>
 
     <script>
       import { supabase } from '../lib/supabase';
       import { rememberGoogleAccount } from '../utils/rememberedAccount';
-      import { renderCompactFlight, escapeHtml, usd, matchesRadar, buildGoogleFlightsSearchUrl, cities, destinationCountry } from '../utils/compactFlights';
+      import { renderCompactFlight, escapeHtml, usd, buildGoogleFlightsSearchUrl } from '../utils/compactFlights';
       import { mountRadarPicker, preferredRadarId, loadRadarPreference } from '../utils/radarPicker';
       import { nextSearchAt } from '../utils/searchSchedule';
       import { monitoredSavedDeal, meaningfulDrop } from '../utils/monitoringView';
       import { latestQuotes, feedCandidate } from '../utils/latestQuotes';
+      import { dailyRadar } from '../utils/dailyRadar';
 
       const formatPrice = (deal: any) => {
         const price = deal.precio_original || deal.precio_total_usd;
@@ -237,42 +238,6 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         "Nueva Zelanda": ["AKL"],
       };
 
-      const countryIsoCodes: Record<string, string> = {
-        "España": "ES",
-        "Francia": "FR",
-        "Italia": "IT",
-        "Reino Unido": "GB",
-        "Alemania": "DE",
-        "Portugal": "PT",
-        "Países Bajos": "NL",
-        "Suiza": "CH",
-        "Grecia": "GR",
-        "París": "FR",
-        "Estados Unidos": "US",
-        "Canadá": "CA",
-        "México": "MX",
-        "Miami": "US",
-        "Nueva York": "US",
-        "Brasil": "BR",
-        "Chile": "CL",
-        "Colombia": "CO",
-        "Perú": "PE",
-        "Uruguay": "UY",
-        "Río de Janeiro": "BR",
-        "República Dominicana": "DO",
-        "Cancún": "MX",
-        "Cuba": "CU",
-        "Costa Rica": "CR",
-        "Puerto Rico": "PR",
-        "Japón": "JP",
-        "Tokio": "JP",
-        "Tailandia": "TH",
-        "Corea del Sur": "KR",
-        "Emiratos Árabes": "AE",
-        "Australia": "AU",
-        "Nueva Zelanda": "NZ"
-      };
-
       // @ts-ignore
       let allDeals = window.__SERVER_DATA__.approvedDeals || [];
       let cdInterval: any;
@@ -287,7 +252,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         
         const mainHero = document.getElementById('main-hero');
         if (mainHero) {
-          mainHero.style.display = '';
+          mainHero.style.display = 'none';
           const title = mainHero.querySelector('h1');
           const subtitle = mainHero.querySelector('#hero-subtitle');
           if (title) title.textContent = alert.nombre || alert.destino || 'Tu radar';
@@ -384,8 +349,6 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         const cdDest = document.getElementById('cd-target-dest');
         if (cdDest) cdDest.innerText = alert.destino;
 
-        // Filtramos TODOS los vuelos para que solo queden los que cumplen con el presupuesto y escalas
-        const affordableDeals = allDeals.filter((d: any) => matchesRadar(d, alert));
         
         // Helper para renderizar la sección completa de Anomalías Pendientes
         const renderAnomaliesHTML = (currentAlert: any) => {
@@ -491,10 +454,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         html += renderAnomaliesHTML(alert);
 
         const renderFlightCard = (deal: any, currentAlert: any, isMain = false, countryName = '') => {
-          // @ts-ignore
-          const insights = window.__SERVER_DATA__?.routeInsights || [];
-          const matchingInsight = insights.find((r: any) => r.ruta === deal.ida_origen_destino);
-          return renderCompactFlight(deal, currentAlert, isMain, countryName, savedFlights.has(String(deal.id)), matchingInsight);
+          return renderCompactFlight(deal, currentAlert, isMain, countryName, savedFlights.has(String(deal.id)));
         };
 
         // Destinos de la zona del radar actual
@@ -504,11 +464,12 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
           "Latinoamérica": ["Brasil", "Chile", "Colombia", "Perú", "Uruguay"],
           "Caribe": ["República Dominicana", "México", "Cuba", "Costa Rica", "Puerto Rico"],
           "Asia": ["Japón", "Tailandia", "Corea del Sur", "Emiratos Árabes"],
-          "Oceanía": ["Australia", "Nueva Zelanda"]
+          "Oceanía": ["Australia", "Nueva Zelanda"],
+          "Cualquiera": ["España", "Estados Unidos", "Japón", "México"]
         };
 
         const targetZone = alert.destino || "Europa";
-        const zoneFallback = zoneCountriesMap[targetZone] || zoneCountriesMap["Europa"];
+        const zoneFallback = zoneCountriesMap[targetZone] || [targetZone];
 
         // Priorizamos los países que el usuario eligió explícitamente o los de su zona
         const hasExplicitCountries = Boolean(alert.paises && alert.paises.length > 0 && !alert.paises.includes('Cualquiera'));
@@ -518,131 +479,32 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
             
         let countriesToRender = [...explicitCountries];
 
-        // Vuelos que pertenecen específicamente a este radar
-        const radarMatchingDeals = affordableDeals.filter((d: any) =>
-          /^[A-Z]{3}$/.test(targetZone) ? d.ida_origen_destino.split('-')[1] === targetZone :
-          countriesToRender.some((c: string) => countryCodes[c]?.includes(d.ida_origen_destino.split('-')[1]))
-        );
-
-        const getDestinationKey = (d) => {
-          const destCode = (d?.ida_origen_destino || '').split('-')[1]?.trim().toUpperCase() || '';
-          const city = (cities[destCode] || destCode || '').toLowerCase();
-          return { destCode, city };
+        const daily = dailyRadar(allDeals, alert, countriesToRender, countryCodes);
+        const mainDeal = daily.best || daily.above;
+        const countryFor = (deal: any) => countriesToRender.find(c => countryCodes[c]?.includes(String(deal.ida_origen_destino).split('-')[1])) || '';
+        const brief = document.getElementById('daily-brief');
+        if (brief) {
+          const gap = mainDeal ? Number(alert.presupuesto_max) - Number(mainDeal.precio_total_usd) : 0;
+          brief.innerHTML = `<div><span class="feed-eyebrow">TU VIAJE HOY</span><h2>${daily.best ? 'Una opción más cerca.' : daily.above ? 'Todavía por encima de tu máximo.' : 'Tu radar sigue en marcha.'}</h2>
+            <p>${mainDeal ? `<strong>${usd(mainDeal.precio_total_usd)}</strong> · ${gap >= 0 ? `${usd(gap)} por debajo` : `${usd(-gap)} por encima`} de tu máximo para ${Number(alert.pasajeros)} adulto${Number(alert.pasajeros) === 1 ? '' : 's'}.` : daily.previous ? 'Hay precios anteriores, pero ninguna cotización de las últimas 24 horas para tu viaje.' : 'Todavía no hay una cotización reciente que coincida con tu viaje.'}</p>
+            <small>${mainDeal?.detalle_cotizacion?.itineraryScope === 'search_result' ? 'Precio desde la búsqueda; falta confirmar el regreso.' : 'Las tarifas pueden cambiar entre consultas.'}</small></div>
+            <div class="daily-scan"><i class="ph ph-broadcast" aria-hidden="true"></i><span id="daily-scan-summary">Leyendo la última búsqueda…</span><small id="daily-scan-time"></small><button type="button" data-open-coverage>Ver cobertura <i class="ph ph-arrow-down" aria-hidden="true"></i></button></div>`;
+        }
+        const strip = document.getElementById('destination-strip');
+        if (strip) strip.innerHTML = daily.rows.map(({ country, quote, aboveBudget }) => `<${quote ? 'button type="button"' : 'a'} class="destination-price${aboveBudget ? ' destination-price--over' : ''}" ${quote ? `data-open-flight="${escapeHtml(quote.id)}"` : `href="/alertas?radar=${encodeURIComponent(alert.id)}"`}>
+          <span>${escapeHtml(country)}</span><strong>${quote ? usd(quote.precio_total_usd) : 'Sin precio reciente'}</strong><small>${quote ? aboveBudget ? `+${usd(Number(quote.precio_total_usd) - Number(alert.presupuesto_max))} sobre tu máximo` : 'Ver cotización' : 'Cobertura por turnos'}</small></${quote ? 'button' : 'a'}>`).join('');
+        const shown = new Set<string>();
+        const addCard = (deal: any, featured = false, label = '') => {
+          if (!deal || shown.has(String(deal.id))) return;
+          shown.add(String(deal.id));
+          html += renderFlightCard(label ? { ...deal, display_label: label } : deal, alert, featured, countryFor(deal));
         };
-
-        const getCountryForDeal = (d) => {
-          const destCode = (d?.ida_origen_destino || '').split('-')[1]?.trim().toUpperCase() || '';
-          for (const [cName, codes] of Object.entries(countryCodes)) {
-            if (codes.includes(destCode)) return cName;
-          }
-          return destinationCountry[destCode] || '';
-        };
-
-        const shownDestCodes = new Set();
-        const shownCities = new Set();
-        const shownCountries = new Set();
-
-        // 1. Tarjeta Principal (Mejor vuelo del radar activo)
-        const mainDeal = radarMatchingDeals.length > 0 ? radarMatchingDeals[0] : null;
-        let mainDealCountry = '';
-        if (mainDeal) {
-          const { destCode, city } = getDestinationKey(mainDeal);
-          if (destCode) shownDestCodes.add(destCode);
-          if (city) shownCities.add(city);
-
-          mainDealCountry = getCountryForDeal(mainDeal);
-          if (mainDealCountry) shownCountries.add(mainDealCountry.toLowerCase());
-
-          html += renderFlightCard(mainDeal, alert, true, mainDealCountry);
-        } else {
-          html += `
-            <div class="card main-deal" style="text-align: left; padding: 1.25rem;">
-              <p style="color: var(--text-secondary); margin: 0; font-size: 1rem;">Todavía no hay cotizaciones recientes para ${Number(alert.pasajeros)} personas dentro de tus fechas y presupuesto de ${usd(alert.presupuesto_max)}.</p>
-            </div>
-          `;
-        }
-
-        // Otros destinos: separar los que tienen oferta de los que siguen buscando
-        let countriesWithDeals = [];
-        let countriesSearching = [];
-        const isMultiCountryRadar = countriesToRender.length > 1;
-
-        countriesToRender.forEach((country) => {
-          // Si el país ya fue cubierto (ej. en la tarjeta principal), no duplicar tarjetas para el mismo país
-          if (shownCountries.has(country.toLowerCase())) {
-            return;
-          }
-
-          let destDeal = null;
-          if (countryCodes[country]) {
-            // Buscamos la mejor cotización que no repita un aeropuerto o ciudad ya mostrada
-            destDeal = affordableDeals.find((d) => {
-              const { destCode, city } = getDestinationKey(d);
-              if (shownDestCodes.has(destCode) || shownCities.has(city)) return false;
-              return countryCodes[country].some(code => d.ida_origen_destino.includes(code));
-            });
-          }
-
-          if (destDeal) {
-            const { destCode, city } = getDestinationKey(destDeal);
-            if (destCode) shownDestCodes.add(destCode);
-            if (city) shownCities.add(city);
-            shownCountries.add(country.toLowerCase());
-            countriesWithDeals.push({ country, deal: destDeal });
-          } else if (hasExplicitCountries) {
-            countriesSearching.push({ country });
-          }
-        });
-
-        countriesWithDeals.sort((a, b) => a.deal.precio_total_usd - b.deal.precio_total_usd);
-
-        // Países con ofertas encontradas (renderizados con el nuevo layout completo)
-        if (countriesWithDeals.length > 0) {
-          countriesWithDeals.forEach(({ country, deal }) => {
-            html += renderFlightCard(deal, alert, false, country);
-          });
-        }
-
-        // Solo agregar ofertas adicionales si pertenecen a OTROS destinos o ciudades no mostradas
-        const visibleQuotes = [mainDeal, ...countriesWithDeals.map(item => item.deal)].filter(Boolean);
-        const itineraryKey = (d) => [d.ida_origen_destino, d.ida_fecha, d.vuelta_fecha, d.pasajeros, d.aerolinea, d.cantidad_escalas].join('|');
-        const shownItineraries = new Set(visibleQuotes.map(itineraryKey));
-
-        const extraQuotes = radarMatchingDeals.filter((d) => {
-          const { destCode, city } = getDestinationKey(d);
-          if (!destCode || !city) return false;
-
-          // NUNCA mostrar dos vuelos al mismo lugar o a la misma ciudad
-          if (shownDestCodes.has(destCode) || shownCities.has(city)) return false;
-
-          // Si el radar es multi-país, nunca mostrar dos tarjetas del mismo país en el feed general
-          const cName = getCountryForDeal(d);
-          if (isMultiCountryRadar && cName && shownCountries.has(cName.toLowerCase())) return false;
-
-          const key = itineraryKey(d);
-          if (shownItineraries.has(key)) return false;
-          shownItineraries.add(key);
-
-          shownDestCodes.add(destCode);
-          shownCities.add(city);
-          if (cName) shownCountries.add(cName.toLowerCase());
-          return true;
-        });
-
-        const availableSlots = Math.max(0, 8 - visibleQuotes.length);
-        const extras = extraQuotes.slice(0, availableSlots);
-        const arQuote = extraQuotes.find((d) => /aerol[ií]neas argentinas/i.test(d.aerolinea || ''));
-        if (arQuote && availableSlots && !extras.includes(arQuote)) extras.splice(availableSlots - 1, 1, arQuote);
-        for (const deal of extras) html += renderFlightCard(deal, alert);
-
-        if (countriesSearching.length > 0) {
-          html += countriesSearching.map(({ country }) => `<article class="destination-waiting">
-            <span class="waiting-icon" aria-label="Bandera de ${escapeHtml(country)}">${countryIsoCodes[country] ? `<img class="waiting-flag" src="https://flagcdn.com/w80/${countryIsoCodes[country].toLowerCase()}.png" srcset="https://flagcdn.com/w160/${countryIsoCodes[country].toLowerCase()}.png 2x" alt="" width="26" height="18" loading="lazy" decoding="async" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='inline-flex';" /><i class="ph ph-globe-hemisphere-west" style="display:none;" aria-hidden="true"></i>` : `<i class="ph ph-globe-hemisphere-west" aria-hidden="true"></i>`}</span>
-            <div><h2>${escapeHtml(country)}</h2><p>Sin cotizaciones recientes en tus filtros</p></div>
-            <a href="/alertas?radar=${encodeURIComponent(alert.id)}" aria-label="Ajustar búsqueda para ${escapeHtml(country)}"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i></a>
-            <span class="waiting-next"><i class="ph ph-clock" aria-hidden="true"></i> Se revisa por turnos, según cobertura</span>
-          </article>`).join('');
-        }
+        addCard(mainDeal, true, daily.best ? '' : 'Menor precio fuera de tu máximo');
+        if (daily.alternative) addCard(daily.alternative, false, `Sin escalas · +${usd(Number(daily.alternative.precio_total_usd) - Number(daily.best.precio_total_usd))}`);
+        for (const { quote } of daily.rows) addCard(quote);
+        // A single-airport radar still offers distinct, real options after its winner.
+        if (/^[A-Z]{3}$/.test(alert.destino)) for (const deal of daily.affordable.slice(0, 4)) addCard(deal);
+        if (!mainDeal) html += `<div class="feed-empty daily-empty"><i class="ph ph-binoculars" aria-hidden="true"></i><h2>Esperando una buena señal.</h2><p>Se revisan combinaciones de tus fechas y destinos por turnos. Una búsqueda parcial no significa que no existan vuelos.</p><a href="/alertas?radar=${encodeURIComponent(alert.id)}">Revisar mi búsqueda <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a></div>`;
         grid.innerHTML = html;
         applySavedFilter();
         renderSourceStatus(alert.id);
@@ -829,11 +691,23 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         const content = document.getElementById('source-status-content');
         if (!container || !content) return;
         const rows = sourceStatuses.filter(row => row.radar_id === radarId);
+        const summary = document.getElementById('daily-scan-summary');
         container.hidden = false;
         if (!sourceStatusesLoaded || sourceStatusesFailed) {
+          if (summary) summary.textContent = sourceStatusesFailed ? 'No pudimos actualizar el estado de búsqueda.' : 'Leyendo la última búsqueda…';
           content.textContent = sourceStatusesFailed ? 'No pudimos leer el estado de las fuentes. No podemos confirmar si el radar ya buscó.' : 'Consultando el estado de las fuentes…';
           return;
         }
+        const currentRows = rows.filter(row => Date.now() - Date.parse(row.checked_at) < 86400000);
+        const lastAttempt = rows.filter(row => row.outcome !== 'deferred' && Number.isFinite(Date.parse(row.checked_at)))
+          .sort((a, b) => Date.parse(b.checked_at) - Date.parse(a.checked_at))[0];
+        const time = document.getElementById('daily-scan-time');
+        if (time) time.textContent = lastAttempt ? `Último intento: ${new Intl.DateTimeFormat('es-AR', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}).format(new Date(lastAttempt.checked_at))}` : 'Todavía no hay un intento registrado.';
+        const hasCoverage = currentRows.some(row => Number(row.checked_combinations) > 0);
+        const hasIssue = currentRows.some(row => ['blocked', 'error'].includes(row.outcome));
+        if (summary) summary.textContent = hasIssue ? 'Una fuente está en pausa. La cobertura es parcial.'
+          : hasCoverage ? 'Cobertura parcial: seguimos recorriendo tus fechas.'
+          : 'Sin combinaciones verificadas en el estado reciente.';
         const labels: Record<string, string> = { ok: 'Consultada', empty: 'Sin resultados en la combinación consultada',
           unverified: 'No se pudo verificar', blocked: 'En pausa por bloqueo', error: 'Error de consulta', deferred: 'Pendiente por cuota o turno' };
         content.innerHTML = ['google_flights', 'despegar'].map(provider => {
@@ -843,8 +717,10 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
           const when = new Date(row.checked_at);
           const old = Date.now() - when.getTime() >= 86400000;
           const date = Number.isFinite(when.getTime()) ? new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(when) : 'Sin fecha';
-          return `<p><strong>${row.provider === 'despegar' ? 'Despegar' : 'Google Flights'}</strong> · ${escapeHtml(labels[row.outcome] || 'Pendiente')} · ${escapeHtml(date)}<br>${old ? 'Estado sin actualizar.' : `${Number(row.checked_combinations)} de ${Number(row.total_combinations)} combinaciones verificadas en las 24 h anteriores a esa consulta.`}</p>`;
-        }).join('');
+          const checked = Math.max(0, Number(row.checked_combinations) || 0);
+          const total = Math.max(1, Number(row.total_combinations) || 1);
+          return `<div class="source-coverage"><p><strong>${name}</strong> · ${escapeHtml(labels[row.outcome] || 'Pendiente')}<br><small>Estado registrado: ${escapeHtml(date)}</small></p>${old ? '<p>Estado sin actualizar.</p>' : `<progress value="${Math.min(checked, total)}" max="${total}" aria-label="Cobertura de ${name}"></progress><p>${checked} de ${total} combinaciones verificadas en las 24 h anteriores a ese estado.</p>`}</div>`;
+        }).join('') + '<p>Las consultas rotan entre radares, destinos y fechas dentro del límite disponible. Abrir la app o editar el radar no adelanta una búsqueda. El horario próximo es estimado.</p>';
       };
 
       // Refresh database snapshots only. Opening/focusing the app never starts a provider search.
@@ -860,16 +736,11 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
           if (!flights.error && (!flights.data || flights.data.length === 0)) {
             flights = await supabase.from('flight_deals').select('*').gte('created_at', new Date(Date.now() - 7 * 86400000).toISOString()).order('created_at', { ascending: false }).limit(500);
           }
-          const [bookmarks, checks, statuses, freshInsights] = await Promise.all([
+          const [bookmarks, checks, statuses] = await Promise.all([
             supabase.from('saved_deals').select('*').eq('user_id', userId).order('guardado_el', { ascending: false }),
             supabase.from('saved_deal_latest').select('*'),
             supabase.from('radar_scan_status').select('*'),
-            supabase.from('route_insights').select('*'),
           ]);
-          if (!freshInsights.error && freshInsights.data) {
-            // @ts-ignore
-            window.__SERVER_DATA__.routeInsights = freshInsights.data;
-          }
           if (radarPreferenceUserId !== userId || revision !== bookmarkRevision || document.querySelector('[data-save-id][disabled]')) return;
           if (!flights.error && flights.data) {
             const latest = latestQuotes(flights.data);
@@ -912,7 +783,12 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
               break; // One unobtrusive notice per refresh; the rest remain in the saved view.
             } catch { /* No repeating notification if its acknowledgement cannot be stored. */ }
           }
-        } catch { /* Preserve the last readable snapshot on network failure. */ }
+        } catch {
+          sourceStatusesLoaded = true;
+          sourceStatusesFailed = true;
+          // Keep the readable quotes, but never leave an endless "loading" status.
+          if (window.currentActiveAlert) renderSourceStatus(window.currentActiveAlert.id);
+        }
         finally { refreshInFlight = false; }
       };
       const refreshTimer = window.setInterval(() => { void refreshLiveData(); }, 120000);
@@ -985,12 +861,31 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
           empty.textContent = 'No tenés vuelos guardados. Tocá el marcador de una oferta para tenerla a mano siempre.';
           grid.append(empty);
         }
+        for (const id of ['daily-brief', 'destination-strip']) {
+          const el = document.getElementById(id);
+          if (el) el.hidden = feedFilter === 'saved';
+        }
         const note = document.getElementById('saved-note');
         if (note) note.hidden = feedFilter !== 'saved';
         document.querySelectorAll<HTMLButtonElement>('[data-feed-filter]').forEach(btn => {
           btn.setAttribute('aria-pressed', String(btn.dataset.feedFilter === feedFilter));
         });
       };
+
+      document.getElementById('daily-brief')?.addEventListener('click', event => {
+        if (!(event.target as Element).closest('[data-open-coverage]')) return;
+        const details = document.getElementById('source-status') as HTMLDetailsElement;
+        details.open = true;
+        details.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        details.querySelector('summary')?.focus({ preventScroll: true });
+      });
+      document.getElementById('destination-strip')?.addEventListener('click', event => {
+        const button = (event.target as Element).closest<HTMLElement>('[data-open-flight]');
+        if (!button) return;
+        const card = document.querySelector<HTMLElement>(`[data-flight-id="${CSS.escape(button.dataset.openFlight || '')}"]`);
+        card?.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+        card?.querySelector<HTMLElement>('.flight-summary')?.focus({ preventScroll: true });
+      });
 
       document.querySelectorAll<HTMLButtonElement>('[data-feed-filter]').forEach(btn => {
         btn.addEventListener('click', () => { feedFilter = btn.dataset.feedFilter || 'all'; applySavedFilter(); });

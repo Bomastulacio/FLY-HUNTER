@@ -86,6 +86,7 @@ jobs:
         run: |
           python -B evals/test_critic_decisions.py
           python -B evals/test_search_orchestration.py
+          python -B evals/test_radar_notifications.py
 
       - name: Run LangGraph pipeline
         run: |
@@ -95,7 +96,8 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+          RESEND_FROM: ${{ vars.RESEND_FROM || 'Flight Hunter <onboarding@resend.dev>' }}
+          APP_URL: ${{ vars.APP_URL || 'https://fly-hunter-ochre.vercel.app' }}
           SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL || secrets.GEMINI_MODEL }}

@@ -7,8 +7,8 @@ from .agents.sanitizer import sanitize_flights
 from .agents.analyst import consolidate_and_analyze
 from .agents.critic import evaluate_with_llm_critic, filter_and_evaluate
 from .agents.data_scientist import data_scientist_analysis
-from .services.db import upsert_deals, FlightDeal, mark_as_notified
-from .services.notifications import notify_golden_opportunity, notify_anomaly, notify_glitch_fare
+from .services.db import upsert_deals, FlightDeal
+from .services.notifications import notify_radar_deals
 
 class GraphState(TypedDict, total=False):
     mission: Dict[str, Any]
@@ -197,17 +197,7 @@ def persistence_and_notify_node(state: GraphState) -> GraphState:
     # Upsert a Supabase
     stored_deals = upsert_deals(db_deals)
     
-    # Notificaciones automáticas
-    for d in stored_deals:
-        if d.get("es_tarifa_error") and not d.get("notificado"):
-            notify_glitch_fare(d)
-            mark_as_notified(d['hash_dedupe'])
-        elif d.get("es_oportunidad_oro") and not d.get("notificado"):
-            notify_golden_opportunity(d)
-            mark_as_notified(d['hash_dedupe'])
-        elif d.get("es_anomalia") and d.get("estado_aprobacion") == "pendiente" and not d.get("notificado"):
-            notify_anomaly(d)
-            mark_as_notified(d['hash_dedupe'])
+    notify_radar_deals(stored_deals, state.get('current_alert') or {})
             
     all_deals = state.get("all_evaluated_deals", [])
     all_deals.extend(deals)

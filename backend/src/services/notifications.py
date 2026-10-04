@@ -1,112 +1,146 @@
-import os
+"""Radar-scoped emails from the existing graph, with durable delivery receipts."""
+import hashlib
 import html
-import urllib.parse
-import resend
+import math
+import os
+from datetime import datetime, timezone, timedelta
+from urllib.parse import urlencode, urlparse
 
-resend.api_key = os.environ.get("RESEND_API_KEY", "")
-alert_email_to = os.environ.get("ALERT_EMAIL_TO", "")
+import requests
 
-def _safe_booking_url(url_str: str) -> str:
-    """Valida que la URL de reserva sea HTTPS y pertenezca a dominios de confianza."""
+from .db import get_supabase_client, mark_as_notified
+
+
+def _observed_at(deal):
+    value = (deal.get('detalle_cotizacion') or {}).get('observedAt') or deal.get('created_at')
     try:
-        parsed = urllib.parse.urlparse(str(url_str).strip())
-        if parsed.scheme == 'https':
-            allowed_hosts = ('google.com', 'despegar.com.ar', 'despegar.com')
-            host = parsed.netloc.lower()
-            if any(host == d or host.endswith('.' + d) for d in allowed_hosts):
-                return html.escape(url_str, quote=True)
-    except Exception:
-        pass
-    return "https://www.google.com/travel/flights"
+        parsed = datetime.fromisoformat(str(value).replace('Z', '+00:00'))
+        return parsed.astimezone(timezone.utc) if parsed.tzinfo else None
+    except (ValueError, TypeError):
+        return None
 
-def send_email(subject: str, html_content: str) -> None:
-    if not resend.api_key or not alert_email_to:
-        print("Warning: Resend credentials not found. Email not sent.")
-        print(f"[Email Preview] Subject: {subject}\nContent: {html_content}")
+
+def notification_kind(deal: dict, radar: dict, now=None):
+    """A low price never bypasses evidence, route, passenger or airline constraints."""
+    from ..agents.critic import _hard_eligible, _date_distance
+    from ..agents.strategist import GEO_MAP
+    now = now or datetime.now(timezone.utc)
+    if not radar.get('id') or not radar.get('user_id') or not radar.get('activo', True) or radar.get('notificar_email') is False:
+        return None
+    evidence = deal.get('detalle_cotizacion') or {}
+    observed = _observed_at(deal)
+    if not observed or not timedelta(0) <= now - observed < timedelta(hours=24):
+        return None
+    if evidence.get('priceBasis') != 'party_total' or evidence.get('passengersVerified') is not True or evidence.get('itineraryScope') != 'roundtrip':
+        return None
+    stops = evidence.get('stopsPerDirection')
+    try:
+        limit = min(1, int(radar.get('escalas_max') if radar.get('escalas_max') is not None else 1))
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(stops, list) or len(stops) != 2 or any(type(s) is not int or not 0 <= s <= limit for s in stops):
+        return None
+    if deal.get('fuente') not in ('google_flights', 'despegar', 'serpapi') or not _hard_eligible(deal, [radar]):
+        return None
+    if deal.get('fuente') == 'google_flights' and not (evidence.get('priceVerified') and evidence.get('queryVerified') and evidence.get('googleParserVersion') == 2):
+        return None
+    try:
+        origin, destination = deal['ida_origen_destino'].split('-')
+        origins = radar.get('origen', '').replace('/', ',').replace(' ', '').split(',')
+        targets = radar.get('paises') or [radar.get('destino', '')]
+        if 'Cualquiera' in targets:
+            targets = [radar.get('destino', 'Cualquiera')]
+        airports = [a for target in targets for a in GEO_MAP.get(target, [target])]
+        total = float(deal['precio_total_usd'])
+        ceiling = float(radar['presupuesto_max'])
+        if not math.isfinite(ceiling) or ceiling <= 0 or origin not in origins or destination not in airports or deal.get('vuelta_origen_destino') != f'{destination}-{origin}' or total > ceiling:
+            return None
+        status = deal.get('estado_aprobacion')
+        distance = _date_distance(deal, radar)
+        if status == 'pendiente' and deal.get('es_anomalia') and distance <= 1:
+            return 'review'
+        if status != 'aprobado' or distance != 0:
+            return None
+        target = float(radar.get('precio_aviso_usd') or 0)
+        golden = total < 750 * int(radar['pasajeros'])
+        low = float(radar.get('presupuesto_min') or 0)
+        if golden or (math.isfinite(target) and low <= total <= min(target, ceiling) and target > 0):
+            return 'opportunity'
+    except (ValueError, TypeError, KeyError):
+        return None
+    return None
+
+
+def _recipient(client, radar):
+    # Radar fields are editable; deliver only to the owner's verified Auth email.
+    user = client.auth.admin.get_user_by_id(radar['user_id']).user
+    if not user or not user.email or not user.email_confirmed_at:
+        return None
+    return user.email
+
+
+def _payload(deal, radar, recipient, kind):
+    e = html.escape
+    amount = 'US$' + format(float(deal['precio_total_usd']), ',.0f').replace(',', '.')
+    name = str(radar.get('nombre') or radar.get('destino') or 'Tu radar')
+    title = 'Una oportunidad para tu viaje' if kind == 'opportunity' else 'Una cotización necesita revisión'
+    app_url = os.environ.get('APP_URL', '').rstrip('/')
+    valid_app = urlparse(app_url)
+    if valid_app.scheme == 'https' and valid_app.netloc and not valid_app.username:
+        link = app_url + '/?' + urlencode({'radar': radar['id']})
+        cta = 'Abrir mi radar'
+    else:
+        origin, destination = deal['ida_origen_destino'].split('-')
+        query = f"Flights to {destination} from {origin} on {deal['ida_fecha']} through {deal['vuelta_fecha']} for {deal['pasajeros']} adults"
+        link = 'https://www.google.com/travel/flights?' + urlencode({'q': query, 'curr': 'USD', 'hl': 'es'})
+        cta = 'Revisar búsqueda en Google Flights'
+    body = f"""<div style="background:#131b16;color:#eef3e8;padding:32px;font-family:Arial,sans-serif;max-width:560px">
+      <p style="color:#c9ef91">FLIGHT HUNTER · {e(name)}</p><h1>{title}</h1>
+      <p style="font-size:32px">{amount}</p><p>Total para {int(deal['pasajeros'])} adultos · ida y vuelta</p>
+      <p>{e(deal['ida_origen_destino'])} · {e(deal['aerolinea'])}<br>{e(deal['ida_fecha'])} al {e(deal['vuelta_fecha'])}</p>
+      <p>{'Coincide con tu viaje y cumple el precio de aviso o el umbral excepcional.' if kind == 'opportunity' else 'Presenta un desvío permitido y queda pendiente de revisión; todavía no es una oferta aprobada.'}</p>
+      <p><a style="color:#d2ef9b" href="{e(link, quote=True)}">{cta}</a></p>
+      <p style="color:#b0bbaa;font-size:13px">Precio observado, sujeto a disponibilidad. Confirmá el total y las condiciones en el proveedor antes de comprar.</p></div>"""
+    return {'from': os.environ.get('RESEND_FROM', 'Flight Hunter <onboarding@resend.dev>'),
+            'to': [recipient], 'subject': f'{name}: {amount} · {title}', 'html': body}
+
+
+def send_email(payload: dict, key: str):
+    api_key = os.environ.get('RESEND_API_KEY')
+    if not api_key:
+        return None
+    response = requests.post('https://api.resend.com/emails', json=payload,
+        headers={'Authorization': f'Bearer {api_key}', 'Idempotency-Key': key}, timeout=20)
+    response.raise_for_status()
+    return response.json().get('id')
+
+
+def notify_radar_deals(deals: list, radar: dict) -> None:
+    candidates = [(d, notification_kind(d, radar)) for d in deals]
+    candidates = [(d, kind) for d, kind in candidates if kind]
+    if not candidates or not os.environ.get('RESEND_API_KEY'):
         return
-    
-    try:
-        r = resend.Emails.send({
-            "from": "Flight Hunter <onboarding@resend.dev>",
-            "to": alert_email_to,
-            "subject": subject,
-            "html": html_content
-        })
-        print(f"Email sent successfully: {r}")
-    except Exception as e:
-        print(f"Error sending email: {e}")
-
-def notify_golden_opportunity(deal: dict) -> None:
-    precio_orig = deal.get('precio_original', deal.get('precio_total_usd', 0))
-    moneda_orig = html.escape(str(deal.get('moneda_original', 'USD')))
-    precio_usd = deal.get('precio_total_usd', 0)
-    
-    ruta_ida = html.escape(str(deal.get('ida_origen_destino', '')))
-    ruta_vuelta = html.escape(str(deal.get('vuelta_origen_destino', '')))
-    aerolinea = html.escape(str(deal.get('aerolinea', '')))
-    fecha_ida = html.escape(str(deal.get('ida_fecha', '')))
-    fecha_vuelta = html.escape(str(deal.get('vuelta_fecha', '')))
-    safe_link = _safe_booking_url(deal.get('link_reserva', ''))
-    
-    subject = f"🌟 OPORTUNIDAD DE ORO: {ruta_ida} a {precio_orig} {moneda_orig}"
-    html_content = f"""
-    <h2>¡Oportunidad de Oro Encontrada!</h2>
-    <p>Se encontró una oferta increíble que cumple los criterios críticos.</p>
-    <ul>
-        <li><strong>Ruta:</strong> {ruta_ida} / {ruta_vuelta}</li>
-        <li><strong>Precio:</strong> {precio_orig:,.2f} {moneda_orig} <em>(aprox. ${precio_usd} USD)</em></li>
-        <li><strong>Fechas:</strong> {fecha_ida} - {fecha_vuelta}</li>
-        <li><strong>Aerolínea:</strong> {aerolinea}</li>
-    </ul>
-    <p><a href="{safe_link}" target="_blank" rel="noopener noreferrer">Reservar ahora</a></p>
-    """
-    send_email(subject, html_content)
-
-def notify_anomaly(deal: dict) -> None:
-    precio_orig = deal.get('precio_original', deal.get('precio_total_usd', 0))
-    moneda_orig = html.escape(str(deal.get('moneda_original', 'USD')))
-    precio_usd = deal.get('precio_total_usd', 0)
-    
-    ruta_ida = html.escape(str(deal.get('ida_origen_destino', '')))
-    ruta_vuelta = html.escape(str(deal.get('vuelta_origen_destino', '')))
-    fecha_ida = html.escape(str(deal.get('ida_fecha', '')))
-    fecha_vuelta = html.escape(str(deal.get('vuelta_fecha', '')))
-    
-    subject = f"❓ Anomalía Pendiente de Aprobación: {ruta_ida} por {precio_orig} {moneda_orig}"
-    html_content = f"""
-    <h2>Anomalía Detectada</h2>
-    <p>Se encontró una oferta atractiva pero que rompe algún parámetro (ej. fechas o escalas). Requiere revisión manual.</p>
-    <ul>
-        <li><strong>Ruta:</strong> {ruta_ida} / {ruta_vuelta}</li>
-        <li><strong>Precio:</strong> {precio_orig:,.2f} {moneda_orig} <em>(aprox. ${precio_usd} USD)</em></li>
-        <li><strong>Fechas:</strong> {fecha_ida} - {fecha_vuelta}</li>
-    </ul>
-    <p>Por favor revisá el panel de control de Flight Hunter para aprobar o rechazar esta oferta.</p>
-    """
-    send_email(subject, html_content)
-
-def notify_glitch_fare(deal: dict) -> None:
-    precio_orig = deal.get('precio_original', deal.get('precio_total_usd', 0))
-    moneda_orig = html.escape(str(deal.get('moneda_original', 'USD')))
-    precio_usd = deal.get('precio_total_usd', 0)
-    
-    ruta_ida = html.escape(str(deal.get('ida_origen_destino', '')))
-    ruta_vuelta = html.escape(str(deal.get('vuelta_origen_destino', '')))
-    aerolinea = html.escape(str(deal.get('aerolinea', '')))
-    fecha_ida = html.escape(str(deal.get('ida_fecha', '')))
-    fecha_vuelta = html.escape(str(deal.get('vuelta_fecha', '')))
-    safe_link = _safe_booking_url(deal.get('link_reserva', ''))
-    
-    subject = f"🚨 TARIFA ERROR DETECTADA: {ruta_ida} a {precio_orig} {moneda_orig}"
-    html_content = f"""
-    <h2 style="color: red;">¡ALERTA MÁXIMA: TARIFA ERROR!</h2>
-    <p><strong>El Agente Crítico ha detectado un precio matemáticamente absurdo. Esto es un "Glitch Fare" y probablemente la aerolínea lo corrija en minutos. ¡COMPRA AHORA!</strong></p>
-    <ul>
-        <li><strong>Ruta:</strong> {ruta_ida} / {ruta_vuelta}</li>
-        <li><strong>Precio:</strong> {precio_orig:,.2f} {moneda_orig} <em>(aprox. ${precio_usd} USD)</em></li>
-        <li><strong>Fechas:</strong> {fecha_ida} - {fecha_vuelta}</li>
-        <li><strong>Aerolínea:</strong> {aerolinea}</li>
-    </ul>
-    <p><a href="{safe_link}" target="_blank" rel="noopener noreferrer" style="background-color: red; color: white; padding: 10px 20px; text-decoration: none; font-weight: bold;">RESERVAR ANTES DE QUE DESAPAREZCA</a></p>
-    """
-    send_email(subject, html_content)
+    client = get_supabase_client()
+    recipient = _recipient(client, radar)
+    if not recipient:
+        return
+    for deal, kind in candidates:
+        key = hashlib.sha256(f"{radar['id']}:{deal['hash_dedupe']}:{kind}".encode()).hexdigest()
+        client.table('radar_email_deliveries').upsert({'id': key, 'radar_id': radar['id'], 'deal_hash': deal['hash_dedupe'], 'kind': kind,
+            'payload': _payload(deal, radar, recipient, kind)}, on_conflict='id', ignore_duplicates=True).execute()
+        receipt = client.table('radar_email_deliveries').select('*').eq('id', key).single().execute().data
+        if receipt.get('sent_at'):
+            continue
+        created = datetime.fromisoformat(receipt['created_at'].replace('Z', '+00:00'))
+        # Resend retains keys for 24h. Never replay an ambiguous delivery after that window.
+        if datetime.now(timezone.utc) - created >= timedelta(hours=23):
+            print(f"Email delivery {key}: pending receipt requires review; not replayed.")
+            continue
+        # An account email change must not send an old request to its former address.
+        if receipt['payload'].get('to') != [recipient]:
+            continue
+        provider_id = send_email(receipt['payload'], key)
+        if provider_id:
+            client.table('radar_email_deliveries').update({'sent_at': datetime.now(timezone.utc).isoformat(),
+                'provider_id': provider_id}).eq('id', key).execute()
+            mark_as_notified(deal['hash_dedupe'])

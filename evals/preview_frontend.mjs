@@ -18,7 +18,7 @@ const deals = [['demo-mia', 'MIA', 1380, 0, 'LATAM'], ['demo-lax', 'LAX', 1416, 
   ida_fecha: '2027-04-17', vuelta_fecha: '2027-05-02', pasajeros: 2, precio_total_usd: price,
   cantidad_escalas: stops, aerolinea: airline, estado_aprobacion: 'aprobado',
   fuente: 'google_flights', created_at: new Date().toISOString(),
-  detalle_cotizacion: { googleParserVersion: 2, priceVerified: true, queryVerified: true, searchView: 'cheapest' },
+  detalle_cotizacion: { priceBasis: 'party_total', passengersVerified: true, itineraryScope: 'search_result', googleParserVersion: 2, priceVerified: true, queryVerified: true, searchView: 'cheapest' },
 }));
 
 createServer(async (req, res) => {
@@ -47,10 +47,10 @@ createServer(async (req, res) => {
       res.end((await read('src/styles/global.css')) + '\n' + extra + '\n' + await read('src/styles/compact.css'));
       return;
     }
-    if (req.url && /^\/utils\/(compactFlights|radarPicker|searchSchedule|monitoringView|latestQuotes)\.js$/.test(req.url)) {
+    if (req.url && /^\/utils\/(compactFlights|radarPicker|searchSchedule|monitoringView|latestQuotes|dailyRadar)\.js$/.test(req.url)) {
       res.setHeader('Content-Type', 'text/javascript');
       res.end(stripTypeScriptTypes(await read(`src${req.url.replace(/\.js$/, '.ts')}`))
-        .replace("from './compactFlights'", "from './compactFlights.js'")
+        .replace("from './compactFlights'", "from './compactFlights.js'").replace("from './latestQuotes'", "from './latestQuotes.js'")
         .replace("import { supabase } from '../lib/supabase';", "const supabase={from:()=>({select(){return this},eq(){return this},update(){return this},maybeSingle:async()=>({data:null,error:null}),upsert:async()=>({error:null})})};"));
       return;
     }
@@ -66,14 +66,24 @@ createServer(async (req, res) => {
       .replace(/import \{ supabase \} from '..\/lib\/supabase';/, '')
       .replace(/from '..\/utils\/(\w+)'/g, "from '/utils/$1.js'"));
     const client = prepare(source.match(/<script>\s*([\s\S]*?)<\/script>/)[1]);
-    const data = { allDeals: deals, approvedDeals: deals, pendingDeals: [], routeInsights: [] };
     const previewQuery = new URL(req.url, 'http://localhost').searchParams;
+    const localAlert = previewQuery.has('europa') ? { ...alert, id: 'demo-europe', nombre: 'Europa en primavera', destino: 'Europa', paises: ['España', 'Italia', 'Francia'] } : alert;
+    const localAlerts = [localAlert, ...alerts.slice(1)];
+    const localDeals = previewQuery.has('europa') ? [
+      { ...deals[0], id: 'demo-madrid', ida_origen_destino: 'EZE-MAD', vuelta_origen_destino: 'MAD-EZE', precio_total_usd: 2047, aerolinea: 'Iberia' },
+      { ...deals[1], id: 'demo-rome', ida_origen_destino: 'EZE-FCO', vuelta_origen_destino: 'FCO-EZE', precio_total_usd: 2536, aerolinea: 'ITA Airways' }
+    ] : deals;
+    const data = { allDeals: localDeals, approvedDeals: localDeals, pendingDeals: [], routeInsights: [] };
+    const statuses = [{radar_id:localAlert.id,provider:'google_flights',outcome:'ok',checked_at:new Date().toISOString(),checked_combinations:4,total_combinations:96},
+      {radar_id:localAlert.id,provider:'despegar',outcome:'blocked',checked_at:new Date().toISOString(),checked_combinations:0,total_combinations:96}];
+    const fixtureTables = { search_alerts: previewQuery.has('new') ? [] : localAlerts, flight_deals: localDeals, saved_deals: [], saved_deal_latest: [], route_insights: [], radar_scan_status: statuses };
+
     const delay = Math.min(15000, Math.max(0, Number(previewQuery.get('delay')) || 0));
     const mock = `const supabase = { auth: {
       getUser: async () => ({data:{user:{id:'ui-fixture-user',email:'preview@example.test',app_metadata:{provider:'google'},user_metadata:{given_name:'Alex'}}}}),
       getSession: async () => { await new Promise(resolve => setTimeout(resolve, ${delay})); ${previewQuery.has('fail') ? 'throw new Error("Offline fixture");' : ''} return ({data:{session:{user:{id:'ui-fixture-user', email:'preview@example.test', app_metadata:{provider:'google'},user_metadata:{given_name:'Alex'}}}}}); },
       signOut: async () => {}, onAuthStateChange: () => {}
-    }, from: () => ({select(){return this},update(){return this},insert:async()=>({error:null}),eq(){return this},order:async()=>({data:${JSON.stringify(previewQuery.has('new') ? [] : alerts)}})})};`;
+    }, from: (table) => ({select(){return this},update(){return this},insert(){return this},delete(){return this},eq(){return this},order(){return this},gte(){return this},limit(){return this},then(resolve){return Promise.resolve({data:(${JSON.stringify(fixtureTables)})[table] || [],error:null}).then(resolve)}})};`;
     const code = `${mock}\n${client}`;
     let html = source.slice(source.indexOf('<html'))
       .replace(/<script is:inline define:vars=[\s\S]*?<\/script>/, () => `<script>window.__SERVER_DATA__=${JSON.stringify(data)}</script>`)

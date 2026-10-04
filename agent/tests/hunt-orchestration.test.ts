@@ -49,7 +49,8 @@ test('Screenshot scenario: Despegar alone reaches persistence and the feed when 
     assert.equal(googleCalls, 1); assert.equal(despegarCalls, 1);
     const feed = latestQuotes(persisted).filter(feedCandidate).filter(deal => matchesRadar(deal, radar));
     assert.deepEqual(feed.map(d => d.precio_total_usd), [1884, 2376]);
-    assert.ok(feed.every(d => renderCompactFlight(d, radar).includes('Ver en Despegar')));
+    assert.ok(feed.every(d => renderCompactFlight(d, radar).includes('Precio observado en Despegar')));
+    assert.ok(feed.every(d => renderCompactFlight(d, radar).includes('no hay un enlace de reserva validado')));
     assert.deepEqual(scans.map(s => s.outcome), ['blocked', 'ok']);
     assert.equal(plans[0].provider_results.length, 2);
     assert.ok(summaries[0].includes('despegar') && summaries[0].includes('blocked'));

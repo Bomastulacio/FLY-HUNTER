@@ -103,8 +103,11 @@ export async function getActiveSearchAlerts(): Promise<any[]> {
 export async function getMonitoringSavedDeals(): Promise<SavedDeal[]> {
   if (!supabase) throw new Error('Faltan las credenciales de Supabase');
   // Validate deployment before spending provider quota. Missing migration is actionable.
-  for (const table of ['saved_deal_checks', 'radar_scan_status']) {
-    const { error } = await supabase.from(table).select('*').limit(1);
+  for (const [table, columns] of [
+    ['saved_deal_checks', '*'], ['radar_scan_status', '*'],
+    ['radar_email_deliveries', 'id'], ['search_alerts', 'notificar_email,precio_aviso_usd'],
+  ]) {
+    const { error } = await supabase.from(table).select(columns).limit(1);
     if (error) throw new Error('Aplicá schema_monitoring.sql antes de ejecutar el seguimiento');
   }
   const rows: SavedDeal[] = [];

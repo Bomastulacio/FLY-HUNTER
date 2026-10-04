@@ -75,6 +75,7 @@ import { supabase } from '../lib/supabase';
             <div class="section-content">
               <div class="summary-row"><span>Presupuesto</span> <strong id="dash-presupuesto">US$800 - US$2.400</strong></div>
               <div class="summary-row"><span>Pasajeros</span> <strong id="dash-pasajeros">2</strong></div>
+              <div class="summary-row"><span>Avisos por email</span> <strong id="dash-notifications">Solo oportunidades excepcionales</strong></div>
             </div>
          </div>
 
@@ -236,7 +237,7 @@ import { supabase } from '../lib/supabase';
       <!-- STEP 2: Presupuesto y Pasajeros -->
       <div class="wizard-step hidden" id="step-2">
         <div class="form-group full-width budget-section">
-          <label>Presupuesto objetivo (USD)</label>
+          <label>Presupuesto total para todos los pasajeros (USD)</label>
           <div class="budget-inputs">
             <div class="input-wrapper">
               <span class="input-prefix">Mín.</span>
@@ -273,6 +274,13 @@ import { supabase } from '../lib/supabase';
               <i class="ph ph-users"></i> 2
             </label>
           </div>
+        </div>
+
+        <div class="form-group full-width notification-settings">
+          <label class="notification-toggle"><input type="checkbox" name="notificar_email" checked /> Avisarme por email cuando valga la pena</label>
+          <label for="notification-price">Avisarme también si el total llega a este precio (opcional)</label>
+          <div class="input-wrapper"><span class="input-prefix">US$</span><input id="notification-price" type="number" name="precio_aviso_usd" min="1" step="1" placeholder="Tu precio para decidir" /></div>
+          <small class="hint" id="notification-live-summary">Solo oportunidades excepcionales, al email verificado de tu cuenta.</small>
         </div>
 
         <div class="wizard-actions dual">
@@ -320,10 +328,6 @@ import { supabase } from '../lib/supabase';
             <label class="pill active">
               <input type="radio" name="escalas_max" value="1" checked>
               <i class="ph ph-airplane"></i> 1
-            </label>
-            <label class="pill">
-              <input type="radio" name="escalas_max" value="2">
-              <i class="ph ph-clock"></i> 2+
             </label>
           </div>
         </div>
@@ -1467,6 +1471,13 @@ import { supabase } from '../lib/supabase';
     const vueltaMaxEl = form.querySelector('input[name="fecha_vuelta_max"]') as HTMLInputElement;
     const zoneEl = form.querySelector('input[name="destino"]:checked') as HTMLInputElement;
     const budget = (form.querySelector('[name="presupuesto_max"]') as HTMLInputElement)?.value;
+    const notify = form.querySelector<HTMLInputElement>('[name="notificar_email"]');
+    const threshold = form.querySelector<HTMLInputElement>('[name="precio_aviso_usd"]');
+    if (threshold) { threshold.max = budget || ''; threshold.disabled = notify?.checked === false; }
+    const mailSummary = document.getElementById('notification-live-summary');
+    if (mailSummary) mailSummary.textContent = notify?.checked === false ? 'Emails pausados para este radar. Podés seguir mirando sus precios.'
+      : Number(threshold?.value) > 0 ? `Aviso al llegar a US$${new Intl.NumberFormat('es-AR').format(Number(threshold?.value))} en total o ante una oportunidad excepcional. Siempre con ida y vuelta verificadas.`
+      : 'Solo oportunidades excepcionales, al email verificado de tu cuenta. Siempre con ida y vuelta verificadas.';
     const passengers = (form.querySelector('[name="pasajeros"]:checked') as HTMLInputElement)?.value || '1';
     const stops = (form.querySelector('[name="escalas_max"]:checked') as HTMLInputElement)?.value || '0';
     const quick = document.getElementById('summary-quick');
@@ -1665,6 +1676,9 @@ import { supabase } from '../lib/supabase';
 
     const dashPax = document.getElementById('dash-pasajeros');
     if (dashPax) dashPax.textContent = String(alert.pasajeros || 1);
+    const dashNotifications = document.getElementById('dash-notifications');
+    if (dashNotifications) dashNotifications.textContent = alert.notificar_email === false ? 'Pausados para este radar'
+      : alert.precio_aviso_usd ? `Hasta US$${formatCurrency(alert.precio_aviso_usd)} en total o una oportunidad excepcional` : 'Solo oportunidades excepcionales';
 
     const dashEscalas = document.getElementById('dash-escalas');
     if (dashEscalas) dashEscalas.textContent = alert.escalas_max === 0 ? 'Vuelo directo' : `Hasta ${alert.escalas_max}`;
@@ -1686,6 +1700,10 @@ import { supabase } from '../lib/supabase';
 
   function populateFormWithAlert(alertData: any) {
     if (!form || !alertData) return;
+    const notify = form.querySelector<HTMLInputElement>('[name="notificar_email"]');
+    const threshold = form.querySelector<HTMLInputElement>('[name="precio_aviso_usd"]');
+    if (notify) notify.checked = alertData.notificar_email !== false;
+    if (threshold) threshold.value = alertData.precio_aviso_usd ? String(alertData.precio_aviso_usd) : '';
     
     // Nombre
     const nombreInp = form.querySelector('[name="nombre"]') as HTMLInputElement;
@@ -1957,7 +1975,10 @@ import { supabase } from '../lib/supabase';
       pasajeros: Number(formData.get('pasajeros') || 1),
       presupuesto_min: formData.get('presupuesto_min') ? Number(formData.get('presupuesto_min')) : null,
       presupuesto_max: formData.get('presupuesto_max') ? Number(formData.get('presupuesto_max')) : null,
-      escalas_max: Number(formData.get('escalas_max')),
+      escalas_max: Math.min(1, Number(formData.get('escalas_max'))),
+      notificar_email: formData.get('notificar_email') === 'on',
+      precio_aviso_usd: (form.querySelector<HTMLInputElement>('[name="precio_aviso_usd"]')?.value)
+        ? Number(form.querySelector<HTMLInputElement>('[name="precio_aviso_usd"]')!.value) : null,
       activo: true
     };
     

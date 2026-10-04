@@ -124,10 +124,11 @@ class OrchestrationEvals(TestCase):
                 'vuelta_origen_destino': 'MAD-EZE', 'precio_total_usd': 1400, 'pasajeros': 2,
                 'aerolinea': 'Aeroméxico', 'cantidad_escalas': 1, 'hash_dedupe': 'fixture', 'es_oportunidad_oro': True,
                 'notificado': False, 'estado_aprobacion': 'aprobado'}
-        with patch.object(graph, 'notify_golden_opportunity') as notify, patch.object(graph, 'upsert_deals', return_value=[{**deal, 'notificado': True}]):
-            graph.persistence_and_notify_node({'evaluated_deals': [deal]})
-            notify.assert_not_called()
-        with patch.object(graph, 'notify_golden_opportunity') as notify, patch.object(graph, 'upsert_deals', side_effect=RuntimeError('DB offline')):
+        persisted = {**deal, 'notificado': True}
+        with patch.object(graph, 'notify_radar_deals') as notify, patch.object(graph, 'upsert_deals', return_value=[persisted]):
+            graph.persistence_and_notify_node({'evaluated_deals': [deal], 'current_alert': ALERT})
+            notify.assert_called_once_with([persisted], ALERT)
+        with patch.object(graph, 'notify_radar_deals') as notify, patch.object(graph, 'upsert_deals', side_effect=RuntimeError('DB offline')):
             with self.assertRaises(RuntimeError):
                 graph.persistence_and_notify_node({'evaluated_deals': [deal]})
             notify.assert_not_called()

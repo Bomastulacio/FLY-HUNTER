@@ -34,7 +34,8 @@ export function evaluateQuote(p: FlightSearchParams, q: ScrapedFlightOption): Ag
   const rejection = rejectionReason(p, q);
   return {
     approvalStatus: rejection ? 'rechazado' : 'aprobado', isAnomaly: false,
-    isGoldenOpportunity: !rejection && q.priceTotalUSD < 750 * p.passengers,
+    isGoldenOpportunity: !rejection && q.priceTotalUSD < 750 * p.passengers
+      && q.evidence?.itineraryScope === 'roundtrip' && q.evidence?.stopsPerDirection?.length === 2,
     bestOption: q.source, reason: rejection || `Total observado para ${q.passengers} personas dentro de tus filtros.${q.paymentCondition ? ` ${q.paymentCondition}.` : ''}`,
     summaryForNotification: rejection || `Vuelo a US$ ${q.priceTotalUSD} para ${q.passengers} personas.`,
   };
