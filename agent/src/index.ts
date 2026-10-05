@@ -31,7 +31,12 @@ export async function runHunt(args = process.argv.slice(2), io = huntIO, runtime
   await runtime.load();
   const saved = await io.getMonitoringSavedDeals();
   const ordered = roundRobin(alerts, runtime.cursor('alerts'), alerts.length);
-  const plans = ordered.map(alert => ({ alert, searches: buildSearchSpace(alert) })).filter(p => p.searches.length);
+  const allPlans = ordered.map(alert => ({ alert, searches: buildSearchSpace(alert) }));
+  const planIssues = allPlans.filter(p => !p.searches.length).map(p => ({ radar_id: p.alert.id, reason: 'invalid_or_expired_search_space' }));
+  for (const issue of planIssues) logEvent('radar.plan_rejected', issue);
+  const plans = allPlans.filter(p => p.searches.length);
+  const reports = new Map(plans.map(p => [p.alert.id, { radar_id: p.alert.id, combinations: p.searches.length,
+    checked: 0, observed: 0, eligible: 0, informational: 0, rejected: {} as Record<string, number> }]));
   if (focus) {
     if (!plans.some(plan => plan.searches.some(p => matchesFocus(p, focus)))) throw new Error('La combinación priorizada no está dentro de un radar activo con esos pasajeros');
     plans.sort((a, b) => Number(b.searches.some(p => matchesFocus(p, focus))) - Number(a.searches.some(p => matchesFocus(p, focus))));
@@ -83,15 +88,24 @@ export async function runHunt(args = process.argv.slice(2), io = huntIO, runtime
       checked_combinations: runtime.coverageCount(cursorKey, Date.parse(result.checkedAt || new Date().toISOString())), total_combinations: searches.length,
     });
     reported.add(`${alert.id}:${provider}`);
-    receipts.push({ provider, mode, origin: params.origin, destination: params.destination,
+    receipts.push({ radar_id: alert.id, provider, mode, origin: params.origin, destination: params.destination,
       departure: params.departureDate, return: params.returnDate, passengers: params.passengers,
       status: result.status, reason: result.reason, stage: result.stage, quotes: result.options.length, checked_at: result.checkedAt });
     attempted.push({ alert_id: alert.id, origin: params.origin, dest: params.destination,
       dep_date: params.departureDate, ret_date: params.returnDate, passengers: params.passengers });
+    const report = reports.get(alert.id)!;
+    report.checked++;
+    report.observed += result.options.length;
     for (const quote of result.options) {
       const evaluation = evaluateQuote(params, quote);
-      logEvent('critic.decision', { provider, decision: evaluation.approvalStatus, reason: evaluation.reason });
-      if (quoteIntegrityReason(params, quote)) continue;
+      const integrity = quoteIntegrityReason(params, quote);
+      logEvent('critic.decision', { radar_id: alert.id, provider, decision: evaluation.approvalStatus, reason: evaluation.reason });
+      if (integrity) {
+        report.rejected[integrity] = (report.rejected[integrity] || 0) + 1;
+        continue;
+      }
+      if (evaluation.approvalStatus === 'aprobado') report.eligible++;
+      else report.informational++;
       const quoteKey = JSON.stringify([quote.source, quote.route, quote.departureDate, quote.returnDate, quote.passengers, quote.airline, quote.priceTotalUSD, quote.paymentCondition]);
       if (!persisted.has(quoteKey)) {
         await io.saveFlightDeal(quote, evaluation, evaluation.approvalStatus === 'rechazado');
@@ -118,7 +132,9 @@ export async function runHunt(args = process.argv.slice(2), io = huntIO, runtime
     }
     await runtime.advance('alerts');
     // A run-scoped artifact lets LangGraph reuse the exact plan rather than inventing different dates.
-    await io.writePlan({ version: 1, searches: attempted, provider_results: receipts, deferred_sources: deferred });
+    for (const report of reports.values()) logEvent('radar.summary', report);
+    await io.writePlan({ version: 1, searches: attempted, provider_results: receipts, deferred_sources: deferred,
+      radar_reports: [...reports.values()], plan_issues: planIssues });
     const deferredLabels: Record<string, string> = {
       run_budget_exhausted: 'Tope de intentos por corrida alcanzado',
       daily_budget_exhausted: 'Tope diario alcanzado (incluye corridas manuales)',
@@ -127,6 +143,7 @@ export async function runHunt(args = process.argv.slice(2), io = huntIO, runtime
       no_unvisited_combination: 'No quedan combinaciones pendientes en esta corrida',
     };
     await io.writeSummary(`## Resultado de la búsqueda\n\n${persisted.size} cotizaciones verificadas registradas; ${reported.size} pares radar/fuente procesados.\n\n`
+      + (planIssues.length ? `${planIssues.length} radares sin combinaciones válidas: revisar destinos, pasajeros y fechas (ver plan_issues en search-plan.json).\n\n` : '')
       + '| Fuente | Ruta | Ida / vuelta | Adultos | Resultado | Cotizaciones | Diagnóstico |\n|---|---|---|---|---|---|---|\n'
       + receipts.map(r => `| ${r.provider} | ${r.origin}–${r.destination} | ${r.departure} / ${r.return} | ${r.passengers} | ${r.status} | ${r.quotes} | ${[r.reason, r.stage].filter(Boolean).join(' / ') || '—'} |`).join('\n')
       + '\n\nFuentes sin intento por cuota o pausa: ' + (plans.length * sources.length - reported.size)

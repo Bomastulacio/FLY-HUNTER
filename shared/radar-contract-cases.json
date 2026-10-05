@@ -1,0 +1,11 @@
+[
+  {"destino":"Norteamérica","paises":["Norteamérica"],"airport":"MIA"},
+  {"destino":"Norteamérica","paises":["norteamerica"],"airport":"JFK"},
+  {"destino":"Europa","paises":["Europa"],"airport":"FRA"},
+  {"destino":"Europa","paises":["Italia"],"airport":"FCO"},
+  {"destino":"Caribe","paises":["Cualquiera"],"airport":"CUN"},
+  {"destino":"Madrid","paises":[],"airport":"MAD"},
+  {"destino":"MIA","paises":["MIA"],"airport":"MIA"},
+  {"destino":"Asia","paises":["Japón"],"airport":"HND"},
+  {"destino":"Oceanía","paises":[],"airport":"SYD"}
+]

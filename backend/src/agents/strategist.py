@@ -3,54 +3,7 @@ import datetime
 from typing import Dict, Any, List
 from ..services.db import get_active_search_alerts
 
-# Mapeo Geográfico Avanzado (Zonas, Países y Ciudades)
-GEO_MAP = {
-    # Zonas Generales
-    "Norteamérica": ["JFK", "MIA", "LAX", "YYZ", "MEX"],
-    "Latinoamérica": ["GRU", "BOG", "LIM", "SCL", "GIG", "MVD"],
-    "Caribe": ["CUN", "PUJ", "HAV", "SJO", "SJU"],
-    "Europa": ["MAD", "CDG", "LHR", "BER", "FCO", "AMS", "LIS", "ZRH", "ATH"],
-    "Asia": ["NRT", "HND", "KIX", "ICN", "BKK", "SIN", "DXB"],
-    "Oceanía": ["SYD", "MEL", "AKL"],
-    "Cualquiera": ["MAD", "MIA", "NRT", "CUN"], # Destinos globales por defecto
-
-    # Países Específicos
-    "Estados Unidos": ["JFK", "MIA", "LAX", "ORD"],
-    "Canadá": ["YYZ", "YVR"],
-    "México": ["MEX", "CUN"],
-    "Brasil": ["GRU", "GIG"],
-    "Chile": ["SCL"],
-    "Colombia": ["BOG", "MDE"],
-    "Perú": ["LIM"],
-    "Uruguay": ["MVD"],
-    "República Dominicana": ["PUJ", "SDQ"],
-    "Cuba": ["HAV"],
-    "Costa Rica": ["SJO"],
-    "Puerto Rico": ["SJU"],
-    "España": ["MAD", "BCN"],
-    "Francia": ["CDG", "ORY"],
-    "Italia": ["FCO", "MXP"],
-    "Reino Unido": ["LHR", "LGW"],
-    "Alemania": ["BER", "FRA", "MUC"],
-    "Portugal": ["LIS", "OPO"],
-    "Países Bajos": ["AMS"],
-    "Suiza": ["ZRH", "GVA"],
-    "Grecia": ["ATH"],
-    "Japón": ["NRT", "HND", "KIX"],
-    "Tailandia": ["BKK", "HKT"],
-    "Corea del Sur": ["ICN"],
-    "Emiratos Árabes": ["DXB"],
-    "Australia": ["SYD", "MEL"],
-    "Nueva Zelanda": ["AKL"],
-
-    # Ciudades / Monitoreo Ultra-específico
-    "Miami": ["MIA"],
-    "Nueva York": ["JFK", "EWR"],
-    "Tokio": ["NRT", "HND"],
-    "Cancún": ["CUN"],
-    "París": ["CDG", "ORY"],
-    "Río de Janeiro": ["GIG"]
-}
+from ..services.geography import radar_targets, destination_airports
 
 # Datos de prueba para el modo manual sin consumir API
 MOCK_FLIGHTS = [
@@ -96,11 +49,9 @@ def define_daily_mission() -> Dict[str, Any]:
             # Revalidate against the current alert; a user may have edited it since scraping.
             origins = [v.strip() for v in re.split(r'[,/]', alert['origen'])]
             targets = set()
-            countries = alert.get('paises') or [alert.get('destino')]
-            if 'Cualquiera' in countries:
-                countries = [alert.get('destino')]
+            countries = radar_targets(alert)
             for country in countries:
-                targets.update(GEO_MAP.get(country, [country]))
+                targets.update(destination_airports(country))
             if (s.get('origin') not in origins or s.get('dest') not in targets
                     or s.get('passengers') != int(alert.get('pasajeros') or 1)
                     or not (alert['fecha_ida_min'] <= s.get('dep_date', '') <= (alert.get('fecha_ida_max') or alert['fecha_ida_min']))
@@ -122,11 +73,9 @@ def define_daily_mission() -> Dict[str, Any]:
             if not (0 <= (dep_max - dep_min).days <= 366 and 0 <= (ret_max - ret_min).days <= 366):
                 continue
             targets = set()
-            countries = alert.get('paises') or [alert['destino']]
-            if 'Cualquiera' in countries:
-                countries = [alert['destino']]
+            countries = radar_targets(alert)
             for country in countries:
-                targets.update(GEO_MAP.get(country, [country]))
+                targets.update(destination_airports(country, 'search'))
             for di in range((dep_max - dep_min).days + 1):
                 dep = dep_min + datetime.timedelta(days=di)
                 if dep < datetime.date.today():

@@ -54,6 +54,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -87,6 +89,7 @@ jobs:
           python -B evals/test_critic_decisions.py
           python -B evals/test_search_orchestration.py
           python -B evals/test_radar_notifications.py
+          python -B evals/test_radar_contract.py
 
       - name: Run LangGraph pipeline
         run: |

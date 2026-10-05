@@ -53,6 +53,9 @@ test('Screenshot scenario: Despegar alone reaches persistence and the feed when 
     assert.ok(feed.every(d => renderCompactFlight(d, radar).includes('no hay un enlace de reserva validado')));
     assert.deepEqual(scans.map(s => s.outcome), ['blocked', 'ok']);
     assert.equal(plans[0].provider_results.length, 2);
+    assert.ok(plans[0].provider_results.every((r: any) => r.radar_id === radar.id));
+    assert.deepEqual(plans[0].radar_reports, [{ radar_id: radar.id, combinations: 1,
+      checked: 2, observed: 2, eligible: 2, informational: 0, rejected: {} }]);
     assert.ok(summaries[0].includes('despegar') && summaries[0].includes('blocked'));
     // The same persisted quota/cooldown ledger applies to a manual focus; it cannot force a blocked source.
     await runHunt([], io, new SearchRuntime(join(directory, 'state.json'), { google_flights: 4, despegar: 2 }, 0), focus);
@@ -63,6 +66,33 @@ test('Screenshot scenario: Despegar alone reaches persistence and the feed when 
     assert.ok(summaries[1].includes('Pausa por bloqueo del proveedor'));
     await assert.rejects(runHunt([], io, new SearchRuntime(join(directory, 'state.json')), 'EZE,MAD,2027-04-16,2027-05-01,2'), /radar activo/);
     assert.equal(googleCalls, 1); assert.equal(despegarCalls, 1);
+  } finally {
+    assert.ok(directory.startsWith(join(tmpdir(), 'fh-hunt-eval-')));
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('An invalid radar is reported without consuming searches or hiding a valid radar', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'fh-hunt-eval-'));
+  try {
+    const plans: any[] = [];
+    let calls = 0;
+    const io: typeof huntIO = { ...huntIO,
+      getActiveSearchAlerts: async () => [radar, { ...radar, id: 'invalid', destino: 'unknown destination' }],
+      getMonitoringSavedDeals: async () => [],
+      collectGoogleFlights: async () => { calls++; return { status: 'empty', options: [] }; },
+      collectDespegar: async () => { throw new Error('Unexpected source'); },
+      persistMonitoring: async () => {}, writeSummary: async () => {},
+      writePlan: async p => { plans.push(p); },
+      saveFlightDeal: async () => { throw new Error('Empty result cannot write a quote'); },
+      evaluateDealWithGemini: async () => { throw new Error('No LLM needed'); },
+    };
+    await runHunt(['--test-google'], io, new SearchRuntime(join(directory, 'state.json'), { google_flights: 4, despegar: 2 }, 0));
+    assert.equal(calls, 1);
+    assert.deepEqual(plans[0].plan_issues, [{ radar_id: 'invalid', reason: 'invalid_or_expired_search_space' }]);
+    assert.equal(plans[0].radar_reports[0].radar_id, radar.id);
+    assert.equal(plans[0].radar_reports[0].observed, 0);
+    assert.equal(plans[0].searches.length, 1);
   } finally {
     assert.ok(directory.startsWith(join(tmpdir(), 'fh-hunt-eval-')));
     await rm(directory, { recursive: true, force: true });

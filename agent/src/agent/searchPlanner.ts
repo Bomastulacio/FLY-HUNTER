@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { destinationAirports, radarTargets } from '../../../shared/radarGeography.js';
 import type { FlightSearchParams } from '../types/flight.js';
 
 export interface SearchAlert {
@@ -10,23 +11,6 @@ export interface SearchAlert {
 }
 
 const normalize = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toUpperCase().trim();
-const destinations: Record<string, string[]> = {
-  EUROPA: ['MAD', 'CDG', 'LHR', 'FRA', 'FCO', 'AMS', 'LIS'],
-  NORTEAMERICA: ['MIA', 'JFK', 'LAX', 'YYZ', 'MEX'],
-  LATINOAMERICA: ['GRU', 'GIG', 'BOG', 'LIM', 'SCL', 'MVD'],
-  CARIBE: ['CUN', 'PUJ', 'HAV', 'SJO', 'SJU'], ASIA: ['NRT', 'HND', 'KIX', 'ICN', 'BKK', 'SIN', 'DXB'],
-  OCEANIA: ['SYD', 'MEL', 'AKL'], CUALQUIERA: ['MAD', 'MIA', 'NRT', 'CUN'],
-  ESPANA: ['MAD', 'BCN'], FRANCIA: ['CDG', 'ORY'], ITALIA: ['FCO', 'MXP'],
-  'REINO UNIDO': ['LHR', 'LGW'], ALEMANIA: ['FRA', 'BER', 'MUC'], PORTUGAL: ['LIS', 'OPO'],
-  'PAISES BAJOS': ['AMS'], SUIZA: ['ZRH', 'GVA'], GRECIA: ['ATH'],
-  'ESTADOS UNIDOS': ['MIA', 'JFK', 'LAX', 'ORD'], CANADA: ['YYZ', 'YVR'], MEXICO: ['MEX', 'CUN'],
-  BRASIL: ['GRU', 'GIG'], CHILE: ['SCL'], COLOMBIA: ['BOG', 'MDE'], PERU: ['LIM'], URUGUAY: ['MVD'],
-  'REPUBLICA DOMINICANA': ['PUJ', 'SDQ'], CUBA: ['HAV'], 'COSTA RICA': ['SJO'], 'PUERTO RICO': ['SJU'],
-  JAPON: ['NRT', 'HND', 'KIX'], TAILANDIA: ['BKK', 'HKT'], 'COREA DEL SUR': ['ICN'],
-  'EMIRATOS ARABES': ['DXB'], AUSTRALIA: ['SYD', 'MEL'], 'NUEVA ZELANDA': ['AKL'],
-  MIAMI: ['MIA'], 'NUEVA YORK': ['JFK', 'EWR'], TOKIO: ['NRT', 'HND'], CANCUN: ['CUN'],
-  PARIS: ['CDG', 'ORY'], 'RIO DE JANEIRO': ['GIG'], MADRID: ['MAD'],
-};
 
 function dates(min?: string, max = min): string[] {
   if (!min || !max || !/^\d{4}-\d{2}-\d{2}$/.test(min) || !/^\d{4}-\d{2}-\d{2}$/.test(max)) return [];
@@ -54,9 +38,8 @@ function spread<T>(items: readonly T[]): T[] {
 /** Stable Cartesian coverage: distribute dates/routes early without dropping any valid combination. */
 export function buildSearchSpace(alert: SearchAlert, now = new Date()): FlightSearchParams[] {
   const origins = [...new Set(alert.origen.split(/[,/]/).map(normalize).filter(c => /^[A-Z]{3}$/.test(c)))];
-  const targets = alert.paises?.length && !alert.paises.some(p => normalize(p) === 'CUALQUIERA')
-    ? alert.paises : [alert.destino];
-  const targetAirports = targets.map(t => destinations[normalize(t)] || (/^[A-Z]{3}$/.test(normalize(t)) ? [normalize(t)] : []));
+  const targets = radarTargets(alert);
+  const targetAirports = targets.map(t => destinationAirports(t, 'search'));
   // Take one airport per requested country before its secondary airports.
   const airports = [...new Set(Array.from({ length: Math.max(0, ...targetAirports.map(a => a.length)) },
     (_, index) => targetAirports.flatMap(a => a[index] ? [a[index]] : [])).flat())];

@@ -133,6 +133,13 @@ class OrchestrationEvals(TestCase):
                 graph.persistence_and_notify_node({'evaluated_deals': [deal]})
             notify.assert_not_called()
 
+    def test_malformed_batch_fails_before_any_write_or_email(self):
+        with patch.object(graph, 'upsert_deals') as persist, patch.object(graph, 'notify_radar_deals') as notify:
+            with self.assertRaises(ValueError):
+                graph.persistence_and_notify_node({'evaluated_deals': [{'precio_total_usd': 'invalid'}]})
+            persist.assert_not_called()
+            notify.assert_not_called()
+
     def test_cache_uses_latest_price_even_when_it_exceeds_budget(self):
         old = {'ida_fecha': SEARCH['dep_date'], 'vuelta_fecha': SEARCH['ret_date'], 'ida_origen_destino': 'EZE-MAD',
                'vuelta_origen_destino': 'MAD-EZE', 'precio_total_usd': 1884, 'pasajeros': 2,

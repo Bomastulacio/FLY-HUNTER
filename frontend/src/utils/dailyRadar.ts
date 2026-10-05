@@ -1,5 +1,6 @@
 import { matchesRadar } from './compactFlights';
 import { feedCandidate, latestQuotes } from './latestQuotes';
+import { destinationAirports, radarDestinationGroups, radarAcceptsDestination } from '../../../shared/radarGeography';
 
 export function isRecentQuote(deal: any, now = Date.now()): boolean {
   const observed = Date.parse(deal.detalle_cotizacion?.observedAt || deal.created_at || '');
@@ -7,18 +8,19 @@ export function isRecentQuote(deal: any, now = Date.now()): boolean {
 }
 
 /** Only compare observations already collected by the scheduled pipeline. */
-export function dailyRadar(deals: any[], radar: any, countries: string[], airports: Record<string, string[]>, now = Date.now()) {
+export function dailyRadar(deals: any[], radar: any, now = Date.now()) {
+  const countries = radarDestinationGroups(radar);
   const destination = (d: any) => String(d.ida_origen_destino || '').split('-')[1]?.trim();
-  const belongs = (d: any) => /^[A-Z]{3}$/.test(radar.destino)
-    ? destination(d) === radar.destino : countries.some(c => airports[c]?.includes(destination(d)));
-  const matching = latestQuotes(deals).filter(d => feedCandidate(d) && matchesRadar(d, radar, true) && belongs(d)
+  const belongs = (d: any) => radarAcceptsDestination(radar, destination(d) || '');
+  const latest = latestQuotes(deals);
+  const matching = latest.filter(d => feedCandidate(d) && matchesRadar(d, radar, true) && belongs(d)
     && d.detalle_cotizacion?.passengersVerified === true && d.detalle_cotizacion?.priceBasis === 'party_total');
   const recent = matching.filter(d => isRecentQuote(d, now));
   const affordable = recent.filter(d => matchesRadar(d, radar));
   const best = affordable[0] || null;
   const above = recent.find(d => Number(d.precio_total_usd) > Number(radar.presupuesto_max)) || null;
   const rows = countries.map(country => {
-    const candidates = recent.filter(d => (airports[country] || [country]).includes(destination(d)));
+    const candidates = recent.filter(d => destinationAirports(country).includes(destination(d)));
     const quote = candidates.find(d => matchesRadar(d, radar)) || candidates.find(d => Number(d.precio_total_usd) > Number(radar.presupuesto_max)) || null;
     return { country, quote, aboveBudget: !!quote && Number(quote.precio_total_usd) > Number(radar.presupuesto_max) };
   });
@@ -35,5 +37,15 @@ export function dailyRadar(deals: any[], radar: any, countries: string[], airpor
       && d.ida_fecha === best.ida_fecha && d.vuelta_fecha === best.vuelta_fecha
       && (d.detalle_cotizacion?.paymentCondition || '') === (best.detalle_cotizacion?.paymentCondition || '')
       && Number(d.precio_total_usd) <= Number(best.precio_total_usd) * 1.25) || null : null;
-  return { best, above, alternative, rows, affordable, recent, previous: matching.find(d => !isRecentQuote(d, now)) || null };
+  const diagnostics = { latest: latest.length, matching: matching.length, recent: recent.length, affordable: affordable.length,
+    unknownDestination: !countries.some(c => destinationAirports(c).length) };
+  return { best, above, alternative, rows, affordable, recent, diagnostics,
+    previous: matching.find(d => !isRecentQuote(d, now)) || null };
+}
+
+export function emptyRadarMessage(state: ReturnType<typeof dailyRadar>): string {
+  if (state.diagnostics.unknownDestination) return 'No pudimos reconocer el destino de este radar. Revisá el destino para continuar.';
+  if (state.recent.length) return 'Hay cotizaciones recientes, pero ninguna cumple tu rango de presupuesto. Revisá también el mínimo configurado.';
+  if (state.previous) return 'Las cotizaciones que coinciden con tu viaje tienen más de 24 horas. Esperamos una nueva consulta para mostrarlas como actuales.';
+  return 'Todavía no tenemos cotizaciones de las últimas 24 horas que coincidan con tus fechas, pasajeros y filtros. Esto no significa que no haya vuelos disponibles.';
 }

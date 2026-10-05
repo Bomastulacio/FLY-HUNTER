@@ -17,7 +17,7 @@ let { data: deals, error } = await supabase
   .order('created_at', { ascending: false }).limit(500);
 
 // Fallback: si no hubo corridas en las últimas 24h, consultar las observaciones recientes verificadas (hasta 7 días)
-if (!deals || deals.length === 0) {
+if (!error && (!deals || deals.length === 0)) {
   const lastWeek = new Date();
   lastWeek.setDate(lastWeek.getDate() - 7);
   const fallback = await supabase
@@ -26,7 +26,9 @@ if (!deals || deals.length === 0) {
     .gte('created_at', lastWeek.toISOString())
     .order('created_at', { ascending: false }).limit(500);
   deals = fallback.data || [];
+  error = fallback.error;
 }
+const feedReadFailed = Boolean(error);
 
 // Procesar datos para enviarlos completos al cliente
 const allDeals = latestQuotes(deals || []);
@@ -139,12 +141,13 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
             <button type="button" data-feed-filter="saved" aria-pressed="false"><i class="ph ph-bookmark-simple" aria-hidden="true"></i> Guardados</button>
           </div>
         </div>
-        <p class="saved-note" id="saved-note" hidden>Conservamos tu precio guardado y seguimos combinaciones que coincidan con tus radares activos.</p>
+        <p class="saved-note" id="saved-note" hidden>Tus guardados conservan la cotización original, aunque sea anterior. Al abrir Google se hace una búsqueda nueva y pueden aparecer otros precios y vuelos.</p>
         <!-- Feed Principal Columna Derecha (Desktop: ancho consistente; Mobile: debajo de sidebar) -->
         <section class="dashboard-feed" id="destinations-grid">
            <!-- Renderizado por JS: Card destacada + Destinos -->
         </section>
         <footer class="radar-footer" aria-label="Seguimiento del radar">
+          <p id="feed-update-status" class="saved-note" role="status" hidden>No pudimos actualizar las cotizaciones. Mostramos la última lectura disponible.</p>
           <details id="destination-status" class="radar-footnote" hidden>
             <summary><i class="ph ph-map-pin" aria-hidden="true"></i> <span id="destination-status-label">Destinos pendientes</span><i class="ph ph-caret-down" aria-hidden="true"></i></summary>
             <div id="destination-strip" class="destination-strip" aria-label="Destinos sin precio reciente"></div>
@@ -181,8 +184,8 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
     <div id="toast-container" class="toast-container" role="status" aria-live="polite" aria-atomic="false"></div>
 
     <!-- Pasar datos del servidor al cliente -->
-    <script is:inline define:vars={{ allDeals, approvedDeals, pendingDeals }}>
-      window.__SERVER_DATA__ = { allDeals, approvedDeals, pendingDeals };
+    <script is:inline define:vars={{ allDeals, approvedDeals, pendingDeals, feedReadFailed }}>
+      window.__SERVER_DATA__ = { allDeals, approvedDeals, pendingDeals, feedReadFailed };
     </script>
 
     <script>
@@ -193,7 +196,8 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
       import { nextSearchAt } from '../utils/searchSchedule';
       import { monitoredSavedDeal, meaningfulDrop } from '../utils/monitoringView';
       import { latestQuotes, feedCandidate } from '../utils/latestQuotes';
-      import { dailyRadar } from '../utils/dailyRadar';
+      import { dailyRadar, emptyRadarMessage } from '../utils/dailyRadar';
+      import { destinationAirports, radarDestinationGroups } from '../../../shared/radarGeography';
 
       const formatPrice = (deal: any) => {
         const price = deal.precio_original || deal.precio_total_usd;
@@ -208,45 +212,9 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         return new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short' }).format(date);
       };
 
-      // Mapeo básico de países a códigos IATA para filtrar los vuelos del servidor
-      const countryCodes: Record<string, string[]> = {
-        "España": ["MAD", "BCN", "AGP", "VLC"],
-        "Francia": ["CDG", "ORY", "NCE", "MRS"],
-        "Italia": ["FCO", "MXP", "LIN", "NAP"],
-        "Reino Unido": ["LHR", "LGW", "MAN", "EDI"],
-        "Alemania": ["FRA", "MUC", "BER", "DUS"],
-        "Portugal": ["LIS", "OPO"],
-        "Países Bajos": ["AMS"],
-        "Suiza": ["ZRH", "GVA"],
-        "Grecia": ["ATH", "JMK"],
-        "París": ["CDG", "ORY"],
-        "Estados Unidos": ["JFK", "MIA", "LAX", "ORD", "SFO"],
-        "Canadá": ["YYZ", "YVR", "YUL"],
-        "México": ["MEX", "CUN", "GDL"],
-        "Miami": ["MIA", "FLL"],
-        "Nueva York": ["JFK", "LGA", "EWR"],
-        "Brasil": ["GRU", "GIG", "BSB", "REC"],
-        "Chile": ["SCL"],
-        "Colombia": ["BOG", "MDE", "CTG"],
-        "Perú": ["LIM", "CUZ"],
-        "Uruguay": ["MVD"],
-        "Río de Janeiro": ["GIG", "SDU"],
-        "República Dominicana": ["PUJ", "SDQ"],
-        "Cancún": ["CUN"],
-        "Cuba": ["HAV"],
-        "Costa Rica": ["SJO"],
-        "Puerto Rico": ["SJU"],
-        "Japón": ["NRT", "HND", "KIX"],
-        "Tokio": ["NRT", "HND"],
-        "Tailandia": ["BKK", "HKT"],
-        "Corea del Sur": ["ICN"],
-        "Emiratos Árabes": ["DXB"],
-        "Australia": ["SYD", "MEL", "BNE"],
-        "Nueva Zelanda": ["AKL"],
-      };
-
       // @ts-ignore
       let allDeals = window.__SERVER_DATA__.approvedDeals || [];
+      let feedReadFailed = Boolean(window.__SERVER_DATA__.feedReadFailed);
       let cdInterval: any;
       
       const renderDashboard = (alert: any) => {
@@ -465,30 +433,11 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         };
 
         // Destinos de la zona del radar actual
-        const zoneCountriesMap: Record<string, string[]> = {
-          "Europa": ["España", "Reino Unido", "Francia", "Alemania", "Italia", "Portugal", "Países Bajos", "Suiza", "Grecia"],
-          "Norteamérica": ["Estados Unidos", "Canadá", "México"],
-          "Latinoamérica": ["Brasil", "Chile", "Colombia", "Perú", "Uruguay"],
-          "Caribe": ["República Dominicana", "México", "Cuba", "Costa Rica", "Puerto Rico"],
-          "Asia": ["Japón", "Tailandia", "Corea del Sur", "Emiratos Árabes"],
-          "Oceanía": ["Australia", "Nueva Zelanda"],
-          "Cualquiera": ["España", "Estados Unidos", "Japón", "México"]
-        };
+        const countriesToRender = radarDestinationGroups(alert);
 
-        const targetZone = alert.destino || "Europa";
-        const zoneFallback = zoneCountriesMap[targetZone] || [targetZone];
-
-        // Priorizamos los países que el usuario eligió explícitamente o los de su zona
-        const hasExplicitCountries = Boolean(alert.paises && alert.paises.length > 0 && !alert.paises.includes('Cualquiera'));
-        let explicitCountries = hasExplicitCountries 
-            ? [...alert.paises] 
-            : zoneFallback;
-            
-        let countriesToRender = [...explicitCountries];
-
-        const daily = dailyRadar(allDeals, alert, countriesToRender, countryCodes);
+        const daily = dailyRadar(allDeals, alert);
         const mainDeal = daily.best || daily.above;
-        const countryFor = (deal: any) => countriesToRender.find(c => countryCodes[c]?.includes(String(deal.ida_origen_destino).split('-')[1])) || '';
+        const countryFor = (deal: any) => countriesToRender.find(c => destinationAirports(c).includes(String(deal.ida_origen_destino).split('-')[1])) || '';
         const strip = document.getElementById('destination-strip');
         const waiting = daily.rows.filter(({ quote }) => !quote);
         if (strip) strip.innerHTML = waiting.map(({ country }) => `<span class="destination-pending">${escapeHtml(country)}</span>`).join('')
@@ -508,7 +457,9 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
         for (const { quote } of daily.rows) addCard(quote);
         // A single-airport radar still offers distinct, real options after its winner.
         if (/^[A-Z]{3}$/.test(alert.destino)) for (const deal of daily.affordable.slice(0, 4)) addCard(deal);
-        if (!mainDeal) html += `<div class="feed-empty daily-empty"><i class="ph ph-binoculars" aria-hidden="true"></i><h2>Esperando una buena señal.</h2><p>Se revisan combinaciones de tus fechas y destinos por turnos. Una búsqueda parcial no significa que no existan vuelos.</p><a href="/alertas?radar=${encodeURIComponent(alert.id)}">Revisar mi búsqueda <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a></div>`;
+        if (!mainDeal) html += `<div class="feed-empty daily-empty"><i class="ph ph-binoculars" aria-hidden="true"></i><h2>${feedReadFailed ? 'No pudimos actualizar tus vuelos.' : 'Sin cotizaciones recientes.'}</h2><p>${feedReadFailed ? 'Falló la lectura de cotizaciones. Volveremos a intentarlo; esto no indica que no haya ofertas para tu viaje.' : escapeHtml(emptyRadarMessage(daily))}</p><a href="/alertas?radar=${encodeURIComponent(alert.id)}">Revisar mi búsqueda <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a></div>`;
+        const feedStatus = document.getElementById('feed-update-status');
+        if (feedStatus) feedStatus.hidden = !feedReadFailed || !mainDeal;
         grid.innerHTML = html;
         applySavedFilter();
         renderSourceStatus(alert.id);
@@ -749,6 +700,7 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
             supabase.from('radar_scan_status').select('*'),
           ]);
           if (radarPreferenceUserId !== userId || revision !== bookmarkRevision || document.querySelector('[data-save-id][disabled]')) return;
+          feedReadFailed = Boolean(flights.error);
           if (!flights.error && flights.data) {
             const latest = latestQuotes(flights.data);
             allDeals = latest.filter(feedCandidate);
@@ -791,10 +743,11 @@ const pendingDeals = allDeals.filter(d => d.estado_aprobacion === 'pendiente' ||
             } catch { /* No repeating notification if its acknowledgement cannot be stored. */ }
           }
         } catch {
+          feedReadFailed = true;
           sourceStatusesLoaded = true;
           sourceStatusesFailed = true;
           // Keep the readable quotes, but never leave an endless "loading" status.
-          if (window.currentActiveAlert) renderSourceStatus(window.currentActiveAlert.id);
+          if (window.currentActiveAlert) renderDashboard(window.currentActiveAlert);
         }
         finally { refreshInFlight = false; }
       };

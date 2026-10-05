@@ -1,0 +1,374 @@
+{
+  "version": 1,
+  "searchAirports": {
+    "EUROPA": [
+      "MAD",
+      "CDG",
+      "LHR",
+      "FRA",
+      "FCO",
+      "AMS",
+      "LIS"
+    ],
+    "NORTEAMERICA": [
+      "MIA",
+      "JFK",
+      "LAX",
+      "YYZ",
+      "MEX"
+    ],
+    "LATINOAMERICA": [
+      "GRU",
+      "GIG",
+      "BOG",
+      "LIM",
+      "SCL",
+      "MVD"
+    ],
+    "CARIBE": [
+      "CUN",
+      "PUJ",
+      "HAV",
+      "SJO",
+      "SJU"
+    ],
+    "ASIA": [
+      "NRT",
+      "HND",
+      "KIX",
+      "ICN",
+      "BKK",
+      "SIN",
+      "DXB"
+    ],
+    "OCEANIA": [
+      "SYD",
+      "MEL",
+      "AKL"
+    ],
+    "CUALQUIERA": [
+      "MAD",
+      "MIA",
+      "NRT",
+      "CUN"
+    ],
+    "ESPANA": [
+      "MAD",
+      "BCN"
+    ],
+    "FRANCIA": [
+      "CDG",
+      "ORY"
+    ],
+    "ITALIA": [
+      "FCO",
+      "MXP"
+    ],
+    "REINO UNIDO": [
+      "LHR",
+      "LGW"
+    ],
+    "ALEMANIA": [
+      "FRA",
+      "BER",
+      "MUC"
+    ],
+    "PORTUGAL": [
+      "LIS",
+      "OPO"
+    ],
+    "PAISES BAJOS": [
+      "AMS"
+    ],
+    "SUIZA": [
+      "ZRH",
+      "GVA"
+    ],
+    "GRECIA": [
+      "ATH"
+    ],
+    "ESTADOS UNIDOS": [
+      "MIA",
+      "JFK",
+      "LAX",
+      "ORD"
+    ],
+    "CANADA": [
+      "YYZ",
+      "YVR"
+    ],
+    "MEXICO": [
+      "MEX",
+      "CUN"
+    ],
+    "BRASIL": [
+      "GRU",
+      "GIG"
+    ],
+    "CHILE": [
+      "SCL"
+    ],
+    "COLOMBIA": [
+      "BOG",
+      "MDE"
+    ],
+    "PERU": [
+      "LIM"
+    ],
+    "URUGUAY": [
+      "MVD"
+    ],
+    "REPUBLICA DOMINICANA": [
+      "PUJ",
+      "SDQ"
+    ],
+    "CUBA": [
+      "HAV"
+    ],
+    "COSTA RICA": [
+      "SJO"
+    ],
+    "PUERTO RICO": [
+      "SJU"
+    ],
+    "JAPON": [
+      "NRT",
+      "HND",
+      "KIX"
+    ],
+    "TAILANDIA": [
+      "BKK",
+      "HKT"
+    ],
+    "COREA DEL SUR": [
+      "ICN"
+    ],
+    "EMIRATOS ARABES": [
+      "DXB"
+    ],
+    "AUSTRALIA": [
+      "SYD",
+      "MEL"
+    ],
+    "NUEVA ZELANDA": [
+      "AKL"
+    ],
+    "MIAMI": [
+      "MIA"
+    ],
+    "NUEVA YORK": [
+      "JFK",
+      "EWR"
+    ],
+    "TOKIO": [
+      "NRT",
+      "HND"
+    ],
+    "CANCUN": [
+      "CUN"
+    ],
+    "PARIS": [
+      "CDG",
+      "ORY"
+    ],
+    "RIO DE JANEIRO": [
+      "GIG"
+    ],
+    "MADRID": [
+      "MAD"
+    ]
+  },
+  "displayAirports": {
+    "España": [
+      "MAD",
+      "BCN",
+      "AGP",
+      "VLC"
+    ],
+    "Francia": [
+      "CDG",
+      "ORY",
+      "NCE",
+      "MRS"
+    ],
+    "Italia": [
+      "FCO",
+      "MXP",
+      "LIN",
+      "NAP"
+    ],
+    "Reino Unido": [
+      "LHR",
+      "LGW",
+      "MAN",
+      "EDI"
+    ],
+    "Alemania": [
+      "FRA",
+      "MUC",
+      "BER",
+      "DUS"
+    ],
+    "Portugal": [
+      "LIS",
+      "OPO"
+    ],
+    "Países Bajos": [
+      "AMS"
+    ],
+    "Suiza": [
+      "ZRH",
+      "GVA"
+    ],
+    "Grecia": [
+      "ATH",
+      "JMK"
+    ],
+    "París": [
+      "CDG",
+      "ORY"
+    ],
+    "Estados Unidos": [
+      "JFK",
+      "MIA",
+      "LAX",
+      "ORD",
+      "SFO"
+    ],
+    "Canadá": [
+      "YYZ",
+      "YVR",
+      "YUL"
+    ],
+    "México": [
+      "MEX",
+      "CUN",
+      "GDL"
+    ],
+    "Miami": [
+      "MIA",
+      "FLL"
+    ],
+    "Nueva York": [
+      "JFK",
+      "LGA",
+      "EWR"
+    ],
+    "Brasil": [
+      "GRU",
+      "GIG",
+      "BSB",
+      "REC"
+    ],
+    "Chile": [
+      "SCL"
+    ],
+    "Colombia": [
+      "BOG",
+      "MDE",
+      "CTG"
+    ],
+    "Perú": [
+      "LIM",
+      "CUZ"
+    ],
+    "Uruguay": [
+      "MVD"
+    ],
+    "Río de Janeiro": [
+      "GIG",
+      "SDU"
+    ],
+    "República Dominicana": [
+      "PUJ",
+      "SDQ"
+    ],
+    "Cancún": [
+      "CUN"
+    ],
+    "Cuba": [
+      "HAV"
+    ],
+    "Costa Rica": [
+      "SJO"
+    ],
+    "Puerto Rico": [
+      "SJU"
+    ],
+    "Japón": [
+      "NRT",
+      "HND",
+      "KIX"
+    ],
+    "Tokio": [
+      "NRT",
+      "HND"
+    ],
+    "Tailandia": [
+      "BKK",
+      "HKT"
+    ],
+    "Corea del Sur": [
+      "ICN"
+    ],
+    "Emiratos Árabes": [
+      "DXB"
+    ],
+    "Australia": [
+      "SYD",
+      "MEL",
+      "BNE"
+    ],
+    "Nueva Zelanda": [
+      "AKL"
+    ]
+  },
+  "groups": {
+    "Europa": [
+      "España",
+      "Reino Unido",
+      "Francia",
+      "Alemania",
+      "Italia",
+      "Portugal",
+      "Países Bajos",
+      "Suiza",
+      "Grecia"
+    ],
+    "Norteamérica": [
+      "Estados Unidos",
+      "Canadá",
+      "México"
+    ],
+    "Latinoamérica": [
+      "Brasil",
+      "Chile",
+      "Colombia",
+      "Perú",
+      "Uruguay"
+    ],
+    "Caribe": [
+      "República Dominicana",
+      "México",
+      "Cuba",
+      "Costa Rica",
+      "Puerto Rico"
+    ],
+    "Asia": [
+      "Japón",
+      "Tailandia",
+      "Corea del Sur",
+      "Emiratos Árabes"
+    ],
+    "Oceanía": [
+      "Australia",
+      "Nueva Zelanda"
+    ],
+    "Cualquiera": [
+      "España",
+      "Estados Unidos",
+      "Japón",
+      "México"
+    ]
+  }
+}

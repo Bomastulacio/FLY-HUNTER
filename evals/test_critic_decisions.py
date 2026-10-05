@@ -1,7 +1,7 @@
 """Offline behavioral evals. Run: python -B evals/test_critic_decisions.py
 
 Requires Pydantic 2, already required by critic.py. No pytest, API keys, network,
-LangGraph or Google SDK required. Loads only critic.py, without package startup.
+LangGraph or Google SDK required. Loads the critic and its pure shared geography contract.
 --strict fails on known architectural gaps as well as regressions.
 The mocked planner tests orchestration contracts, not live model quality.
 """
@@ -10,7 +10,6 @@ from __future__ import annotations
 import argparse
 from copy import deepcopy
 from datetime import date, timedelta
-import importlib.util
 import hashlib
 import json
 from pathlib import Path
@@ -22,12 +21,8 @@ from unittest.mock import MagicMock, patch
 from pydantic import ValidationError
 
 
-CRITIC_PATH = Path(__file__).resolve().parents[1] / "backend/src/agents/critic.py"
-SPEC = importlib.util.spec_from_file_location("fly_hunter_critic_evals", CRITIC_PATH)
-assert SPEC is not None and SPEC.loader is not None
-critic = importlib.util.module_from_spec(SPEC)
-sys.modules[SPEC.name] = critic
-SPEC.loader.exec_module(critic)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'backend'))
+from src.agents import critic
 
 
 class FrozenDate(date):

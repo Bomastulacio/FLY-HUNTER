@@ -276,3 +276,65 @@ y las pausas nuevas conservan su fecha original. También se conserva el ledger 
 No incorporar RAG de precios como fuente de disponibilidad. Las preferencias y observaciones
 pertenecen a tablas consultables. Gemini puede explicar o priorizar datos verificados dentro del
 presupuesto, nunca inventarlos ni autorizar más búsquedas.
+
+### Incidente de feed vacío y contrato de radares — 05/10/2026
+
+Las capturas muestran una cotización guardada del 1/10 y una búsqueda manual posterior en
+Google. Guardados conserva la cotización original; abrir su enlace consulta otras opciones
+actuales. No prueba que esas opciones estuvieran en la base ni que cumplan todos los filtros.
+El feed compara observaciones de las últimas 24 horas. No se debe rejuvenecer la fecha de un
+guardado ni importar el precio de una captura como evidencia de producción.
+
+Se reprodujo además un defecto concreto: el planificador aceptaba `paises: ["Norteamérica"]`,
+pero la vista trataba ese valor como país desconocido y ocultaba MIA. Mapas independientes en
+Python y TypeScript también discrepaban sobre aeropuertos. La configuración real del usuario
+y los logs de su corrida no fueron accesibles durante esta reparación; no se afirma que ese
+defecto haya sido la única causa de su pantalla vacía.
+
+Implementación:
+
+- `shared/radar-geography.json` mantiene cobertura de búsqueda explícita y destinos reconocidos
+  para presentación. Los consumidores normalizan acentos/capitalización, regiones dentro de
+  `paises`, ciudades e IATA. El frontend, formulario, planificador, Crítico y notificaciones usan
+  el mismo catálogo. La lista y orden de aeropuertos del planificador TypeScript se conservan.
+- `shared/radar-contract-cases.json` alimenta regresiones Python/TypeScript. El test de contrato
+  recorre todos los destinos planificables por política real, proyección de datos y selección del
+  feed. Un precio viejo no gana frente a una observación reciente; pasajeros/escalas siguen siendo
+  filtros duros. Estos tests no afirman cobertura exhaustiva del proveedor.
+- El feed distingue datos vencidos, destino desconocido y fallo al leer cotizaciones. Un fallo
+  conserva el último resultado legible con aviso; no se interpreta como búsqueda sin ofertas.
+  Guardados aclara que Google abre otra búsqueda y puede devolver vuelos/precios diferentes.
+- El scraper agrega `radar_id` a recibos y decisiones; el artefacto incluye `radar_reports`
+  (combinaciones, intentos procesados, observaciones, elegibles, informativas y rechazos por motivo)
+  y `plan_issues`. `checked` cuenta resultados procesados por radar/fuente, incluidos reutilizados;
+  no es un contador de I/O externo ni de combinaciones únicas. Las reservas siguen en el ledger.
+- LangGraph emite `graph.node_completed` con corrida, radar, nodo, iteración y conteos. Valida
+  todo el lote antes de escribir/notificar, evitando pérdida silenciosa de filas mal formadas.
+  El workflow consumidor usa el commit del scraper que produjo el plan, evitando mezclar versiones.
+- `quality.yml` ejecuta TypeScript, fixtures offline, SQL/RLS, Astro y evals Python en push/PR.
+  No recibe secrets ni llama proveedores. Para impedir merges con checks rojos, el propietario
+  debe seleccionar este check como requerido en las reglas de GitHub; crear el workflow no
+  modifica automáticamente protección de ramas ni bloquea despliegues directos de Vercel.
+
+Fundamento de ingeniería (fuentes primarias consultadas el 05/10/2026):
+
+- [Uber Engineering: Efficient Software Factory](https://www.uber.com/us/en/blog/efficient-software-factory/):
+  evaluar resultados de trabajo real y mantener un ciclo de mejora del contexto y herramientas.
+  Aplicación aquí: convertir el incidente en contrato ejecutable y reglas del repositorio.
+- [Anthropic: Demystifying evals for AI agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents):
+  combinar evaluaciones del resultado y trazas para diagnosticar dónde se rompe el flujo.
+  Aplicación aquí: comprobar que una búsqueda elegible llega a la tarjeta, además de probar nodos.
+- [LangGraph: Persistence](https://docs.langchain.com/oss/python/langgraph/persistence):
+  distinguir estado duradero y puntos de recuperación. No se añadió un checkpointer ni se promete
+  ejecución exactamente una vez: antes de múltiples ejecutores sigue siendo necesaria la etapa
+  de reservas/leases atómicas ya documentada arriba.
+
+El enlace de X enviado no permitió recuperar el contenido del post; el artículo de Uber es
+una fuente primaria adicional, no una transcripción o verificación de ese tweet.
+
+Despliegue: no requiere migración SQL; publicar frontend y código del pipeline juntos.
+Después, verificar en la cuenta real la configuración del radar y el siguiente artefacto del
+scraper. Una cotización todavía no recolectada seguirá sin aparecer como precio actual.
+Se conserva el límite de 500 filas del feed y la deuda de distinguir vacío válido de fallo en
+el refinamiento Python (`test_target_empty_success_should_explore_once_without_llm`, fallo
+esperado existente). Ambos límites requieren su etapa específica; no se presentan como resueltos.

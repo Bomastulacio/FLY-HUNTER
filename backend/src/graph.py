@@ -185,14 +185,9 @@ def persistence_and_notify_node(state: GraphState) -> GraphState:
         print("No hay vuelos para guardar en este lote.")
         return state
         
-    # Crear objetos Pydantic
-    db_deals = []
-    for d in deals:
-        try:
-            deal_obj = FlightDeal(**d)
-            db_deals.append(deal_obj)
-        except Exception as e:
-            print(f"Error parsing deal to Pydantic: {e}")
+    # Fail visibly at the contract boundary; never report a successful batch after
+    # silently dropping malformed quotes. No writes or emails precede validation.
+    db_deals = [FlightDeal(**d) for d in deals]
             
     # Upsert a Supabase
     stored_deals = upsert_deals(db_deals)

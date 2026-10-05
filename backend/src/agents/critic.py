@@ -15,6 +15,7 @@ from datetime import date, datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from ..services.geography import radar_targets, destination_airports
 
 logger = logging.getLogger(__name__)
 GLITCH_THRESHOLD_PER_PAX = 400.0
@@ -114,6 +115,16 @@ def _airline(value: str) -> str:
 def _hard_eligible(deal: Dict, alerts: List[Dict]) -> bool:
     """Before hashing, grouping, rescue or exposing any flight to the model."""
     try:
+        routed_alerts = [a for a in alerts if a.get('origen') and a.get('destino')]
+        route_matches = not routed_alerts
+        for alert in routed_alerts:
+            origin, destination = deal.get('ida_origen_destino', '').split('-')
+            origins = [v.strip().upper() for v in re.split(r'[,/]', alert['origen'])]
+            targets = {a for t in radar_targets(alert) for a in destination_airports(t)}
+            if origin in origins and destination in targets and deal.get('vuelta_origen_destino') == f'{destination}-{origin}':
+                route_matches = True
+        if not route_matches:
+            return False
         if deal.get("price_unknown") not in (None, False):
             return False
         stops = _integer(deal.get("cantidad_escalas"))  # Unknown is not nonstop.

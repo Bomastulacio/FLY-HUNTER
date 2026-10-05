@@ -60,7 +60,10 @@ jobs:
       - name: Offline collector evals
         run: |
           cd agent
+          npm run check
           npm test
+          cd ../frontend
+          npm run build
 
       - name: Run Flight Hunter Agent in loop
         run: |

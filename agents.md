@@ -1,6 +1,6 @@
 # Flight Hunter — Reglas vigentes de desarrollo y operación
 
-Actualizado: 13/09/2026. Este archivo y `MONITORING.md` describen la implementación vigente.
+Actualizado: 05/10/2026. Este archivo y `MONITORING.md` describen la implementación vigente.
 `SEARCH_RELIABILITY.md` conserva el diagnóstico de extracción y sus límites. Ante textos
 históricos contradictorios, prevalecen estas reglas. No crear otra copia `agent.md`.
 
@@ -101,3 +101,5 @@ Para evitar deuda técnica y bugs recurrentes, respetar obligatoriamente:
 18. **Seguimiento sin falsificar identidad**: `saved_deals` conserva la cotización guardada. `saved_deal_checks` agrega observaciones idempotentes; una suba se registra aunque ya no entre en presupuesto. Solo se comparan misma ruta, fechas, pasajeros, aerolínea, escalas y condición de pago. Sin números de vuelo/fare family no afirmar que es exactamente el mismo ticket. Un fallo conserva el último precio conocido y muestra su antigüedad.
 19. **Verificación antes del despliegue**: ejecutar los tests offline del agente (incluyen SQL/RLS en PGlite), TypeScript, build Astro y los evals Python si se altera su comportamiento. Los tests nunca consumen SerpApi, Gemini ni consultan proveedores en vivo. No generar datos ficticios de producción para completar una card.
 20. **Hoja de ruta única**: consultar `MONITORING.md` para instalación, límites y siguientes etapas (push, widgets nativos y escalado). No sumar agentes, RAG, cron o memoria paralelos para resolver funciones ya cubiertas por este flujo.
+21. **Contrato entre búsqueda y presentación**: `shared/radar-geography.json` es la fuente de destinos para TypeScript, Python y frontend. No agregar mapas de elegibilidad independientes. Regiones dentro de `paises`, ciudades, códigos IATA y nombres sin acentos deben interpretarse igual. Todo destino que el planificador consulta debe poder aparecer en el feed si cumple evidencia, filtros y antigüedad. Cada incidente debe sumar una regresión que recorra planificación, política y presentación; los casos compartidos también se ejecutan en Python.
+22. **Diagnóstico sin silencios**: distinguir error de lectura, cotización vencida, destino desconocido, búsqueda vacía y cobertura parcial. Conservar `radar_id` en decisiones, recibos y reportes del plan. Validar el lote antes de persistir o notificar; no descartar silenciosamente datos mal formados ni presentar precios guardados como recién consultados. Ejecutar `Offline quality checks` en PR/push además de las validaciones previas a la búsqueda.
