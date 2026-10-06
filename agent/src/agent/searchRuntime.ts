@@ -6,7 +6,7 @@ import { searchKey } from './searchPlanner.js';
 
 export type Provider = ScrapedFlightOption['source'];
 export type DeferralReason = 'run_budget_exhausted' | 'daily_budget_exhausted' | 'provider_blocked' | 'provider_error' | 'provider_cooldown';
-export interface ProviderResult { status: 'ok' | 'empty' | 'blocked' | 'error' | 'unverified'; options: ScrapedFlightOption[]; reason?: string; stage?: string; checkedAt?: string }
+export interface ProviderResult { status: 'ok' | 'empty' | 'blocked' | 'error' | 'unverified'; options: ScrapedFlightOption[]; reason?: string; stage?: string; checkedAt?: string; diagnostics?: Record<string, boolean | number | string> }
 interface State {
   cursors: Record<string, number>;
   cooldown: Partial<Record<Provider, number>>;
@@ -14,8 +14,10 @@ interface State {
   cache: Record<string, { expires: number; result: ProviderResult }>;
   daily: Record<string, number>;
   coverage?: Record<string, Record<string, number>>;
+  consecutiveBlocks?: Partial<Record<Provider, number>>;
 }
-export const logEvent = (event: string, fields: Record<string, unknown> = {}) => console.log(JSON.stringify({ timestamp: new Date().toISOString(), event, ...fields }));
+export const logEvent = (event: string, fields: Record<string, unknown> = {}) => console.log(JSON.stringify({ timestamp: new Date().toISOString(),
+  execution: process.env.NODE_TEST_CONTEXT ? 'offline_test' : 'live', run_id: process.env.GITHUB_RUN_ID || 'local', event, ...fields }));
 
 export class SearchRuntime {
   private state: State = { cursors: {}, cooldown: {}, cache: {}, daily: {} };
@@ -98,15 +100,20 @@ export class SearchRuntime {
     let result: ProviderResult;
     try { result = await run(); } catch { result = { status: 'error', options: [] }; }
     result = { ...result, checkedAt: new Date().toISOString() };
+    this.state.consecutiveBlocks ??= {};
+    if (result.status === 'blocked') this.state.consecutiveBlocks[provider] = (this.state.consecutiveBlocks[provider] || 0) + 1;
+    else if (result.status === 'ok' || result.status === 'empty') this.state.consecutiveBlocks[provider] = 0;
     if (result.status === 'blocked' || result.status === 'error') {
-      this.state.cooldown[provider] = Date.now() + (result.status === 'blocked' ? 24 : 1) * 3600000;
+      const hours = result.status === 'blocked' ? Math.min(168, 24 * 2 ** Math.min(3, (this.state.consecutiveBlocks[provider] || 1) - 1)) : 1;
+      this.state.cooldown[provider] = Date.now() + hours * 3600000;
       this.state.pauses ??= {};
       this.state.pauses[provider] = { outcome: result.status, checked_at: result.checkedAt! };
     }
     // Unverified markup is not evidence that there are no flights.
     if (result.status === 'ok' || result.status === 'empty') this.state.cache[key] = { expires: Date.now() + (result.status === 'ok' ? 6 : 1) * 3600000, result };
     await this.save();
-    logEvent('search.completed', { provider, key, status: result.status, reason: result.reason, stage: result.stage, quotes: result.options.length, latency_ms: Date.now() - start, api_credits: 0, searches_used: this.used[provider] });
+    logEvent('search.completed', { provider, key, status: result.status, reason: result.reason, stage: result.stage, diagnostics: result.diagnostics,
+      quotes: result.options.length, latency_ms: Date.now() - start, api_credits: 0, searches_used: this.used[provider] });
     return result;
   }
 }

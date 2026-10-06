@@ -236,11 +236,10 @@ class CriticDecisionEvals(unittest.TestCase):
         self.assertEqual(critic.generate_hash(deal), hashlib.md5(raw.encode('utf-8')).hexdigest())
         self.assertNotEqual(critic.generate_hash(deal), critic.generate_hash(self.deal()))
 
-    @unittest.expectedFailure
     def test_target_empty_success_should_explore_once_without_llm(self):
-        # Known gap: critic conflates empty success with exhausted search.
-        # Future graph policy must distinguish empty success from provider failure.
-        result = self.evaluate([])
+        result = critic.evaluate_with_llm_critic([], self.alert, current_search={
+            'dep_date': self.alert['fecha_ida_min'], 'ret_date': self.alert['fecha_vuelta_min']},
+            collection_context={'status': 'empty'})
         self.assertTrue(result[1], "One bounded deterministic alternative remains available")
         self.planner.assert_not_called()
 

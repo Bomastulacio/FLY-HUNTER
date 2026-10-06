@@ -148,3 +148,24 @@ test('Google reports a late CAPTCHA as blocked so the source cooldown survives t
   assert.deepEqual(result.options, []);
   assert.equal(requests, 1);
 });
+
+test('Google waits for dynamically inserted rows even when there is no loading indicator', async () => {
+  const fixture = `<input role="combobox" aria-label="¿Desde dónde? Buenos Aires EZE">
+    <input role="combobox" aria-label="¿A dónde quieres ir? Madrid MAD">
+    <input aria-label="Salida" value="dom, 18 abr"><input aria-label="Vuelta" value="sáb, 1 may">
+    <button role="switch" aria-label="Hacer un seguimiento con salida el 2027-04-18 y vuelta el 2027-05-01"></button>
+    <button id="cheap" role="tab" aria-selected="false">Los más bajos</button>
+    <div id="panel" role="tabpanel" aria-label="Los más bajos">Precio total para 2 adultos.</div>
+    <template id="rows"><li class="pIav2d">
+      <div role="link" aria-label="A partir de 1884 dólares estadounidenses (precio total de ida y vuelta). Vuelo directo de Example Air. Sale de Ezeiza. Seleccionar vuelo"></div>
+      <span role="text" aria-label="1884 dólares estadounidenses">1.884 US$</span>
+    </li></template>
+    <script>document.getElementById('cheap').onclick = () => {
+      document.getElementById('cheap').setAttribute('aria-selected', 'true');
+      setTimeout(() => document.getElementById('panel').insertAdjacentHTML('beforeend', document.getElementById('rows').innerHTML), 300);
+    };</script>`;
+  const { result, requests } = await withOfflineBrowser(fixture, () => collectGoogleFlights(params));
+  assert.equal(result.status, 'ok', JSON.stringify(result));
+  assert.equal(result.diagnostics?.rowsVerified, 1);
+  assert.equal(requests, 1);
+});

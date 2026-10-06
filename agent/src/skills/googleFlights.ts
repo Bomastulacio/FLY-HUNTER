@@ -47,7 +47,7 @@ export async function collectGoogleFlights(p: FlightSearchParams, options: { hea
     if (!await dates.count()) {
       const body = await page.locator('body').innerText().catch(() => '');
       if (challenged(body)) return { status: 'blocked', options: [] };
-      return { status: 'unverified', options: [], reason: 'exact_dates_not_verified' };
+      return { status: 'unverified', options: [], reason: 'exact_dates_not_verified', stage, diagnostics: { datesVerified: false } };
     }
     const departureInput = page.getByRole('textbox', { name: 'Salida', exact: true });
     const returnInput = page.getByRole('textbox', { name: 'Vuelta', exact: true });
@@ -66,15 +66,23 @@ export async function collectGoogleFlights(p: FlightSearchParams, options: { hea
     const pagePassengerCount = verifiedPassengerCount(await panel.innerText());
     const origin = page.getByRole('combobox', { name: new RegExp(`Desde dónde.*\\b${escapeRegex(originCode)}\\b`) });
     const destination = page.getByRole('combobox', { name: new RegExp(`dónde quieres ir.*\\b${escapeRegex(destCode)}\\b`) });
-    if (await cheapest.getAttribute('aria-selected') !== 'true' || pagePassengerCount !== p.passengers
-      || !await origin.count() || !await destination.count()
-      || await departureInput.inputValue() !== departureValue || await returnInput.inputValue() !== returnValue) {
-      return { status: 'unverified', options: [], reason: 'search_controls_mismatch' };
+    const diagnostics = { cheapestSelected: await cheapest.getAttribute('aria-selected') === 'true',
+      passengersMatch: pagePassengerCount === p.passengers, observedPassengers: pagePassengerCount ?? 0,
+      originMatches: await origin.count() === 1, destinationMatches: await destination.count() === 1,
+      departureMatches: await departureInput.inputValue() === departureValue, returnMatches: await returnInput.inputValue() === returnValue };
+    if (Object.entries(diagnostics).some(([key, value]) => key !== 'observedPassengers' && !value)) {
+      return { status: 'unverified', options: [], reason: 'search_controls_mismatch', stage, diagnostics };
     }
     stage = 'result_rows';
     const results: ScrapedFlightOption[] = [];
+    const rows = panel.locator('li.pIav2d, ul.Rk10dc > li');
+    // all() doesn't wait for asynchronously inserted rows. No reload or extra query.
+    if (!/no se encontraron vuelos|no hay vuelos/i.test(body)) {
+      await rows.first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+    }
+    if (challenged(await page.locator('body').innerText())) return { status: 'blocked', options: [] };
     // Read the full loaded list; Aerolíneas Argentinas may appear beyond the first five cards.
-    for (const card of await panel.locator('li.pIav2d, ul.Rk10dc > li').all()) {
+    for (const card of await rows.all()) {
       if (!await card.isVisible()) continue;
       const links = card.getByRole('link', { name: /^A partir de .*Seleccionar vuelo$/ });
       if (await links.count() !== 1) continue;
@@ -84,7 +92,10 @@ export async function collectGoogleFlights(p: FlightSearchParams, options: { hea
         bookingUrl: page.url(), collectedAt: new Date().toISOString() }, p);
       if (quote) results.push(quote);
     }
-    return { status: results.length ? 'ok' : /no se encontraron vuelos|no hay vuelos/i.test(body) ? 'empty' : 'unverified', options: selectDiverseQuotes(results), reason: results.length ? undefined : 'no_verified_rows' };
+    const finalBody = await page.locator('body').innerText();
+    return { status: results.length ? 'ok' : /no se encontraron vuelos|no hay vuelos/i.test(finalBody) ? 'empty' : 'unverified',
+      options: selectDiverseQuotes(results), reason: results.length ? undefined : 'no_verified_rows', stage,
+      diagnostics: { ...diagnostics, rowsFound: await rows.count(), rowsVerified: results.length } };
   } catch (error) {
     // Challenges can arrive after DOMContentLoaded while waiting for result controls.
     // Preserve the blocked status so the runtime applies its durable source cooldown.

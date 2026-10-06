@@ -23,7 +23,7 @@ def _observed_at(deal):
 def notification_kind(deal: dict, radar: dict, now=None):
     """A low price never bypasses evidence, route, passenger or airline constraints."""
     from ..agents.critic import _hard_eligible, _date_distance
-    from .geography import destination_airports, radar_targets
+    from .geography import destination_airports, radar_targets, origin_airports
     now = now or datetime.now(timezone.utc)
     if not radar.get('id') or not radar.get('user_id') or not radar.get('activo', True) or radar.get('notificar_email') is False:
         return None
@@ -46,7 +46,7 @@ def notification_kind(deal: dict, radar: dict, now=None):
         return None
     try:
         origin, destination = deal['ida_origen_destino'].split('-')
-        origins = radar.get('origen', '').replace('/', ',').replace(' ', '').split(',')
+        origins = origin_airports(radar.get('origen', ''))
         targets = radar_targets(radar)
         airports = [a for target in targets for a in destination_airports(target)]
         total = float(deal['precio_total_usd'])

@@ -108,7 +108,12 @@ export async function getMonitoringSavedDeals(): Promise<SavedDeal[]> {
     ['radar_email_deliveries', 'id'], ['search_alerts', 'notificar_email,precio_aviso_usd'],
   ]) {
     const { error } = await supabase.from(table).select(columns).limit(1);
-    if (error) throw new Error('Aplicá schema_monitoring.sql antes de ejecutar el seguimiento');
+    if (error) {
+      if (['42P01', '42703', 'PGRST204', 'PGRST205'].includes(error.code)) {
+        throw new Error('Aplicá schema_monitoring.sql antes de ejecutar el seguimiento');
+      }
+      throw new Error(`monitoring_preflight_failed: ${table} (${error.code || 'connection_error'})`);
+    }
   }
   const rows: SavedDeal[] = [];
   for (let offset = 0; ; offset += 500) {

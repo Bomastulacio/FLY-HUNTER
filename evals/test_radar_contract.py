@@ -6,7 +6,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from backend.src.services.geography import CATALOG, destination_airports, radar_targets
+from backend.src.services.geography import CATALOG, destination_airports, radar_targets, origin_airports
 from backend.src.agents.critic import _hard_eligible
 
 
@@ -21,8 +21,10 @@ class RadarContract(unittest.TestCase):
                 self.assertIn(case['airport'], planned)
                 self.assertIn(case['airport'], accepted)
                 self.assertNotIn('ZZZ', accepted)
-                radar = {**case, 'origen': 'EZE', 'pasajeros': 1, 'escalas_max': 1}
-                quote = {'ida_origen_destino': f"EZE-{case['airport']}", 'vuelta_origen_destino': f"{case['airport']}-EZE",
+                origin = case.get('originAirport', 'EZE')
+                radar = {'origen': 'EZE', **case, 'pasajeros': 1, 'escalas_max': 1}
+                self.assertIn(origin, origin_airports(radar['origen']))
+                quote = {'ida_origen_destino': f"{origin}-{case['airport']}", 'vuelta_origen_destino': f"{case['airport']}-{origin}",
                          'ida_fecha': '2027-01-29', 'vuelta_fecha': '2027-03-05', 'precio_total_usd': 913,
                          'pasajeros': 1, 'cantidad_escalas': 0, 'aerolinea': 'American Airlines'}
                 self.assertTrue(_hard_eligible(quote, [radar]))

@@ -1,8 +1,9 @@
 from typing import TypedDict, List, Dict, Any, Optional
 from langgraph.graph import StateGraph, END
 import datetime
+import json
 from .agents.strategist import define_daily_mission
-from .agents.collectors import collect_dynamic_flights, collect_flights_for_search
+from .agents.collectors import collect_dynamic_flights, collect_flights_for_search, complete_selected_return
 from .agents.sanitizer import sanitize_flights
 from .agents.analyst import consolidate_and_analyze
 from .agents.critic import evaluate_with_llm_critic, filter_and_evaluate
@@ -26,6 +27,7 @@ class GraphState(TypedDict, total=False):
     suggested_deltas: Dict[str, int]
     searched_date_pairs: List[Dict[str, str]]
     retained_deals: List[Dict[str, Any]]
+    collection_context: Dict[str, Any]
 
 def strategist_node(state: GraphState) -> GraphState:
     print("\n=======================================================")
@@ -63,6 +65,7 @@ def pick_alert_node(state: GraphState) -> GraphState:
     state["refinement_reason"] = ""
     state["suggested_deltas"] = {"dep_delta": 0, "ret_delta": 0}
     state["raw_flights"] = []
+    state['collection_context'] = {}
     state["analyzed_flights"] = []
     state["evaluated_deals"] = []
     state["retained_deals"] = []
@@ -85,10 +88,14 @@ def supervisor_node(state: GraphState) -> GraphState:
         # Refinements also reuse exact cached quotes before spending another credit.
         check_cache = True
         flights = collect_flights_for_search(current_search, check_cache_first=check_cache)
+        flights = complete_selected_return(current_search, flights, state.get('current_alert') or {})
     else:
         flights = collect_dynamic_flights(mission)
         
     state["raw_flights"] = flights
+    state['collection_context'] = getattr(flights, 'context', {'status': 'ok' if flights else 'unknown'})
+    print(json.dumps({'event': 'search.context', 'radar_id': (state.get('current_alert') or {}).get('id'),
+          **state['collection_context']}))
     print(f"📦 Recolectados {len(flights)} vuelos para análisis.")
     return state
 
@@ -126,6 +133,7 @@ def critic_node(state: GraphState) -> GraphState:
         max_iterations=max_iter,
         current_search=current_search,
         searched_date_pairs=searched_pairs,
+        collection_context=state.get('collection_context'),
     )
     
     # Preserve the best informational quote if a later search is empty or worse.

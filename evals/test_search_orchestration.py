@@ -75,6 +75,31 @@ class OrchestrationEvals(TestCase):
         with patch.dict(os.environ, {'FLIGHT_SEARCH_PLAN_PATH': str(path)}), patch.object(strategist, 'get_active_search_alerts', return_value=[{**ALERT, 'pasajeros': 1}]):
             self.assertEqual(strategist.define_daily_mission()['searches'], [])
 
+    def test_exact_handoff_context_isolated_by_radar_and_tracking_does_not_spend(self):
+        path = Path(self.temp) / 'plan-context.json'
+        receipt = {'radar_id': 'radar', 'provider': 'google_flights', 'status': 'blocked', 'reason': 'provider_blocked',
+                   'origin': 'EZE', 'destination': 'MAD', 'departure': SEARCH['dep_date'], 'return': SEARCH['ret_date'],
+                   'passengers': 2, 'mode': 'follow', 'checked_at': '2026-10-06T09:00:00Z', 'quotes': 0}
+        path.write_text(json.dumps({'version': 1, 'geography_version': 2, 'searches': [SEARCH],
+            'provider_results': [receipt, {**receipt, 'radar_id': 'other', 'mode': 'explore'}]}), encoding='utf-8')
+        with patch.dict(os.environ, {'FLIGHT_SEARCH_PLAN_PATH': str(path)}), patch.object(strategist, 'get_active_search_alerts', return_value=[ALERT]):
+            search = strategist.define_daily_mission()['searches'][0]
+        context = search['source_context']
+        self.assertEqual(context['mode'], 'follow')
+        self.assertEqual(len(context['providers']), 1)
+        self.assertEqual(context['providers'][0]['checked_at'], receipt['checked_at'])
+        self.assertTrue(context['constraints']['require_verified_return_for_email'])
+        with patch('src.services.db.get_recent_flight_deals', return_value=[]), patch.object(collectors, 'fetch_serpapi_flights') as paid:
+            result = collectors.collect_flights_for_search(search)
+            self.assertEqual(result.context['reason'], 'saved_tracking_has_no_paid_fallback')
+            paid.assert_not_called()
+
+    def test_cache_read_failure_does_not_start_paid_fallback(self):
+        with patch('src.services.db.get_recent_flight_deals', side_effect=RuntimeError('offline fixture')), patch.object(collectors, 'fetch_serpapi_flights') as paid:
+            result = collectors.collect_flights_for_search(SEARCH)
+            self.assertEqual(result.context['status'], 'error')
+            paid.assert_not_called()
+
     def test_empty_alerts_never_collect_or_spend(self):
         with ExitStack() as stack:
             stack.enter_context(patch.object(graph, 'define_daily_mission', return_value={'searches': [], 'alerts_context': []}))

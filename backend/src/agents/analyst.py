@@ -63,4 +63,6 @@ def consolidate_and_analyze(flights_data: List[Dict]) -> List[Dict]:
     ])
     df = df.drop(columns=['_payment_condition'])
     
-    return df.to_dict('records')
+    # Mixed partial/complete quotes may omit optional fields. Pandas NaN is not
+    # a JSON null and cannot be persisted as an optional integer by Pydantic.
+    return df.astype(object).where(pd.notna(df), None).to_dict('records')

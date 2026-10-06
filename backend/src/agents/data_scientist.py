@@ -4,27 +4,23 @@ import holidays
 from typing import List, Dict
 from datetime import datetime
 from ..services.db import get_recent_flight_deals, upsert_route_insights, RouteInsight, get_supabase_client
+from ..services.geography import airport_country
+
+
+def holiday_for_airport(code, date_str):
+    country = airport_country(code)
+    if not country or not date_str:
+        return False
+    try:
+        day = datetime.strptime(date_str, '%Y-%m-%d').date()
+        return day in holidays.country_holidays(country, years=[day.year])
+    except (ValueError, TypeError, NotImplementedError):
+        return False  # Unknown calendar is never replaced with another country's.
 
 def data_scientist_analysis(current_deals: List[Dict]) -> None:
     print("--- Data Scientist: Iniciando análisis de tendencias y feriados ---")
     
     # 1. Analizar e inferir feriados para los vuelos actuales y actualizar la DB
-    ar_holidays = holidays.AR()
-    country_map = {
-        'MAD': holidays.ES(), 'BCN': holidays.ES(),
-        'CDG': holidays.FR(), 'ORY': holidays.FR(),
-        'LHR': holidays.GB(), 'LGW': holidays.GB(),
-        'BER': holidays.DE(), 'FRA': holidays.DE(), 'MUC': holidays.DE(),
-        'NRT': holidays.JP(), 'HND': holidays.JP(), 'KIX': holidays.JP()
-    }
-    
-    def is_holiday(date_str, hol_obj):
-        try:
-            d = datetime.strptime(date_str, '%Y-%m-%d').date()
-            return d in hol_obj
-        except:
-            return False
-            
     client = get_supabase_client()
     for d in current_deals:
         hash_id = d.get('hash_dedupe')
@@ -34,13 +30,12 @@ def data_scientist_analysis(current_deals: List[Dict]) -> None:
         ida_f = d.get('ida_fecha')
         vuelta_f = d.get('vuelta_fecha')
         ruta = d.get('ida_origen_destino', '')
-        dest_code = ruta.split('-')[-1] if '-' in ruta else 'MAD'
+        origin_code, _, dest_code = ruta.partition('-')
         
-        fer_origen = is_holiday(ida_f, ar_holidays) if ida_f else False
-        dest_hol = country_map.get(dest_code, holidays.ES())
-        fer_dest = is_holiday(vuelta_f, dest_hol) if vuelta_f else False
+        fer_origen = holiday_for_airport(origin_code, ida_f)
+        fer_dest = holiday_for_airport(dest_code, vuelta_f)
         
-        if fer_origen or fer_dest:
+        if hash_id:
             try:
                 client.table('flight_deals').update({
                     'es_feriado_origen': fer_origen,

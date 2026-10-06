@@ -7,5 +7,12 @@
   {"destino":"Madrid","paises":[],"airport":"MAD"},
   {"destino":"MIA","paises":["MIA"],"airport":"MIA"},
   {"destino":"Asia","paises":["Japón"],"airport":"HND"},
-  {"destino":"Oceanía","paises":[],"airport":"SYD"}
+  {"destino":"Oceanía","paises":[],"airport":"SYD"},
+  {"origen":"Buenos Aires","originAirport":"AEP","destino":"MIA","paises":[],"airport":"MIA"},
+  {"origen":"Nueva York","originAirport":"EWR","destino":"Londres","paises":[],"airport":"LGW"},
+  {"origen":"Londres","originAirport":"LCY","destino":"Tokio","paises":[],"airport":"HND"},
+  {"origen":"São Paulo","originAirport":"CGH","destino":"París","paises":[],"airport":"ORY"},
+  {"origen":"Osaka","originAirport":"ITM","destino":"Seúl","paises":[],"airport":"GMP"},
+  {"origen":"SYD","originAirport":"SYD","destino":"Kenia","paises":[],"airport":"NBO"},
+  {"origen":"NBO","originAirport":"NBO","destino":"CPT","paises":[],"airport":"CPT"}
 ]

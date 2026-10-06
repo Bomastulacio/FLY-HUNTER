@@ -3,7 +3,7 @@ import datetime
 from typing import Dict, Any, List
 from ..services.db import get_active_search_alerts
 
-from ..services.geography import radar_targets, destination_airports
+from ..services.geography import radar_targets, destination_airports, origin_airports
 
 # Datos de prueba para el modo manual sin consumir API
 MOCK_FLIGHTS = [
@@ -26,7 +26,6 @@ MOCK_FLIGHTS = [
 def define_daily_mission() -> Dict[str, Any]:
     """Reuse the scraper's exact plan, or rotate a bounded deterministic plan."""
     import json
-    import re
     from pathlib import Path
     from .collectors import flight_cache
     if os.environ.get('TEST_MODE', '').lower() == 'true':
@@ -40,6 +39,9 @@ def define_daily_mission() -> Dict[str, Any]:
         data = json.loads(Path(artifact).read_text(encoding='utf-8'))
         if data.get('version') != 1 or not isinstance(data.get('searches'), list):
             raise ValueError('Invalid search plan artifact')
+        if any(not isinstance(data.get(key, []), list) or any(not isinstance(row, dict) for row in data.get(key, []))
+               for key in ('searches', 'provider_results', 'radar_reports')):
+            raise ValueError('Invalid search plan context')
         active = {str(a['id']): a for a in alerts}
         searches, seen = [], set()
         for s in data['searches']:
@@ -47,7 +49,7 @@ def define_daily_mission() -> Dict[str, Any]:
             if not alert:
                 continue
             # Revalidate against the current alert; a user may have edited it since scraping.
-            origins = [v.strip() for v in re.split(r'[,/]', alert['origen'])]
+            origins = origin_airports(alert['origen'])
             targets = set()
             countries = radar_targets(alert)
             for country in countries:
@@ -60,7 +62,20 @@ def define_daily_mission() -> Dict[str, Any]:
             key = tuple(s.get(k) for k in ('alert_id', 'origin', 'dest', 'dep_date', 'ret_date', 'passengers'))
             if key not in seen:
                 seen.add(key)
-                searches.append(s)
+                search = dict(s)
+                receipts = [r for r in data.get('provider_results', []) if isinstance(r, dict)
+                    and str(r.get('radar_id')) == str(s.get('alert_id'))
+                    and all(r.get(rk) == s.get(sk) for rk, sk in (('origin', 'origin'), ('destination', 'dest'),
+                        ('departure', 'dep_date'), ('return', 'ret_date'), ('passengers', 'passengers')))]
+                if receipts:
+                    search['source_context'] = {
+                        'version': 1, 'mode': 'follow' if all(r.get('mode') == 'follow' for r in receipts) else 'explore',
+                        'providers': [{k: r.get(k) for k in ('provider', 'status', 'reason', 'stage', 'checked_at', 'quotes', 'diagnostics')} for r in receipts],
+                        'geography_version': data.get('geography_version'),
+                        'coverage': next((r for r in data.get('radar_reports', []) if str(r.get('radar_id')) == str(s.get('alert_id'))), None),
+                        'constraints': {'max_stops_each_direction': min(1, int(alert.get('escalas_max') if alert.get('escalas_max') is not None else 1)),
+                                        'passengers': s['passengers'], 'currency': 'USD', 'require_verified_return_for_email': True}}
+                searches.append(search)
         return {'use_mock': False, 'searches': searches, 'alerts_context': alerts}
 
     candidates = []
@@ -84,9 +99,9 @@ def define_daily_mission() -> Dict[str, Any]:
                     ret = ret_min + datetime.timedelta(days=ri)
                     if ret <= dep:
                         continue
-                    for origin in sorted(set(re.split(r'[,/]', alert['origen']))):
+                    for origin in sorted(origin_airports(alert['origen'])):
                         for dest in sorted(targets):
-                            if not re.fullmatch(r'[A-Z]{3}', origin.strip()) or not re.fullmatch(r'[A-Z]{3}', dest):
+                            if origin == dest:
                                 continue
                             candidates.append({'alert_id': alert['id'], 'origin': origin.strip(), 'dest': dest,
                                 'dep_date': dep.isoformat(), 'ret_date': ret.isoformat(), 'passengers': int(alert.get('pasajeros') or 1)})

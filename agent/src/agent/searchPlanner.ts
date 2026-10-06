@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { destinationAirports, radarTargets } from '../../../shared/radarGeography.js';
+import { destinationAirports, radarTargets, originAirports } from '../../../shared/radarGeography.js';
 import type { FlightSearchParams } from '../types/flight.js';
 
 export interface SearchAlert {
@@ -37,7 +37,7 @@ function spread<T>(items: readonly T[]): T[] {
 
 /** Stable Cartesian coverage: distribute dates/routes early without dropping any valid combination. */
 export function buildSearchSpace(alert: SearchAlert, now = new Date()): FlightSearchParams[] {
-  const origins = [...new Set(alert.origen.split(/[,/]/).map(normalize).filter(c => /^[A-Z]{3}$/.test(c)))];
+  const origins = originAirports(alert.origen);
   const targets = radarTargets(alert);
   const targetAirports = targets.map(t => destinationAirports(t, 'search'));
   // Take one airport per requested country before its secondary airports.
@@ -54,7 +54,7 @@ export function buildSearchSpace(alert: SearchAlert, now = new Date()): FlightSe
     datePairs.push({ departureDate, returnDate });
   }
   const balancedDates = spread(datePairs);
-  const routes = airports.flatMap(destination => origins.map(origin => ({ origin, destination })));
+  const routes = airports.flatMap(destination => origins.filter(origin => origin !== destination).map(origin => ({ origin, destination })));
   const searches: FlightSearchParams[] = [];
   // Every route receives every valid date pair exactly once. The phase per route
   // avoids spending an entire early pass on the same departure/return dates.

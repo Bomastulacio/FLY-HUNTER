@@ -124,7 +124,10 @@ test('Google browser selects Cheapest, waits for final fares, ignores hidden row
       const result = await collectGoogleFlights(params);
       assert.equal(result.status, wrongDates ? 'unverified' : 'ok', JSON.stringify(result));
       assert.equal(result.options.length, wrongDates ? 0 : 1);
+      if (wrongDates) assert.equal(result.diagnostics?.datesVerified, false);
       if (!wrongDates) {
+        assert.equal(result.diagnostics?.departureMatches, true);
+        assert.equal(result.diagnostics?.passengersMatch, true);
         assert.equal(result.options[0].priceTotalUSD, 1925);
         assert.equal(result.options[0].airline, 'Aeromexico');
       }

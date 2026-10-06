@@ -335,6 +335,56 @@ una fuente primaria adicional, no una transcripción o verificación de ese twee
 Despliegue: no requiere migración SQL; publicar frontend y código del pipeline juntos.
 Después, verificar en la cuenta real la configuración del radar y el siguiente artefacto del
 scraper. Una cotización todavía no recolectada seguirá sin aparecer como precio actual.
-Se conserva el límite de 500 filas del feed y la deuda de distinguir vacío válido de fallo en
-el refinamiento Python (`test_target_empty_success_should_explore_once_without_llm`, fallo
-esperado existente). Ambos límites requieren su etapa específica; no se presentan como resueltos.
+Se conserva el límite de 500 filas del feed. La distinción entre vacío válido y fallo en
+el refinamiento Python se resolvió en la revisión del 06/10/2026 descrita debajo.
+
+### Contexto verificable y geografía global — 06/10/2026
+
+- `shared/radar-geography.json` incorpora un snapshot de 9.051 aeropuertos IATA no cerrados
+  de OurAirports, con procedencia, fecha y SHA-256. Las tuplas siguen `airportFields` para
+  mantener liviano el cliente. Regeneración explícita: `node scripts/update-airport-catalog.mjs`;
+  nunca se descarga durante una búsqueda, cron o apertura de la app.
+- Un IATA exacto conserva ese aeropuerto; un código inexistente no se acepta por tener tres
+  letras. Ciudades/áreas metropolitanas usan grupos explícitos (Buenos Aires, Nueva York,
+  Londres, Tokio, São Paulo, etc.) o municipios no ambiguos entre países. La cobertura de
+  grupos metropolitanos no es exhaustiva. Países nuevos usan aeropuertos con servicio regular;
+  los países/regiones ya configurados conservan su selección acotada. Geografía no implica
+  disponibilidad: AEP–MIA/BER no se descarta por ausencia de un vuelo directo.
+- El artefacto conserva `run_id`, `commit_sha`, `generated_at`, `geography_version` y recibos
+  por radar/consulta. Python recibe estado, motivo, etapa, antigüedad, cobertura y restricciones
+  correspondientes a esa combinación. No mezcla recibos de otro radar. Seguimiento no abre
+  una segunda búsqueda paga ni un refinamiento LLM.
+- SerpApi distingue `error`, `blocked`, `unverified`, `deferred` y `empty`. Solo el mensaje
+  explícito de búsqueda vacía del proveedor se guarda como vacío durante una hora. Un JSON
+  de error, parámetros distintos o una lectura fallida de DB nunca se cachean como ausencia
+  de vuelos. Un vacío confirmado permite una alternativa determinista dentro de la ventana,
+  una sola vez y sin Gemini, respetando el mismo ledger. La brecha `expectedFailure` queda
+  reemplazada por un test normal.
+- Una salida SerpApi elegible y dentro del presupuesto puede usar la segunda llamada permitida
+  para seleccionar su regreso con `departure_token`. Se exige eco de ruta/fechas/pasajeros/moneda,
+  token coincidente, segmentos de ambos sentidos, aeropuertos exactos, máximo una escala por
+  sentido y aerolíneas permitidas también en el regreso. El total de la selección es el total
+  cotizado: no se suman pasajes sueltos ni se multiplican pasajeros otra vez. Si falta evidencia
+  o cuota se mantiene alcance `search_result`, sin email. Los tokens no se guardan en ofertas
+  ni se imprimen. La URL pública sigue siendo una búsqueda, no una reserva garantizada.
+- Google espera filas insertadas de forma asíncrona sin recargar; los diagnósticos separan
+  fechas, pasajeros, origen/destino y filas verificadas. Los bloqueos Playwright consecutivos
+  pausan 24/48/96/168 horas, con máximo de siete días y reinicio tras respuesta válida. SerpApi
+  pausa 24 horas ante HTTP 403/429. No hay reintentos para sortear CAPTCHA.
+- Feriados usan el país real de cada aeropuerto, sin asumir Argentina/España para todos.
+  Calendario desconocido no se sustituye. Las tendencias históricas por ruta siguen siendo
+  agregados heterogéneos, no evidencia de ahorro para un ticket comparable.
+- La retención del plan aumenta a 14 días; los eventos TypeScript distinguen `offline_test`
+  de ejecución real. Se agregan casos compartidos globales y evals de contexto, cuotas,
+  selección de regreso y valores opcionales de Pandas en `quality.yml` y `pipeline.yml`.
+
+No se agregan agentes, cuotas Gemini, crons, fuentes de inventario ni migraciones SQL.
+Validación local final: 50 tests TypeScript (DOM offline y SQL/RLS incluidos), 58 evals Python,
+`tsc --noEmit` y build Astro aprobados. No se consumieron búsquedas ni llamadas Gemini.
+Los tests de proveedor son fixtures offline: el siguiente run real debe validar comportamiento
+en el runner. El catálogo mundial no garantiza cobertura comercial mundial. Siguen pendientes
+los contadores/leases atómicos para escalar y las consultas agrupadas/open-jaw como etapa separada.
+
+Referencias de los contratos implementados:
+[OurAirports](https://ourairports.com/data/) (geografía, no rutas) y
+[SerpApi Google Flights](https://serpapi.com/google-flights-api) (selección de regreso por token).

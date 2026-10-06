@@ -1,4 +1,5 @@
 /** Compact flight cards with progressive disclosure. No provider calls or UI framework. */
+import { originAirports } from '../../../shared/radarGeography.js';
 export const escapeHtml = (value: unknown) => String(value ?? '').replace(/[&<>"']/g,
   char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]!));
 
@@ -138,7 +139,7 @@ export function matchesRadar(deal: any, radar: any, ignoreBudget = false): boole
     || !deal.detalle_cotizacion?.priceVerified || !deal.detalle_cotizacion?.queryVerified
     || deal.detalle_cotizacion?.searchView !== 'cheapest')) return false;
   const [origin] = String(deal.ida_origen_destino || '').split('-');
-  const origins = String(radar.origen || '').split(/[,/]/).map(s => s.trim());
+  const origins = originAirports(String(radar.origen || ''));
   const normalize = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
   const excluded = Array.isArray(radar.aerolineas_excluidas) ? radar.aerolineas_excluidas : [];
   const stops = deal.cantidad_escalas;
@@ -300,7 +301,7 @@ export function renderCompactFlight(deal: any, alert: any, featured = false, cou
           <p>${e(stopText)} · ${e(pax)}${alert?.presupuesto_max ? `. El presupuesto de tu búsqueda es ${e(usd(alert.presupuesto_max))}.` : '.'}</p>
           ${savings > 0 ? `<p class="flight-positive"><i class="ph ph-trend-down"></i> <strong>Margen:</strong> ${e(usd(savings))} por debajo de tu presupuesto máximo.</p>` : ''}
           ${criticReason ? `<p><i class="ph ph-check-circle"></i> <strong>Por qué aparece:</strong> ${e(criticReason)}</p>` : ''}
-          ${deal.es_feriado_origen ? `<p style="color:#fbbf24;"><i class="ph ph-calendar-check"></i> <strong>Feriado nacional:</strong> La salida coincide con un feriado o fin de semana largo en Argentina.</p>` : ''}
+          ${deal.es_feriado_origen ? `<p style="color:#fbbf24;"><i class="ph ph-calendar-check"></i> <strong>Feriado en origen:</strong> La salida coincide con un feriado del país de origen.</p>` : ''}
           ${deal.es_feriado_destino ? `<p style="color:#fbbf24;"><i class="ph ph-calendar-check"></i> <strong>Feriado en destino:</strong> La fecha en destino coincide con feriados locales.</p>` : ''}
           ${insight ? `
             <div style="margin-top: 0.5rem; padding: 0.6rem; background: rgba(255,255,255,0.04); border-radius: 8px; font-size: 0.85rem;">

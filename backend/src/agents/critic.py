@@ -119,7 +119,8 @@ def _hard_eligible(deal: Dict, alerts: List[Dict]) -> bool:
         route_matches = not routed_alerts
         for alert in routed_alerts:
             origin, destination = deal.get('ida_origen_destino', '').split('-')
-            origins = [v.strip().upper() for v in re.split(r'[,/]', alert['origen'])]
+            from ..services.geography import origin_airports
+            origins = origin_airports(alert['origen'])
             targets = {a for t in radar_targets(alert) for a in destination_airports(t)}
             if origin in origins and destination in targets and deal.get('vuelta_origen_destino') == f'{destination}-{origin}':
                 route_matches = True
@@ -328,6 +329,7 @@ def _ask_gemini(context: Dict) -> Optional[RefinementDecision]:
 def evaluate_with_llm_critic(
     deals: List[Dict], alert: Dict, iteration: int = 0, max_iterations: int = 2,
     *, current_search: Optional[Dict] = None, searched_date_pairs: Optional[List[Dict]] = None,
+    collection_context: Optional[Dict] = None,
 ) -> Tuple[List[Dict], bool, str, Dict[str, int]]:
     """Keep the graph tuple; only a genuine calendar dilemma uses Gemini.
 
@@ -339,6 +341,23 @@ def evaluate_with_llm_critic(
     eligible = [d for d in deals if _hard_eligible(d, [alert])]
     evaluated = filter_and_evaluate(eligible, [alert])
     stop = (evaluated, False, "", {"dep_delta": 0, "ret_delta": 0})
+    if (current_search or {}).get('source_context', {}).get('mode') == 'follow':
+        return stop
+    context_status = (collection_context or {}).get('status')
+    if (collection_context or {}).get('return_verification') in ('blocked', 'error', 'deferred_budget'):
+        return stop
+    if context_status in ('blocked', 'error', 'deferred', 'unverified', 'unknown'):
+        return stop
+    if not deals and context_status == 'empty' and iteration == 0 and max_iterations > 0 and current_search:
+        try:
+            candidates = _calendar_candidates(alert, current_search, searched_date_pairs or [])
+            if candidates:
+                first = candidates[0]
+                return evaluated, True, 'Vacío confirmado: explorar una alternativa dentro de la ventana; disponibilidad por verificar.', {
+                    'dep_delta': first['dep_delta'], 'ret_delta': first['ret_delta']}
+        except (ValueError, TypeError, KeyError):
+            pass
+        return stop
     if (not eligible or iteration < 0 or iteration >= min(max_iterations, MAX_REFINEMENTS)
             or any(d["estado_aprobacion"] in ("aprobado", "pendiente") for d in evaluated)):
         return stop
@@ -372,9 +391,13 @@ def evaluate_with_llm_critic(
     # Far-over-budget quotes and a single alternative need no semantic choice.
     if len(candidates) > 1 and any(_cost(d, alert) <= high * LLM_VALUE_MARGIN for d in dilemma):
         context = {
+            'collection': collection_context or {'status': 'ok'},
+            'source_context': (current_search or {}).get('source_context'),
+            'evidence_rules': {'geography_is_not_route_availability': True, 'missing_return_is_not_verified': True,
+                               'provider_failure_is_not_empty': True, 'maximum_stops_each_direction': 1},
             "passengers": pax, "budget_min_usd": low, "budget_max_usd": high,
             "iteration": iteration, "remaining_refinements": min(max_iterations, MAX_REFINEMENTS) - iteration,
-            "current_search": {k: current_search.get(k) for k in ("dep_date", "ret_date")},
+            "current_search": {k: current_search.get(k) for k in ("origin", "dest", "dep_date", "ret_date", "passengers")},
             "candidates": candidates,
             "observed_quotes": [{
                 "total_for_alert_usd": round(_cost(d, alert), 2),

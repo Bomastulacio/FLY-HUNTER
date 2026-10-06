@@ -13,6 +13,35 @@ const radar = { id: 'coverage-fixture', origen: 'EZE,AEP', destino: 'Europa',
   fecha_vuelta_min: '2027-04-26', fecha_vuelta_max: '2027-05-03' };
 const today = new Date('2026-09-14T12:00:00Z');
 
+test('Repeated provider blocks back off across runs and successful recovery resets the streak', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'fh-coverage-eval-'));
+  const path = join(directory, 'state.json');
+  let now = Date.now();
+  const clock = mock.method(Date, 'now', () => now);
+  const params = buildSearchSpace(radar, today)[0];
+  try {
+    for (const hours of [24, 48, 96, 168, 168]) {
+      const runtime = new SearchRuntime(path, { google_flights: 10, despegar: 10 }, 0);
+      await runtime.load();
+      await runtime.search('despegar', params, async () => ({ status: 'blocked', options: [] }));
+      const state = JSON.parse(await readFile(path, 'utf8'));
+      assert.equal(state.cooldown.despegar - now, hours * 3600000);
+      let attempts = 0;
+      await runtime.search('despegar', params, async () => { attempts++; return { status: 'empty', options: [] }; });
+      assert.equal(attempts, 0);
+      now = state.cooldown.despegar + 1;
+    }
+    const recovered = new SearchRuntime(path, { google_flights: 10, despegar: 10 }, 0);
+    await recovered.load();
+    await recovered.search('despegar', params, async () => ({ status: 'empty', options: [] }));
+    assert.equal(JSON.parse(await readFile(path, 'utf8')).consecutiveBlocks.despegar, 0);
+  } finally {
+    clock.mock.restore();
+    assert.ok(resolve(directory).startsWith(resolve(tmpdir()) + sep + 'fh-coverage-eval-'));
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test('Balanced exploration covers the whole Cartesian window once and spreads initial dates/countries', () => {
   const space = buildSearchSpace(radar, today);
   assert.equal(space.length, 2 * 9 * 3 * 8);

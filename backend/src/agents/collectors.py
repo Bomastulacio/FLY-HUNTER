@@ -4,6 +4,10 @@ import requests
 from typing import List, Dict, Any
 import diskcache
 import unicodedata
+import json
+import math
+from urllib.parse import urlencode
+from ..services.serpapi_evidence import direction, verified_roundtrip
 from ..services.search_budget import reserve_paid_search
 
 # Inicializar caché en el directorio del proyecto
@@ -11,6 +15,28 @@ cache_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file_
 flight_cache = diskcache.Cache(cache_dir)
 
 SERPAPI_KEY = os.environ.get("SERPAPI_KEY", "")
+
+
+class CollectionResult(list):
+    """List-compatible quotes plus explicit evidence for downstream graph decisions."""
+    def __init__(self, quotes=(), *, status='ok', reason=None, checked_at=None, cache_hit=False, candidates=()):
+        super().__init__(quotes)
+        self.context = {'provider': 'serpapi', 'status': status, 'reason': reason,
+                        'checked_at': checked_at or datetime.now(timezone.utc).isoformat(), 'cache_hit': cache_hit}
+        self.candidates = list(candidates)  # Ephemeral return-selection tokens; never log or persist in deals.
+
+
+def collection_result(quotes=(), **kwargs):
+    result = CollectionResult(quotes, **kwargs)
+    print(json.dumps({'event': 'collection.completed', **result.context, 'quotes': len(result)}))
+    return result
+
+
+def response_matches(data, params):
+    actual = data.get('search_parameters') or {}
+    # Echoed parameters are required evidence; a requested party size alone is not verification.
+    keys = ('departure_id', 'arrival_id', 'outbound_date', 'return_date', 'adults', 'currency', 'type')
+    return isinstance(actual, dict) and all(str(actual.get(k, '')) == str(params[k]) for k in keys)
 
 def check_serpapi_quota() -> Dict[str, Any]:
     """
@@ -42,19 +68,22 @@ def check_serpapi_quota() -> Dict[str, Any]:
 
 def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str, adults: int = 1) -> List[Dict]:
     """Busca vuelos usando SerpApi (Google Flights) si hay cuota habilitada"""
-    cache_key = ('quote_v2', origin, dest, dep_date, ret_date, adults, 'USD')
+    cache_key = ('quote_v3', origin, dest, dep_date, ret_date, adults, 'USD')
     cached = flight_cache.get(cache_key)
     if cached is not None:
-        return cached
+        return collection_result(cached['quotes'], status=cached['status'], checked_at=cached['checked_at'], cache_hit=True)
     if not SERPAPI_KEY or os.environ.get('SERPAPI_ENABLED', 'true').lower() != 'true':
         print("Warning: SERPAPI_KEY no encontrada. Omitiendo búsqueda.")
-        return []
+        return collection_result(status='deferred', reason='paid_search_disabled')
+
+    if flight_cache.get('serpapi_blocked_until', 0) > datetime.now(timezone.utc).timestamp():
+        return collection_result(status='deferred', reason='provider_blocked')
         
     # Verificar cuota en vivo antes de disparar la búsqueda paga
     quota = check_serpapi_quota()
     if not reserve_paid_search(flight_cache, quota):
         print("[SerpApi Guard] Búsqueda pospuesta por cuota o presupuesto de llamadas.")
-        return []
+        return collection_result(status='deferred', reason='quota_or_budget_unavailable')
         
     print(f"Buscando en SerpApi: {origin} -> {dest} ({dep_date} al {ret_date}) para {adults} adultos [Restantes: {quota.get('searches_left')}]")
     url = "https://serpapi.com/search.json"
@@ -74,13 +103,26 @@ def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str, 
     
     try:
         response = requests.get(url, params=params, timeout=30)
+        if response.status_code in (403, 429):
+            flight_cache.set('serpapi_blocked_until', datetime.now(timezone.utc).timestamp() + 86400, expire=86400)
+            return collection_result(status='blocked', reason='provider_blocked')
         response.raise_for_status()
         data = response.json()
+        if not isinstance(data, dict):
+            return collection_result(status='unverified', reason='invalid_response_shape')
         
         if "error" in data:
-            print(f"SerpApi JSON Error: {data['error']}")
+            if data['error'] == "Google Flights hasn't returned any results for this query.":
+                result = collection_result(status='empty', reason='provider_confirmed_empty')
+                flight_cache.set(cache_key, {'quotes': [], 'status': 'empty', 'checked_at': result.context['checked_at']}, expire=3600)
+                return result
+            return collection_result(status='error', reason='provider_api_error')
+        if not response_matches(data, params):
+            return collection_result(status='unverified', reason='search_parameters_mismatch')
             
         # Juntamos 'best_flights' y 'other_flights'
+        if any(not isinstance(data.get(k, []), list) for k in ('best_flights', 'other_flights')):
+            return collection_result(status='unverified', reason='invalid_response_shape')
         raw_flights = data.get("best_flights", []) + data.get("other_flights", [])
         
         if not raw_flights:
@@ -90,9 +132,12 @@ def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str, 
         search_link = data.get("search_metadata", {}).get("google_flights_url", "https://google.com/travel/flights")
         
         parsed_flights = []
+        candidates = []
         observed_at = datetime.now(timezone.utc).isoformat()
         pax = max(1, adults)
         for flight in raw_flights:
+            if not isinstance(flight, dict) or not isinstance(flight.get('flights'), list):
+                continue
             # Obtener aerolinea del primer tramo
             airlines = [leg.get("airline", "Desconocida") for leg in flight.get("flights", [])]
             airline = ' / '.join(dict.fromkeys(airlines)) if airlines else "Múltiples"
@@ -103,8 +148,11 @@ def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str, 
             
             # Precio total devuelto por Google Flights para los pasajeros configurados
             precio_usd = flight.get("price", 0)
-            if flight.get('price_unknown') or not isinstance(precio_usd, (int, float)) or precio_usd <= 0 or stops > 1 or not airlines:
+            observed_direction = direction(flight, origin, dest, dep_date)
+            if flight.get('type') != 'Round trip' or flight.get('price_unknown') or isinstance(precio_usd, bool) or not isinstance(precio_usd, (int, float)) or not math.isfinite(precio_usd) or precio_usd <= 0 or stops > 1 or not observed_direction:
                 continue
+            airline = ' / '.join(observed_direction['airlines'])
+            stops = observed_direction['stops']
             precio_unitario = round(precio_usd / pax, 2) if precio_usd else 0.0
             
             parsed_flights.append({
@@ -125,12 +173,73 @@ def fetch_serpapi_flights(origin: str, dest: str, dep_date: str, ret_date: str, 
                 "created_at": observed_at,
                 "detalle_cotizacion": {"priceBasis": "party_total", "passengersVerified": True, "itineraryScope": "search_result", "observedAt": observed_at}
             })
+            if isinstance(flight.get('departure_token'), str) and flight['departure_token']:
+                candidates.append({'quote': parsed_flights[-1], 'flight': flight})
             
-        flight_cache.set(cache_key, parsed_flights, expire=21600)
-        return parsed_flights
+        result = collection_result(parsed_flights, status='ok' if parsed_flights else 'unverified',
+                                   reason=None if parsed_flights else 'no_verified_rows', candidates=candidates)
+        if parsed_flights:
+            flight_cache.set(cache_key, {'quotes': parsed_flights, 'status': 'ok', 'checked_at': observed_at}, expire=21600)
+        return result
     except Exception as e:
         print(f"Error fetching from SerpApi: {type(e).__name__}")
-        return []
+        return collection_result(status='error', reason='provider_request_failed')
+
+def complete_selected_return(search, flights, alert):
+    """At most one promising outbound verified, inside the SAME paid reservation budget."""
+    from .critic import _hard_eligible
+    candidates = getattr(flights, 'candidates', [])
+    if not candidates or search.get('source_context', {}).get('mode') == 'follow':
+        return flights
+    try:
+        ceiling = float(alert.get('presupuesto_max') or 0)
+        eligible = [c for c in candidates if _hard_eligible(c['quote'], [alert])
+                    and c['quote']['precio_total_usd'] <= ceiling]
+    except (ValueError, TypeError):
+        return flights
+    if not eligible or os.environ.get('SERPAPI_ENABLED', 'true').lower() != 'true':
+        return flights
+    candidate = min(eligible, key=lambda c: c['quote']['precio_total_usd'])
+    if flight_cache.get('serpapi_blocked_until', 0) > datetime.now(timezone.utc).timestamp():
+        return flights
+    if not reserve_paid_search(flight_cache, check_serpapi_quota()):
+        flights.context['return_verification'] = 'deferred_budget'
+        return flights
+    params = {'engine': 'google_flights', 'departure_id': search['origin'], 'arrival_id': search['dest'],
+              'outbound_date': search['dep_date'], 'return_date': search['ret_date'], 'adults': search['passengers'],
+              'currency': 'USD', 'type': '1', 'stops': '2', 'departure_token': candidate['flight']['departure_token'], 'api_key': SERPAPI_KEY}
+    try:
+        response = requests.get('https://serpapi.com/search.json', params=params, timeout=30)
+        if response.status_code in (403, 429):
+            flight_cache.set('serpapi_blocked_until', datetime.now(timezone.utc).timestamp() + 86400, expire=86400)
+            flights.context['return_verification'] = 'blocked'
+            return flights
+        response.raise_for_status()
+        data = response.json()
+        if (not isinstance(data, dict) or data.get('error') or not response_matches(data, params)
+                or (data.get('search_parameters') or {}).get('departure_token') != params['departure_token']):
+            flights.context['return_verification'] = 'unverified'
+            return flights
+        now = datetime.now(timezone.utc).isoformat()
+        verified = []
+        for returning in data.get('best_flights', []) + data.get('other_flights', []):
+            quote = verified_roundtrip(candidate['flight'], returning, search, now)
+            if quote and _hard_eligible(quote, [alert]):
+                query = f"Flights to {search['dest']} from {search['origin']} on {search['dep_date']} through {search['ret_date']} for {search['passengers']} adults"
+                quote['link_reserva'] = 'https://www.google.com/travel/flights?' + urlencode({'q': query, 'curr': 'USD', 'hl': 'es'})
+                verified.append(quote)
+        flights.context['return_verification'] = 'verified' if verified else 'unverified'
+        # The selected outbound's initial price is provisional once a return is chosen.
+        if verified:
+            remaining = [q for q in flights if q is not candidate['quote']]
+            flights[:] = remaining + verified
+            key = ('quote_v3', search['origin'], search['dest'], search['dep_date'], search['ret_date'], search['passengers'], 'USD')
+            flight_cache.set(key, {'quotes': list(flights), 'status': 'ok', 'checked_at': now}, expire=21600)
+        return flights
+    except (requests.RequestException, ValueError, TypeError, KeyError, AttributeError):
+        flights.context['return_verification'] = 'error'
+        return flights
+
 
 def reusable_quote(deal: Dict) -> bool:
     """Retire pre-fix Google DOM quotes without deleting historical/saved flights."""
@@ -225,7 +334,10 @@ def collect_flights_for_search(search: Dict, check_cache_first: bool = True) -> 
                     })
                 return results
         except Exception as e:
-            print(f"[Recolector Híbrido] Caché omitida ({e}). Procediendo con SerpApi.")
+            return collection_result(status='error', reason='quote_cache_read_failed')
+
+    if search.get('source_context', {}).get('mode') == 'follow':
+        return collection_result(status='deferred', reason='saved_tracking_has_no_paid_fallback')
 
     if all([origin, dest, dep_date, ret_date]):
         return fetch_serpapi_flights(origin, dest, dep_date, ret_date, adults=adults)

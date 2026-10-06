@@ -47,5 +47,6 @@ jobs:
         run: |
           python -B evals/test_critic_decisions.py
           python -B evals/test_search_orchestration.py
+          python -B evals/test_collection_context.py
           python -B evals/test_radar_notifications.py
           python -B evals/test_radar_contract.py

@@ -6,7 +6,7 @@ import { buildSearchSpace } from '../src/agent/searchPlanner.js';
 import { toObservedDeal } from '../src/agent/monitoring.js';
 import { evaluateQuote } from '../src/agent/quotePolicy.js';
 import { dailyRadar, emptyRadarMessage } from '../../frontend/src/utils/dailyRadar.js';
-import { radarAcceptsDestination } from '../../shared/radarGeography.js';
+import { radarAcceptsDestination, originAirports, destinationAirports } from '../../shared/radarGeography.js';
 import type { ScrapedFlightOption } from '../src/types/flight.js';
 
 const now = new Date('2026-10-05T12:00:00Z');
@@ -40,6 +40,32 @@ test('Shared Python/TypeScript regression cases cover region-in-countries, accen
     assert.ok(buildSearchSpace(radar, now).some(p => p.destination === entry.airport));
     assert.ok(radarAcceptsDestination(radar, entry.airport));
     assert.equal(radarAcceptsDestination(radar, 'ZZZ'), false);
+    const origin = entry.originAirport || base.origen;
+    const plan = buildSearchSpace(radar, now).find(p => p.origin === origin && p.destination === entry.airport)!;
+    assert.ok(plan, `${radar.origen} -> ${entry.airport}`);
+    const quote: ScrapedFlightOption = { route: `${origin}-${entry.airport}`, source: 'google_flights',
+      airline: 'Example Air', passengers: 1, stops: 0, priceTotalUSD: 913, pricePerPaxUSD: 913,
+      departureDate: plan.departureDate, returnDate: plan.returnDate, collectedAt: now.toISOString(), bookingUrl: '',
+      evidence: { priceBasis: 'party_total', passengersVerified: true, itineraryScope: 'search_result',
+        googleParserVersion: 2, priceVerified: true, queryVerified: true, searchView: 'cheapest' } };
+    const evaluation = evaluateQuote(plan, quote);
+    assert.equal(evaluation.approvalStatus, 'aprobado');
+    const row = { ...toObservedDeal(quote), id: 'world-fixture', estado_aprobacion: evaluation.approvalStatus };
+    assert.equal(dailyRadar([row], radar, now.getTime()).best?.id, row.id);
+  }
+});
+
+test('Exact airports never silently expand, unknown IATA is rejected and geography does not infer routes', () => {
+  for (const code of ['AEP', 'EZE', 'LGA', 'EWR', 'LGW', 'HND', 'CGH', 'ITM', 'NBO']) {
+    assert.deepEqual(originAirports(code), [code]);
+    assert.deepEqual(destinationAirports(code), [code]);
+  }
+  assert.deepEqual(originAirports('ZZZ'), []);
+  assert.deepEqual(destinationAirports('ZZZ', 'search'), []);
+  assert.ok(buildSearchSpace({ ...base, origen: 'AEP', destino: 'BER' }, now).length);
+  assert.equal(buildSearchSpace({ ...base, origen: 'LHR', destino: 'LHR' }, now).length, 0);
+  for (const airports of Object.values(catalog.metroAirports)) {
+    for (const code of airports) assert.ok(code in catalog.airports, code);
   }
 });
 

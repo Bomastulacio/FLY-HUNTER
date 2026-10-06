@@ -89,5 +89,5 @@ jobs:
         with:
           name: search-plan
           path: agent/search-plan.json
-          retention-days: 1
+          retention-days: 14
           if-no-files-found: error

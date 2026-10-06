@@ -10,6 +10,7 @@ import { SearchRuntime, logEvent, type Provider, type ProviderResult } from './a
 import { saveFlightDeal, getActiveSearchAlerts, getMonitoringSavedDeals, persistMonitoring } from './db/supabase.js';
 import { savedChecks, watchTargets, pickMonitoringSearch } from './agent/monitoring.js';
 import type { FlightSearchParams, ScrapedFlightOption } from './types/flight.js';
+import geography from '../../shared/radar-geography.json' with { type: 'json' };
 
 export const huntIO = { getActiveSearchAlerts, getMonitoringSavedDeals, saveFlightDeal, persistMonitoring,
   collectGoogleFlights, collectDespegar, evaluateDealWithGemini,
@@ -76,7 +77,7 @@ export async function runHunt(args = process.argv.slice(2), io = huntIO, runtime
       await runtime.advance(selectedCursor, steps);
       await runtime.advance(`mode:${provider}`);
     }
-    logEvent('search.selected', { provider, mode, origin: params.origin, destination: params.destination,
+    logEvent('search.selected', { radar_id: alert.id, provider, mode, origin: params.origin, destination: params.destination,
       departure: params.departureDate, return: params.returnDate, passengers: params.passengers });
     const result = previous || await runtime.search(provider, params, () => provider === 'google_flights'
       ? io.collectGoogleFlights(params, { headless: true }) : io.collectDespegar(params, { headless: true }));
@@ -90,7 +91,7 @@ export async function runHunt(args = process.argv.slice(2), io = huntIO, runtime
     reported.add(`${alert.id}:${provider}`);
     receipts.push({ radar_id: alert.id, provider, mode, origin: params.origin, destination: params.destination,
       departure: params.departureDate, return: params.returnDate, passengers: params.passengers,
-      status: result.status, reason: result.reason, stage: result.stage, quotes: result.options.length, checked_at: result.checkedAt });
+      status: result.status, reason: result.reason, stage: result.stage, diagnostics: result.diagnostics, quotes: result.options.length, checked_at: result.checkedAt });
     attempted.push({ alert_id: alert.id, origin: params.origin, dest: params.destination,
       dep_date: params.departureDate, ret_date: params.returnDate, passengers: params.passengers });
     const report = reports.get(alert.id)!;
@@ -133,7 +134,8 @@ export async function runHunt(args = process.argv.slice(2), io = huntIO, runtime
     await runtime.advance('alerts');
     // A run-scoped artifact lets LangGraph reuse the exact plan rather than inventing different dates.
     for (const report of reports.values()) logEvent('radar.summary', report);
-    await io.writePlan({ version: 1, searches: attempted, provider_results: receipts, deferred_sources: deferred,
+    await io.writePlan({ version: 1, geography_version: geography.version, run_id: process.env.GITHUB_RUN_ID,
+      commit_sha: process.env.GITHUB_SHA, generated_at: new Date().toISOString(), searches: attempted, provider_results: receipts, deferred_sources: deferred,
       radar_reports: [...reports.values()], plan_issues: planIssues });
     const deferredLabels: Record<string, string> = {
       run_budget_exhausted: 'Tope de intentos por corrida alcanzado',

@@ -141,10 +141,13 @@ minoristas de débito. Es una vía para evaluar si se necesita cobertura estable
 
 ### Verificación y límites pendientes
 
-Validación local: 36 tests TypeScript (incluyen Chromium interceptado, feed, cuotas, PGlite/RLS
+Validación histórica del 14/09/2026: 36 tests TypeScript (incluyen Chromium interceptado, feed, cuotas, PGlite/RLS
 y autorización administrativa del endpoint),
 TypeScript check y build Astro aprobados. Python: 13 tests de orquestación y 22 del Crítico,
 sin errores, con una brecha documentada `expectedFailure` sobre refinamiento tras vacío.
+Actualización 06/10/2026: esa brecha ahora tiene una regresión aprobable normal; errores y
+vacíos confirmados viajan separados al Crítico. Ver la implementación vigente y sus límites
+en `MONITORING.md`, sección «Contexto verificable y geografía global».
 En Windows se usó `PYTHONIOENCODING=utf-8`; una consola cp1252 puede fallar al imprimir los
 logs existentes y confundir un fallo de log con uno de caché. Las pruebas no consumen proveedores,
 SerpApi ni Gemini. La navegación de factibilidad se registra por separado de los tests.
